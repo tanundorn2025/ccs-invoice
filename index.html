@@ -714,156 +714,64 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
   <div id="tax-inv-list"></div>
 </div>
 
-<!-- ========== TAB 7 : FORM DESIGNER V2 (Excel-style) ========== -->
-<div id="t7" class="panel" style="padding:0;height:calc(100vh - 50px);overflow:hidden">
-<!-- Toolbar 1 -->
-<div id="tb1">
-  <span style="font-size:13px;font-weight:700;color:#2a6bdf;margin-right:4px">📋 Form Designer</span>
-  <button class="btn p" onclick="D2G.loadTpl()">🧾 โหลดใบกำกับภาษี</button>
-  <div class="sep"></div>
-  <button class="btn" onclick="D2G.undo()">↩</button>
-  <button class="btn" onclick="D2G.redo()">↪</button>
-  <div class="sep"></div>
-  <button class="btn" onclick="D2G.merge()">⊞ Merge</button>
-  <button class="btn" onclick="D2G.unmerge()">⊟ Unmerge</button>
-  <div class="sep"></div>
-  <button class="btn" onclick="D2G.insRow(-1)">↑ Row</button>
-  <button class="btn" onclick="D2G.insRow(1)">↓ Row</button>
-  <button class="btn r" onclick="D2G.delRow()">✕ Row</button>
-  <div class="sep"></div>
-  <button class="btn" onclick="D2G.insCol(-1)">← Col</button>
-  <button class="btn" onclick="D2G.insCol(1)">→ Col</button>
-  <button class="btn r" onclick="D2G.delCol()">✕ Col</button>
-  <div class="sep"></div>
-  <button class="btn g" onclick="D2G.save()">💾 Save</button>
-  <button class="btn" onclick="D2G.load()">📂 Load</button>
-  <button class="btn" style="background:#1a304a;color:#6aaef0;border-color:#2a4a6a" onclick="D2G.exportHTML()">📥 Export</button>
-</div>
+<!-- ========== TAB 7 : DESIGNER ========== -->
+<div id="t7" class="panel">
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><div class="ci">🎨</div>Invoice Form Designer</div>
+    </div>
+    <div class="alert ai" style="font-size:13px;margin-bottom:1rem">
+      🤖 <strong>AI Form Designer</strong> — ออกแบบใบกำกับภาษีด้วย AI<br>
+      <span style="font-size:12px;color:var(--muted)">บอก AI เป็นภาษาไทย หรืออัปโหลดรูปต้นฉบับ แล้ว AI จะสร้างแบบฟอร์มให้อัตโนมัติ</span>
+    </div>
 
-<!-- Toolbar 2: Format -->
-<div id="tb2">
-  <input id="f-font" class="spi" style="width:88px" value="Sarabun" title="Font" onchange="D2G.fmt('fontFamily',this.value)">
-  <input id="f-size" class="spi" style="width:44px" type="number" value="10" min="6" max="72" title="Font size (pt)" onchange="D2G.fmt('fontSize',+this.value)">
-  <button class="btn" id="f-b" onclick="D2G.toggle('bold')" style="font-weight:700;padding:4px 9px">B</button>
-  <button class="btn" id="f-i" onclick="D2G.toggle('italic')" style="font-style:italic;padding:4px 9px">I</button>
-  <button class="btn" id="f-u" onclick="D2G.toggle('underline')" style="text-decoration:underline;padding:4px 9px">U</button>
-  <div class="sep"></div>
-  <button class="btn" onclick="D2G.fmt('align','left')" title="ชิดซ้าย">≡</button>
-  <button class="btn" onclick="D2G.fmt('align','center')" title="กึ่งกลาง">☰</button>
-  <button class="btn" onclick="D2G.fmt('align','right')" title="ชิดขวา">≡</button>
-  <div class="sep"></div>
-  <span class="lbl">ตัวอักษร:</span>
-  <input type="color" id="f-color" value="#000000" style="width:26px;height:24px;border:1px solid #333846;border-radius:3px;cursor:pointer;padding:1px;background:#252830" onchange="D2G.fmt('color',this.value)" title="สีตัวอักษร">
-  <span class="lbl">พื้นหลัง:</span>
-  <input type="color" id="f-bg" value="#ffffff" style="width:26px;height:24px;border:1px solid #333846;border-radius:3px;cursor:pointer;padding:1px;background:#252830" onchange="D2G.fmt('bgColor',this.value)" title="สีพื้นหลัง">
-  <div class="sep"></div>
-  <span class="lbl">เส้น:</span>
-  <button class="btn" onclick="D2G.border('all')" title="ทุกด้าน">⊞</button>
-  <button class="btn" onclick="D2G.border('outer')" title="ขอบนอก">□</button>
-  <button class="btn" onclick="D2G.border('inner')" title="ด้านใน">⊟</button>
-  <button class="btn" onclick="D2G.border('none')" title="ลบเส้น">✕</button>
-  <button class="btn" onclick="D2G.border('top')" title="บน">⊤</button>
-  <button class="btn" onclick="D2G.border('bottom')" title="ล่าง">⊥</button>
-  <button class="btn" onclick="D2G.border('left')" title="ซ้าย">⊢</button>
-  <button class="btn" onclick="D2G.border('right')" title="ขวา">⊣</button>
-  <div class="sep"></div>
-  <input type="color" id="f-bcol" value="#333333" style="width:26px;height:24px;border:1px solid #333846;border-radius:3px;cursor:pointer;padding:1px;background:#252830" title="สีเส้น" onchange="D2G.bcol=this.value">
-  <select class="spi" style="width:56px" title="ความหนาเส้น" onchange="D2G.bw=+this.value">
-    <option value="0.5">0.5</option><option value="1" selected>1</option>
-    <option value="1.5">1.5</option><option value="2">2</option><option value="3">3</option>
-  </select>
-  <select class="spi" style="width:64px" title="สไตล์เส้น" onchange="D2G.bs=this.value">
-    <option value="solid">Solid</option><option value="dashed">Dashed</option>
-    <option value="dotted">Dotted</option><option value="double">Double</option>
-  </select>
-</div>
+    <!-- ปุ่มหลัก -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.5rem">
+      <button class="btn bp" onclick="openAIDesigner()" style="font-size:14px;padding:10px 24px">
+        🤖 เปิด AI Designer
+      </button>
+      <button class="btn bo" onclick="loadAILayout()">
+        🔄 โหลด Layout ล่าสุดจาก Designer
+      </button>
+      <button class="btn ba" onclick="resetAILayout()">
+        ✕ ล้าง Layout (ใช้ค่าเริ่มต้น)
+      </button>
+    </div>
 
-<!-- Formula bar -->
-<div id="fbar">
-  <input id="fcell" readonly placeholder="A1">
-  <input id="fval" placeholder="ข้อมูลใน cell..." oninput="D2G.fvalInput(this.value)">
-</div>
-
-<!-- Main -->
-<div id="main">
-  <div id="gscroll">
-    <div id="gwrap">
-      <div style="display:flex;position:sticky;top:0;z-index:25">
-        <div id="corner" style="width:46px;height:24px;background:#13151b;border-right:1px solid #2a2e3a;border-bottom:2px solid #2a6bdf;flex-shrink:0"></div>
-        <div id="colhdrs" style="display:flex;position:relative"></div>
+    <!-- Status -->
+    <div id="designer-status" style="padding:12px 16px;background:var(--surf2);border-radius:var(--r);border:1px solid var(--bord);margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span id="designer-layout-dot" style="width:10px;height:10px;border-radius:50%;background:#aaa;display:inline-block"></span>
+        <span id="designer-layout-name" style="font-size:13px;font-weight:600;color:var(--navy)">ยังไม่มี layout (ใช้ค่าเริ่มต้น)</span>
       </div>
-      <div id="gbody"></div>
-    </div>
-  </div>
-
-  <!-- Side panel -->
-  <div id="side">
-    <div class="sph" onclick="d2ToggleSP('sp-sz')">📐 Cell Size <span>▾</span></div>
-    <div id="sp-sz" class="spb">
-      <div class="spr"><span class="spl">Row H</span><input class="spi" type="number" id="sp-rh" min="12" max="300" value="22" onchange="D2G.setRH(+this.value)"> px</div>
-      <div class="spr"><span class="spl">Col W</span><input class="spi" type="number" id="sp-cw" min="20" max="500" value="80" onchange="D2G.setCW(+this.value)"> px</div>
-      <div class="spr"><span class="spl">Padding</span><input class="spi" type="number" id="sp-pad" min="0" max="20" value="2" onchange="D2G.fmt('padding',+this.value)"> px</div>
-    </div>
-    <div class="sph" onclick="d2ToggleSP('sp-mg')">⊞ Merge <span>▾</span></div>
-    <div id="sp-mg" class="spb">
-      <div id="mg-info" style="font-size:11px;color:#5a6070">ไม่ได้ผสาน</div>
-      <button class="btn" style="margin-top:3px" onclick="D2G.merge()">ผสาน cell ที่เลือก</button>
-      <button class="btn" onclick="D2G.unmerge()">ยกเลิกการผสาน</button>
-    </div>
-    <div class="sph" onclick="d2ToggleSP('sp-ty')">🔤 Typography <span>▾</span></div>
-    <div id="sp-ty" class="spb">
-      <div class="spr"><span class="spl">V-Align</span>
-        <select class="spi" onchange="D2G.fmt('valign',this.value)">
-          <option value="top">Top</option><option value="middle">Middle</option><option value="bottom">Bottom</option>
-        </select>
-      </div>
-      <div class="spr"><span class="spl">Wrap</span>
-        <select class="spi" onchange="D2G.fmt('wrap',this.value==='1')">
-          <option value="1">Wrap</option><option value="0">No wrap</option>
-        </select>
+      <div id="designer-preview-thumb" style="display:none;margin-top:8px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Preview:</div>
+        <div id="designer-thumb-content" style="background:#fff;border:1px solid var(--bord);border-radius:4px;padding:8px;max-height:200px;overflow:hidden;transform-origin:top left;font-size:10px"></div>
       </div>
     </div>
-    <div class="sph" onclick="d2ToggleSP('sp-bd')">🔲 Border <span>▾</span></div>
-    <div id="sp-bd" class="spb">
-      <div class="spr"><span class="spl">Color</span><input type="color" class="spi" style="width:36px;height:24px;padding:1px;cursor:pointer" value="#333333" onchange="D2G.bcol=this.value"></div>
-      <div class="spr"><span class="spl">Width</span>
-        <select class="spi" onchange="D2G.bw=+this.value">
-          <option value="0.5">0.5pt</option><option value="1" selected>1pt</option>
-          <option value="1.5">1.5pt</option><option value="2">2pt</option><option value="3">3pt</option>
-        </select>
-      </div>
-      <div class="spr"><span class="spl">Style</span>
-        <select class="spi" onchange="D2G.bs=this.value">
-          <option value="solid">Solid</option><option value="dashed">Dashed</option>
-          <option value="dotted">Dotted</option><option value="double">Double</option>
-        </select>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:2px">
-        <button class="btn" onclick="D2G.border('all')">ทุกด้าน</button>
-        <button class="btn" onclick="D2G.border('outer')">ขอบนอก</button>
-        <button class="btn" onclick="D2G.border('top')">บน ⊤</button>
-        <button class="btn" onclick="D2G.border('bottom')">ล่าง ⊥</button>
-        <button class="btn" onclick="D2G.border('left')">ซ้าย ⊢</button>
-        <button class="btn" onclick="D2G.border('right')">ขวา ⊣</button>
-        <button class="btn" onclick="D2G.border('inner')">ด้านใน</button>
-        <button class="btn r" onclick="D2G.border('none')">ลบเส้น ✕</button>
+
+    <!-- วิธีใช้ -->
+    <div style="background:var(--surf2);border-radius:var(--r);padding:14px 16px;border:1px solid var(--bord)">
+      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">📖 วิธีใช้งาน</div>
+      <div style="font-size:12.5px;color:var(--muted);line-height:2">
+        <div>1️⃣ กด <strong>"🤖 เปิด AI Designer"</strong> → หน้าต่างใหม่จะเปิดขึ้น</div>
+        <div>2️⃣ กด <strong>"📥 โหลดจากระบบ"</strong> ใน AI Designer เพื่อดึงข้อมูลบริษัท/ลูกค้า</div>
+        <div>3️⃣ พิมพ์คำสั่ง เช่น <em>"สร้างใบกำกับภาษีมาตรฐาน"</em> หรืออัปโหลดรูปต้นฉบับ</div>
+        <div>4️⃣ AI จะสร้างแบบฟอร์มให้ — ปรับแก้ด้วยคำสั่งภาษาไทยได้เรื่อยๆ</div>
+        <div>5️⃣ กด <strong>"💾 บันทึก"</strong> ใน AI Designer → layout จะถูกบันทึกใน LocalStorage</div>
+        <div>6️⃣ กลับมาที่นี่ กด <strong>"🔄 โหลด Layout"</strong> → Tab ใบกำกับภาษีจะใช้ layout ใหม่</div>
       </div>
     </div>
   </div>
 
-  <!-- Preview -->
-  <div id="prev">
-    <div id="prevhdr"><span>👁 Preview</span><button class="btn" onclick="D2G.renderPreview()" style="padding:2px 6px;font-size:11px">↻</button></div>
-    <div id="prevscroll"><div id="prevpaper"></div></div>
+  <!-- Preview ของ layout ปัจจุบัน -->
+  <div class="card" id="layout-preview-card" style="display:none">
+    <div class="ch">
+      <div class="ct">👁 Preview Layout ปัจจุบัน</div>
+      <button class="btn bo bsm" onclick="document.getElementById('layout-preview-card').style.display='none'">✕</button>
+    </div>
+    <div id="layout-preview-content" style="background:#f8f9fb;padding:12px;border-radius:var(--r);overflow:auto;max-height:600px"></div>
   </div>
-</div>
-
-<!-- Status bar -->
-<div id="sbar">
-  <span id="sb-pos">A1</span>|<span id="sb-merge">—</span>
-  <span style="flex:1"></span>
-  <span id="sb-paper">A4 794×1123px</span>
-</div>
 </div>
 
 
@@ -2347,6 +2255,20 @@ function notifyLayoutUpdated(name){
 }
 
 function loadDSLayout(){
+  // ลองโหลดจาก AI Designer ก่อน (HTML format)
+  var aiData=localStorage.getItem('active_form_layout');
+  if(aiData){
+    try {
+      var ad=JSON.parse(aiData);
+      if(ad.type==='html'&&ad.html){
+        var name=localStorage.getItem('active_form_name')||'AI Designer';
+        var badge=document.getElementById('ds-layout-badge');
+        if(badge) badge.textContent='🤖 Layout: '+name;
+        return {type:'html',html:ad.html};
+      }
+    } catch(e){}
+  }
+  // fallback: DS_LAYOUT เดิม
   var data=localStorage.getItem('ds_layout');
   if(data){
     DS_LAYOUT_ACTIVE=true;
@@ -2460,6 +2382,9 @@ function genTaxInvoices(){
       <div id="tax-inv-${g}-${mon}">${(function(){
         var layout=loadDSLayout();
         if(layout){
+          // AI HTML layout
+          if(layout.type==='html'&&layout.html) return layout.html;
+          // DS grid layout
           var html=renderDSLayout(layout,{taxNo:taxNo,taxDate:taxDate,cust:cust,invs:invs,beforeVat:beforeVat,vat:vat,grand:total});
           if(html) return html;
         }
@@ -4452,6 +4377,75 @@ function d2InitTab(){
   }
 }
 
+
+/* ── Designer Tab 7 ── */
+var _designerWin = null;
+
+function openAIDesigner(){
+  // ส่งข้อมูลระบบไปให้ AI Designer ผ่าน localStorage
+  try {
+    localStorage.setItem('co_data', JSON.stringify(CO));
+    localStorage.setItem('customers_data', JSON.stringify(CUSTOMERS));
+    // บันทึก invoices ตัวอย่างด้วย
+    if(S && S.invoices) localStorage.setItem('sys_invoices', JSON.stringify(S.invoices.slice(0,5)));
+  } catch(e){}
+  // เปิด AI Designer ในหน้าต่างใหม่
+  var url = 'invoice-designer-ai.html'; // ต้องวาง invoice-designer-ai.html ไว้ในโฟลเดอร์เดียวกัน
+  _designerWin = window.open(url, 'ai-designer',
+    'width=1200,height=800,toolbar=0,menubar=0,scrollbars=1,resizable=1');
+  if(!_designerWin){
+    alert('กรุณาอนุญาต popup สำหรับเว็บไซต์นี้ก่อนครับ');
+    return;
+  }
+  showToast('🤖 เปิด AI Designer แล้ว — บันทึกใน Designer แล้วกลับมากด "โหลด Layout"');
+}
+
+function loadAILayout(){
+  try {
+    var saved = localStorage.getItem('active_form_layout');
+    var name = localStorage.getItem('active_form_name') || 'ไม่ทราบชื่อ';
+    if(!saved){ alert('ยังไม่มี layout จาก AI Designer
+กรุณาสร้างและบันทึกใน AI Designer ก่อน'); return; }
+    var data = JSON.parse(saved);
+    // update status
+    document.getElementById('designer-layout-dot').style.background='#22c55e';
+    document.getElementById('designer-layout-name').textContent='✅ Layout: "'+name+'"';
+    // show preview
+    if(data.type==='html' && data.html){
+      var thumb=document.getElementById('designer-thumb-content');
+      if(thumb){ thumb.innerHTML=data.html; thumb.style.transform='scale(0.25)'; }
+      document.getElementById('designer-preview-thumb').style.display='block';
+    }
+    // notify tax invoice tab
+    notifyLayoutUpdated(name);
+    showToast('✅ โหลด Layout "'+name+'" แล้ว — Tab ใบกำกับภาษีจะใช้ layout นี้');
+  } catch(e){ alert('เกิดข้อผิดพลาด: '+e.message); }
+}
+
+function resetAILayout(){
+  if(!confirm('ล้าง layout จาก AI Designer และกลับใช้ค่าเริ่มต้น?')) return;
+  localStorage.removeItem('active_form_layout');
+  localStorage.removeItem('active_form_name');
+  localStorage.removeItem('ds_layout');
+  localStorage.removeItem('ds_layout_name');
+  document.getElementById('designer-layout-dot').style.background='#aaa';
+  document.getElementById('designer-layout-name').textContent='ยังไม่มี layout (ใช้ค่าเริ่มต้น)';
+  document.getElementById('designer-preview-thumb').style.display='none';
+  showToast('✅ ล้าง layout แล้ว — Tab ใบกำกับภาษีจะใช้รูปแบบเริ่มต้น');
+}
+
+function d2InitTab(){
+  // check saved layout
+  try {
+    var name = localStorage.getItem('active_form_name');
+    if(name){
+      document.getElementById('designer-layout-dot').style.background='#22c55e';
+      document.getElementById('designer-layout-name').textContent='✅ Layout: "'+name+'"';
+    }
+  } catch(e){}
+}
+
+function v2InitTab(){ d2InitTab(); }
 
 function exportXlsx(){
   const plant=document.getElementById('sum-plant').value;
