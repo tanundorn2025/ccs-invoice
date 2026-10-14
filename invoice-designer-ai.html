@@ -412,7 +412,14 @@ function resetForm(){
 // INIT
 // ════════════════════════════════════════════════════════════════
 setZoom(75);
-loadFromSystem();
+// โหลดครั้งเดียวเมื่อเปิดหน้า
+var _loaded = false;
+function initOnce(){
+  if(_loaded) return;
+  _loaded = true;
+  loadFromSystem();
+}
+initOnce();
 
 // โหลดแบบฟอร์มที่บันทึกไว้ (ถ้ามี)
 try {
