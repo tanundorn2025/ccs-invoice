@@ -598,7 +598,6 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
   <button class="tb" onclick="sw('t3',this)">📊 Summary</button>
   <button class="tb" onclick="sw('t5',this)">⭐ Special Invoice</button>
   <button class="tb" onclick="sw('t6',this)">🧾 ใบกำกับภาษี</button>
-  <button class="tb" onclick="sw('t7',this)">🎨 Designer</button>
   <button class="tb" onclick="sw('t4',this)">⚙️ ตั้งค่า</button>
 </nav>
 
@@ -978,68 +977,6 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
   <div id="tax-inv-list"></div>
 </div>
 
-<!-- ========== TAB 7 : DESIGNER ========== -->
-<div id="t7" class="panel">
-  <div class="card">
-    <div class="ch">
-      <div class="ct"><div class="ci">🎨</div>Invoice Form Designer</div>
-    </div>
-    <div class="alert ai" style="font-size:13px;margin-bottom:1rem">
-      🤖 <strong>AI Form Designer</strong> — ออกแบบใบกำกับภาษีด้วย AI<br>
-      <span style="font-size:12px;color:var(--muted)">บอก AI เป็นภาษาไทย หรืออัปโหลดรูปต้นฉบับ แล้ว AI จะสร้างแบบฟอร์มให้อัตโนมัติ</span>
-    </div>
-
-    <!-- ปุ่มหลัก -->
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.5rem">
-      <button class="btn bp" onclick="openAIDesigner()" style="font-size:14px;padding:10px 24px">
-        🤖 เปิด AI Designer
-      </button>
-      <button class="btn bo" onclick="loadAILayout()">
-        🔄 โหลด Layout ล่าสุดจาก Designer
-      </button>
-      <button class="btn ba" onclick="resetAILayout()">
-        ✕ ล้าง Layout (ใช้ค่าเริ่มต้น)
-      </button>
-    </div>
-
-    <!-- Status -->
-    <div id="designer-status" style="padding:12px 16px;background:var(--surf2);border-radius:var(--r);border:1px solid var(--bord);margin-bottom:1rem">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <span id="designer-layout-dot" style="width:10px;height:10px;border-radius:50%;background:#aaa;display:inline-block"></span>
-        <span id="designer-layout-name" style="font-size:13px;font-weight:600;color:var(--navy)">ยังไม่มี layout (ใช้ค่าเริ่มต้น)</span>
-      </div>
-      <div id="designer-preview-thumb" style="display:none;margin-top:8px">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Preview:</div>
-        <div id="designer-thumb-content" style="background:#fff;border:1px solid var(--bord);border-radius:4px;padding:8px;max-height:200px;overflow:hidden;transform-origin:top left;font-size:10px"></div>
-      </div>
-    </div>
-
-    <!-- วิธีใช้ -->
-    <div style="background:var(--surf2);border-radius:var(--r);padding:14px 16px;border:1px solid var(--bord)">
-      <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">📖 วิธีใช้งาน</div>
-      <div style="font-size:12.5px;color:var(--muted);line-height:2">
-        <div>1️⃣ กด <strong>"🤖 เปิด AI Designer"</strong> → หน้าต่างใหม่จะเปิดขึ้น</div>
-        <div>2️⃣ กด <strong>"📥 โหลดจากระบบ"</strong> ใน AI Designer เพื่อดึงข้อมูลบริษัท/ลูกค้า</div>
-        <div>3️⃣ พิมพ์คำสั่ง เช่น <em>"สร้างใบกำกับภาษีมาตรฐาน"</em> หรืออัปโหลดรูปต้นฉบับ</div>
-        <div>4️⃣ AI จะสร้างแบบฟอร์มให้ — ปรับแก้ด้วยคำสั่งภาษาไทยได้เรื่อยๆ</div>
-        <div>5️⃣ กด <strong>"💾 บันทึก"</strong> ใน AI Designer → layout จะถูกบันทึกใน LocalStorage</div>
-        <div>6️⃣ กลับมาที่นี่ กด <strong>"🔄 โหลด Layout"</strong> → Tab ใบกำกับภาษีจะใช้ layout ใหม่</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Preview ของ layout ปัจจุบัน -->
-  <div class="card" id="layout-preview-card" style="display:none">
-    <div class="ch">
-      <div class="ct">👁 Preview Layout ปัจจุบัน</div>
-      <button class="btn bo bsm" onclick="document.getElementById('layout-preview-card').style.display='none'">✕</button>
-    </div>
-    <div id="layout-preview-content" style="background:#f8f9fb;padding:12px;border-radius:var(--r);overflow:auto;max-height:600px"></div>
-  </div>
-</div>
-
-
-
 <!-- ========== TAB 4 : SETTINGS ========== -->
 <div id="t4" class="panel">
 
@@ -1182,7 +1119,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
   btn.classList.add('on');
   if(id==='t3') buildSum();
   if(id==='t6'){ initTaxMonDropdown(); var n=localStorage.getItem('ds_layout_name'); if(n){var b=document.getElementById('ds-layout-badge');if(b) b.textContent='🎨 Layout: '+n;} }
-  if(id==='t7'){d2InitTab();}
+
   // ซ่อน/แสดง zoom slider ตาม tab
   const zf=document.getElementById('ts-zoom-fixed');
   if(zf) zf.style.display=(id==='t1'&&document.querySelector('#ts-out .att-outer'))?'flex':'none';
@@ -2481,7 +2418,7 @@ function showSumPreview(){
     +clone.innerHTML
     +'
 <script>
-/* ── V2 DESIGNER JS V3 ──*/
+
 
 // ═══════════════════════════════════════════════════════════════
 // G = Grid Engine
