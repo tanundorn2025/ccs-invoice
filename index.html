@@ -218,7 +218,7 @@ function downloadTaxInv(divId,group,mon,taxDate){
   var el=document.getElementById(divId);
   if(!el) return;
   var css='*{box-sizing:border-box;margin:0;padding:0}@page{size:A4 portrait;margin:10mm 12mm}body{font-family:\'Sarabun\',sans-serif;font-size:10pt;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'+css+'</style></head><body onload="setTimeout(function(){window.print();},400)">'+el.innerHTML+'</body></html>';
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'+css+'</style></head><body>'+el.innerHTML+'</body></html>';
   var blob=new Blob([html],{type:'text/html;charset=utf-8'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
@@ -2414,7 +2414,7 @@ function showSumPreview(){
 
   const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Summary '+mon+'</title>'
     +'<style>'+css+'</style>'
-    +'</head><body onload="setTimeout(function(){window.print();},400)">'
+    +'</head><body>'
     +clone.innerHTML
     +'
 <script>
@@ -2910,5 +2910,5 @@ var D2G=(function(){
     if(!pp) return;
     // reset scale for export
     pp.style.transform='none';
-    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0}@page{size:A4 portrait;margin:0}body{font-family:Sarabun,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body onload="setTimeout(function(){window.print()},400)">'+pp.innerHTML+'</body>
+    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{box-sizing:border-box;margin:0;padding:0}@page{size:A4 portrait;margin:0}body{font-family:Sarabun,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>'+pp.innerHTML+'</body>
 </html>
