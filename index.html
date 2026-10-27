@@ -218,7 +218,9 @@ function downloadTaxInv(divId,group,mon,taxDate){
   var el=document.getElementById(divId);
   if(!el) return;
   var css='*{box-sizing:border-box;margin:0;padding:0}@page{size:A4 portrait;margin:10mm 12mm}body{font-family:\'Sarabun\',sans-serif;font-size:10pt;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
-  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'+css+'</style></head><body>'+el.innerHTML+'</body></html>';
+  var html='<!DOCTYPE html>
+<!-- CCS Invoice System v2.0 Clean | 2026-10-22 -->
+<html><head><meta charset="UTF-8"><style>'+css+'</style></head><body>'+el.innerHTML+'</body></html>';
   var blob=new Blob([html],{type:'text/html;charset=utf-8'});
   var url=URL.createObjectURL(blob);
   var a=document.createElement('a');
@@ -230,37 +232,19 @@ function downloadTaxInv(divId,group,mon,taxDate){
 function renderDSLayout(layout,data){ return null; }
 
 /* ── Designer Tab ── */
-var _designerWin=null;
-function openAIDesigner(){
-  try{localStorage.setItem('co_data',JSON.stringify(CO));localStorage.setItem('customers_data',JSON.stringify(CUSTOMERS));if(S&&S.invoices)localStorage.setItem('sys_invoices',JSON.stringify(S.invoices.slice(0,5)));}catch(e){}
-  var url='invoice-designer-ai.html';
-  _designerWin=window.open(url,'ai-designer','width=1200,height=800,toolbar=0,menubar=0,scrollbars=1,resizable=1');
-  if(!_designerWin){alert('กรุณาอนุญาต popup สำหรับเว็บไซต์นี้ก่อนครับ');return;}
-  showToast('🤖 เปิด AI Designer แล้ว');
-}
-function loadAILayout(){
-  try{
-    var saved=localStorage.getItem('active_form_layout');
-    var name=localStorage.getItem('active_form_name')||'ไม่ทราบชื่อ';
-    if(!saved){alert('ยังไม่มี layout จาก AI Designer');return;}
+
+
+
     document.getElementById('designer-layout-dot')&&(document.getElementById('designer-layout-dot').style.background='#22c55e');
     document.getElementById('designer-layout-name')&&(document.getElementById('designer-layout-name').textContent='✅ Layout: "'+name+'"');
     notifyLayoutUpdated(name);
     showToast('✅ โหลด Layout "'+name+'" แล้ว');
   }catch(e){alert('เกิดข้อผิดพลาด: '+e.message);}
 }
-function resetAILayout(){
-  if(!confirm('ล้าง layout?')) return;
-  localStorage.removeItem('active_form_layout');localStorage.removeItem('active_form_name');
-  localStorage.removeItem('ds_layout');localStorage.removeItem('ds_layout_name');
-  document.getElementById('designer-layout-dot')&&(document.getElementById('designer-layout-dot').style.background='#aaa');
-  document.getElementById('designer-layout-name')&&(document.getElementById('designer-layout-name').textContent='ยังไม่มี layout');
-  showToast('✅ ล้าง layout แล้ว');
+
+}catch(e){}
 }
-function d2InitTab(){
-  try{var name=localStorage.getItem('active_form_name');if(name){document.getElementById('designer-layout-dot')&&(document.getElementById('designer-layout-dot').style.background='#22c55e');document.getElementById('designer-layout-name')&&(document.getElementById('designer-layout-name').textContent='✅ Layout: "'+name+'"');}}catch(e){}
-}
-function v2InitTab(){ d2InitTab(); }
+
 
 PE html>
 <html lang="th">
@@ -488,101 +472,23 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .print-header-block{display:none}
 
 
-/* ── Designer V2 ── */
-
-
 /* toolbar */
-#t7 #tb1, #t7 #tb2 {display:flex;align-items:center;gap:4px;padding:5px 8px;background:#13151b;border-bottom:1px solid #2a2e3a;flex-wrap:wrap;flex-shrink:0}
-#t7 #tb1 {border-bottom:2px solid #2a6bdf}
-#t7 .btn {background:#252830;border:1px solid #333846;color:#b8bcc8;padding:4px 9px;border-radius:4px;font-size:12px;cursor:pointer;font-family:'Sarabun',sans-serif;white-space:nowrap;line-height:1.4}
-#t7 .btn:hover {background:#2e3340;color:#fff}
-#t7 .btn.act {background:#2a6bdf;color:#fff;border-color:#1a5bcf}
-#t7 .btn.g {background:#1a3d1a;color:#7fdf6f;border-color:#2a5d2a}
-#t7 .btn.r {background:#3d1a1a;color:#ef8f8f;border-color:#5d2a2a}
-#t7 .btn.p {background:#2d1a4a;color:#c0a0ff;border-color:#4d3a7a}
-#t7 .sep {width:1px;height:22px;background:#2a2e3a;margin:0 2px;flex-shrink:0}
-#t7 .lbl {font-size:11px;color:#6a7080;white-space:nowrap}
 
 /* formula bar */
-#t7 #fbar {display:flex;align-items:center;background:#13151b;border-bottom:1px solid #2a2e3a;flex-shrink:0;height:26px}
-#t7 #fcell {width:72px;padding:3px 8px;font-size:12px;font-family:monospace;background:#1e2229;border:none;border-right:1px solid #2a2e3a;color:#6ab4ff;text-align:center;height:100%}
-#t7 #fcell:focus {outline:none}
-#t7 #fval {flex:1;padding:3px 8px;font-size:12px;background:#1e2229;border:none;color:#c8ccd8;font-family:'Sarabun',sans-serif;height:100%;-webkit-user-select:text;user-select:text}
-#t7 #fval:focus {outline:none;background:#16181f}
 
 /* main */
-#t7 #main {display:flex;flex:1;overflow:hidden;min-height:0}
 
 /* grid */
-#t7 #gscroll {flex:1;overflow:auto;background:#252830;position:relative}
-#t7 #gwrap {display:inline-block;position:relative}
-#t7 #corner {position:sticky;top:0;left:0;width:46px;height:24px;background:#13151b;border-right:1px solid #2a2e3a;border-bottom:2px solid #2a6bdf;z-index:30;flex-shrink:0}
-#t7 #colhdrs {position:sticky;top:0;display:flex;background:#13151b;border-bottom:2px solid #2a6bdf;z-index:20;padding-left:46px}
-#t7 .chdr {height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#6a7080;border-right:1px solid #2a2e3a;flex-shrink:0;cursor:col-resize;position:relative;-webkit-user-select:none;user-select:none}
-#t7 .chdr.hl {background:#1a3560;color:#6ab4ff}
-#t7 .chdr.sel {background:#2a6bdf;color:#fff}
-#t7 .chdr-rz {position:absolute;right:-3px;top:0;width:6px;height:100%;cursor:col-resize;z-index:5}
-#t7 .chdr-rz:hover {background:rgba(42,107,223,.6)}
 
-#t7 #gbody {display:block}
-#t7 .grow {display:flex}
-#t7 .rnum {width:46px;min-width:46px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6a7080;border-right:1px solid #2a2e3a;border-bottom:1px solid #252830;background:#13151b;flex-shrink:0;position:sticky;left:0;z-index:10;cursor:row-resize;-webkit-user-select:none;user-select:none;position:relative}
-#t7 .rnum.hl {background:#1a3560;color:#6ab4ff}
-#t7 .rnum.sel {background:#2a6bdf;color:#fff}
-#t7 .rnum-rz {position:absolute;bottom:-3px;left:0;width:100%;height:6px;cursor:row-resize;z-index:5}
-#t7 .rnum-rz:hover {background:rgba(42,107,223,.6)}
 
-#t7 .cell {display:flex;align-items:flex-start;flex-shrink:0;overflow:hidden;cursor:cell;position:relative;background:#fff;border-right:1px solid #d0d4dc;border-bottom:1px solid #d0d4dc}
-#t7 .cell.mhide {display:none}
-#t7 .cell.csel {outline:2px solid #2a6bdf!important;outline-offset:-2px;z-index:8}
-#t7 .cell.cinsel {background:#ddeeff!important}
-#t7 .cell-txt {width:100%;height:100%;padding:2px 4px;font-family:'Sarabun',sans-serif;font-size:10pt;line-height:1.35;overflow:hidden;white-space:pre-wrap;word-break:break-word;outline:none;-webkit-user-select:text;user-select:text}
-#t7 .cell-txt[contenteditable=true] {cursor:text;background:rgba(255,255,255,.05)}
 
 /* side panel */
-#t7 #side {width:220px;background:#13151b;border-left:1px solid #2a2e3a;overflow-y:auto;flex-shrink:0;font-size:12px}
-#t7 .sph {padding:6px 10px;font-size:10px;font-weight:700;color:#5a6070;letter-spacing:.07em;text-transform:uppercase;background:#0d0f14;border-bottom:1px solid #2a2e3a;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
-#t7 .spb {padding:8px 10px;display:flex;flex-direction:column;gap:5px}
-#t7 .spr {display:flex;align-items:center;gap:5px}
-#t7 .spl {font-size:11px;color:#5a6070;min-width:56px;flex-shrink:0}
-#t7 .spi {background:#0d0f14;border:1px solid #2a2e3a;color:#b8bcc8;border-radius:3px;padding:3px 5px;font-size:11.5px;width:100%;font-family:'Sarabun',sans-serif}
-#t7 .spi:focus {outline:none;border-color:#2a6bdf}
 
 /* preview */
-#t7 #prev {width:280px;background:#3a3e48;border-left:1px solid #2a2e3a;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
-#t7 #prevhdr {padding:5px 10px;font-size:10px;font-weight:700;color:#5a6070;text-transform:uppercase;background:#0d0f14;border-bottom:1px solid #2a2e3a;flex-shrink:0;display:flex;justify-content:space-between;align-items:center}
-#t7 #prevscroll {flex:1;overflow:auto;padding:10px}
-#t7 #prevpaper {background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.5);transform-origin:top left}
 
 /* status */
-#t7 #sbar {height:20px;background:#0d0f14;border-top:1px solid #2a2e3a;display:flex;align-items:center;padding:0 10px;font-size:10.5px;color:#5a6070;gap:10px;flex-shrink:0}
 
 
-/* ── DS Designer Styles ── */
-.ds-tb{background:#2e3341;border:1px solid #3a3f4e;color:#c8ccd8;padding:3px 8px;border-radius:5px;font-size:11.5px;cursor:pointer;font-family:'Sarabun',sans-serif;white-space:nowrap}
-.ds-tb:hover{background:#3a3f4e;color:#fff}
-.ds-tb.ds-on{background:#4a90d9;color:#fff;border-color:#4a90d9}
-.ds-tlb{width:34px;height:34px;border-radius:6px;border:1px solid transparent;background:none;color:#8891aa;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.ds-tlb:hover{background:#2e3341;color:#c8ccd8}
-.ds-tlb.ds-on{background:#4a90d9;color:#fff}
-.ds-el{position:absolute;cursor:move}
-.ds-el.ds-sel{outline:2px solid #4a90d9;outline-offset:0;z-index:1000!important}
-.ds-el.ds-sel .ds-rh{display:block}
-.ds-rh{display:none;position:absolute;width:8px;height:8px;background:#4a90d9;border:1.5px solid #fff;border-radius:2px;z-index:1001}
-.ds-rh-nw{top:-4px;left:-4px;cursor:nw-resize}
-.ds-rh-n{top:-4px;left:calc(50% - 4px);cursor:n-resize}
-.ds-rh-ne{top:-4px;right:-4px;cursor:ne-resize}
-.ds-rh-e{top:calc(50% - 4px);right:-4px;cursor:e-resize}
-.ds-rh-se{bottom:-4px;right:-4px;cursor:se-resize}
-.ds-rh-s{bottom:-4px;left:calc(50% - 4px);cursor:s-resize}
-.ds-rh-sw{bottom:-4px;left:-4px;cursor:sw-resize}
-.ds-rh-w{top:calc(50% - 4px);left:-4px;cursor:w-resize}
-.ds-pg{background:#2a2d35;border-radius:6px;overflow:hidden;margin-bottom:4px}
-.ds-pgh{padding:6px 10px;font-size:10.5px;font-weight:700;color:#8891aa;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;display:flex;justify-content:space-between;background:#232631}
-.ds-pr{display:flex;align-items:center;justify-content:space-between;padding:4px 10px;gap:6px;border-top:1px solid #1e2128}
-.ds-pl{font-size:11px;color:#8891aa;white-space:nowrap;flex-shrink:0;min-width:72px}
-.ds-pi{background:#1e2128;border:1px solid #3a3f4e;color:#c8ccd8;border-radius:4px;padding:3px 6px;font-size:11.5px;width:100%;font-family:'Sarabun',sans-serif}
-.ds-pi:focus{outline:none;border-color:#4a90d9}
 </style>
 </head>
 <body>
@@ -954,8 +860,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
       <span id="ds-layout-badge" style="font-size:12px;color:#8891aa;padding:3px 8px;background:var(--surf2);border-radius:6px;border:1px solid var(--bord)">🎨 Layout: ค่าเริ่มต้น</span>
-      <button class="btn bo bsm" onclick="sw('t7',document.querySelectorAll('.tb')[6])">🎨 ปรับแบบฟอร์มใน Designer</button>
-    </div>
+        </div>
     <div class="alert ai" style="font-size:12.5px">
       💡 ระบบจะดึง Invoice ทั้งหมดจาก Summary เดือนที่เลือก (รวม Special Invoice) และออกใบกำกับภาษีแยกตามกลุ่มลูกค้าอัตโนมัติ<br>
       ✏️ กด "ปรับแบบฟอร์ม" → แก้ layout → Save → กลับมา Tab นี้ → ออกใบใหม่จะใช้ layout ที่แก้ไว้ทันที
