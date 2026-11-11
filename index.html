@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-11b | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-11d | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -183,6 +183,18 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .ask-box .ask-msg{font-size:13.5px;color:#333;line-height:1.6}
 .ask-box .ask-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
 
+/* Invoice live total */
+.inv-live{margin-top:1rem;border:1px solid var(--bord);border-radius:var(--r);overflow:hidden}
+.inv-live table{width:100%;border-collapse:collapse;font-size:13px}
+.inv-live td{padding:6px 12px;border-bottom:1px solid #eef0f4}
+.inv-live td.n{text-align:right;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+.inv-live tr.g td{background:var(--navy);color:#fff;font-weight:800;font-size:14.5px;border-bottom:none}
+.inv-live tr.s td{background:#f4f6fa;font-weight:700}
+
+.inv-edit{margin:.25rem 0 1rem;padding:10px 13px;border-radius:var(--r);font-size:13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.inv-edit.conf{background:#e8f6ee;border:1px solid #a9dcbc;border-left:4px solid #1d8a4a;color:#14532d}
+.inv-edit.draft{background:var(--goldbg);border:1px solid #e9c77a;border-left:4px solid var(--gold);color:#6b4a00}
+
 /* DATA TABLE */
 .dt{width:100%;border-collapse:collapse;font-size:13px}
 .dt th{background:var(--surf2);padding:8px 10px;text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--bord)}
@@ -276,7 +288,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11b</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11d</div>
 </header>
 
 <nav class="tabs">
@@ -456,12 +468,13 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
       <div class="ct"><div class="ci">📄</div>ข้อมูล Invoice</div>
       <button class="btn bp bsm" onclick="printInv()">🖨️ พิมพ์ Invoice</button>
     </div>
+    <div id="inv-edit-banner"></div>
     <div class="g2">
-      <div class="fg"><label>เลขที่ Invoice</label><input type="text" id="inv-no" placeholder="เช่น CCS-H.OPTICS-SLR-NOV.-1(24)" oninput="this.dataset.auto=''"></div>
-      <div class="fg"><label>วันที่ออก</label><input type="date" id="inv-dt" onchange="_preferTsId=null;loadTStoInv();autoFillInvNo()"></div>
+      <div class="fg"><label>เลขที่ Invoice</label><input type="text" id="inv-no" placeholder="เช่น CCS-H.OPTICS-SLR-NOV.-1(24)" oninput="this.dataset.auto='';calcInv()"></div>
+      <div class="fg"><label>วันที่ออก</label><input type="date" id="inv-dt" onchange="_preferTsId=null;loadTStoInv();autoFillInvNo();calcInv()"></div>
       <div class="fg">
         <label>โรงงาน (Plant)</label>
-        <select id="inv-plant" onchange="onInvPlantChange();autoFillInvNo()">
+        <select id="inv-plant" onchange="onInvPlantChange();autoFillInvNo();calcInv()">
           <option value="SLR">HOYA OPTICS SLR</option>
           <option value="GMO">HOYA OPTICS GMO</option>
           <option value="PO">HOYA OPTICS PO</option>
@@ -470,11 +483,11 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
       </div>
       <div class="fg">
         <label>แผนก (Department)</label>
-        <select id="inv-dept" onchange="loadTStoInv();autoFillInvNo()"><option value="MAIN">MAIN</option></select>
+        <select id="inv-dept" onchange="loadTStoInv();autoFillInvNo();calcInv()"><option value="MAIN">MAIN</option></select>
       </div>
       <div class="fg full">
         <label>ประเภทบริการ</label>
-        <select id="inv-svc">
+        <select id="inv-svc" onchange="calcInv()">
           <option>CLEANING WORK SERVICE</option>
           <option>GARDEN WORK SERVICE</option>
           <option>DISH WASHING SERVICE</option>
@@ -487,7 +500,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     <div class="g4">
       <div class="fg"><label>จำนวนพนักงาน (คน)</label><input type="number" id="i-cnt" value="5" oninput="calcInv()"></div>
       <div class="fg"><label>อัตรา/คน/เดือน (฿)</label><input type="number" id="i-rate" value="11900" oninput="calcInv()"></div>
-      <div class="fg"><label>วันขาด/หยุด (วัน)</label><input type="number" id="i-abs" value="0" oninput="calcInv()"></div>
+      <div class="fg"><label>วันทำงานพนักงานคิดรายวัน (วัน)</label><input type="number" id="i-abs" value="0" oninput="calcInv()"></div>
       <div class="fg"><label>อัตรา/วัน (฿) auto</label><input type="number" id="i-drate" readonly></div>
     </div>
 
@@ -508,9 +521,12 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
       <div class="fg"><label>รวมค่าวันหยุด (฿) auto</label><input type="number" id="i-holamt" readonly></div>
     </div>
 
+    <div id="inv-live" class="inv-live"></div>
+
     <div class="brow">
-      <button class="btn bp" onclick="calcInv()">🔄 คำนวณ</button>
-      <button class="btn ba" onclick="saveInv()">💾 บันทึก Invoice</button>
+      <button class="btn bo" onclick="pullLatestInv()" title="ดึงค่าจากใบบันทึกเวลาและการตั้งค่าล่าสุดใหม่">🔄 ดึงค่าล่าสุด</button>
+      <button class="btn ba" id="inv-save-btn" onclick="saveInv(false)">💾 บันทึกร่าง</button>
+      <button class="btn bs" onclick="saveInv(true)">✅ บันทึกและยืนยัน</button>
       <button class="btn bs" onclick="showInvPreview()">👁️ Preview</button>
     </div>
   </div>
@@ -521,6 +537,21 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
       <button class="btn bo bsm no-print" onclick="document.getElementById('inv-preview').style.display='none'">✕</button>
     </div>
     <div id="inv-html"></div>
+  </div>
+  <div class="card no-print">
+    <div class="ch" style="flex-wrap:wrap;gap:8px">
+      <div class="ct">📁 Invoice ที่บันทึกไว้</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <select id="inv-list-mon" onchange="renderInvList()" style="width:auto;padding:5px 9px;font-size:12.5px"></select>
+        <button class="btn bs bsm" onclick="confirmMonth()">✅ ยืนยันทั้งเดือน</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
+      <span class="badge bg-gold">ร่าง</span> ยอดเงินจะคำนวณใหม่ตามอัตราในตั้งค่าอัตโนมัติ ·
+      <span class="badge bg-green">✅ ยืนยันแล้ว</span> ยอดเงินคงที่ ไม่เปลี่ยนตามตั้งค่า (แก้ไขเองได้ด้วยปุ่ม ✏️) ·
+      <span class="badge bg-navy">🔒</span> อยู่ในใบกำกับภาษีที่ออกแล้ว แก้ไขไม่ได้
+    </div>
+    <div id="inv-list"><p style="color:var(--light);font-size:13px">ยังไม่มี Invoice</p></div>
   </div>
 </div>
 
@@ -817,10 +848,7 @@ service cloud.firestore {
     <div id="fac-cfg"></div>
     <div class="brow"><button class="btn bp" onclick="saveCfg()">💾 บันทึกการตั้งค่า</button></div>
   </div>
-  <div class="card">
-    <div class="ch"><div class="ct">📁 Invoice ที่บันทึกไว้</div></div>
-    <div id="inv-list"><p style="color:var(--light);font-size:13px">ยังไม่มี Invoice</p></div>
-  </div>
+
 </div>
 
 </div><!-- /wrap -->
@@ -1253,6 +1281,7 @@ function sw(id,btn,force){
   document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   btn.classList.add('on');
+  if(id==='t2') loadTStoInv();
   if(id==='t3'){refreshMonthSelects();buildSum();}
   if(id==='t6') initTaxMonDropdown();
   // ซ่อน/แสดง zoom slider ตาม tab
@@ -1870,7 +1899,7 @@ function updateGroupTotal(grp){
   if(elOT) elOT.textContent=fmtOT(tOT);
   const tH=rows.reduce((s,r)=>s+(parseFloat(r.h)||0),0);
   const elH=document.getElementById(`tot-h-${grp}`);
-  if(elH) elH.textContent=tH||'0';
+  if(elH) elH.textContent=tH>0?tH:'-';
   const tOTH=rows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0);
   const elOTH=document.getElementById(`tot-oth-${grp}`);
   if(elOTH) elOTH.textContent=fmtOT(tOTH);
@@ -2273,7 +2302,8 @@ function pickTSForInv(plant,dept,invDt){
   return (invDt&&sorted.find(t=>t.de<=invDt))||sorted[0];
 }
 
-function loadTStoInv(){
+function loadTStoInv(force){
+  if(_editInvId&&!force){ calcInv(); return; }   // กำลังแก้ไข Invoice ที่บันทึกไว้ → ใช้ค่าที่บันทึกไว้
   const plant=document.getElementById('inv-plant').value;
   const dept=document.getElementById('inv-dept').value;
   const invDt=document.getElementById('inv-dt').value;
@@ -2365,15 +2395,42 @@ function calcInv(){
   const d=getCalc();
   document.getElementById('i-otamt').value=d.ot_amt.toFixed(2);
   document.getElementById('i-holamt').value=(d.hol_amt+d.hol_ot).toFixed(2);
+  const live=document.getElementById('inv-live');
+  if(live){
+    const row=(l,v,c='')=>`<tr class="${c}"><td>${l}</td><td class="n">${fmt(v)}</td></tr>`;
+    live.innerHTML=`<table>
+      ${row(`ค่าจ้างตามสัญญา (${d.cnt} คน × ${fmt(d.rate)})`,d.contract)}
+      ${d.part_amt?row(`พนักงานคิดรายวัน (${d.abs} วัน × ${fmt(d.dr)})`,d.part_amt):''}
+      ${row(`OT (${d.oth} ชม. × ${fmt(d.otr)})`,d.ot_amt)}
+      ${(d.hol_amt||d.hol_ot)?row(`วันหยุด (${d.hd} วัน × ${fmt(d.hr)}${d.hot?` + OT ${d.hot} ชม.`:''})`,d.hol_amt+d.hol_ot):''}
+      ${row('Up Total',d.up,'s')}
+      ${row('VAT 7%',d.vat)}
+      ${row('Grand Total (฿)',d.grand,'g')}
+    </table>`;
+  }
+  // Preview ที่เปิดอยู่ อัปเดตตามทันที
+  const pv=document.getElementById('inv-preview');
+  if(pv&&pv.style.display!=='none'&&!_invPreviewBusy){_invPreviewBusy=true;try{showInvPreview();}finally{_invPreviewBusy=false;}}
   return d;
 }
+var _invPreviewBusy=false;
 
+/* คำนวณยอดจากค่าตั้งต้น (ใช้ทั้งฟอร์มและการคำนวณ Invoice ร่างใหม่ตามอัตราล่าสุด) */
+function calcFromInputs(o){
+  const cnt=+o.cnt||0, rate=+o.rate||0, abs=+o.abs||0;
+  const dr=parseFloat((rate/30).toFixed(4));
+  const oth=+o.oth||0, otp=+o.otp||1, otr=+o.otr||0;
+  const hp=+o.hp||0, hd=+o.hd||0, hr=+o.hr||0, hot=+o.hot||0;
+  const contract=rate*cnt, part_amt=dr*abs, ot_amt=otr*oth, hol_amt=hr*hd, hol_ot=(hr/8)*hot;
+  const up=contract+part_amt+ot_amt+hol_amt+hol_ot, vat=up*0.07, grand=up+vat;
+  return {cnt,rate,abs,dr,contract,part_amt,oth,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hol_ot,up,vat,grand};
+}
 function getCalc(){
   const cnt=parseInt(document.getElementById('i-cnt').value)||0;
   const rate=parseFloat(document.getElementById('i-rate').value)||0;
   const abs=parseInt(document.getElementById('i-abs').value)||0;
   const dr=parseFloat((rate/30).toFixed(4));
-  const partAmt=parseFloat(document.getElementById('i-partamt')?.value||0)||0;
+  const partAmt=dr*abs;  // พนักงานคิดรายวัน: วันทำงานรวม × อัตรา/วัน (ตามอัตราปัจจุบัน)
   const oth=parseFloat(document.getElementById('i-oth').value)||0;
   const otp=parseInt(document.getElementById('i-otp').value)||1;
   const otr=parseFloat(document.getElementById('i-otr').value)||0;
@@ -2421,7 +2478,7 @@ function showInvPreview(){
     <thead><tr><th style="text-align:left">รายการ</th><th style="text-align:right">จำนวน</th><th style="text-align:right">อัตรา (฿)</th><th style="text-align:right">จำนวนเงิน (฿)</th></tr></thead>
     <tbody>
       <tr><td>Monthly Cleaning Charge On Contract (${d.cnt} persons)</td><td class="num">${d.cnt}</td><td class="num">${fmt(d.rate)}</td><td class="num">${fmt(d.contract)}</td></tr>
-      ${d.part_amt>0?(window._lastSummary&&window._lastSummary.partial.length?window._lastSummary.partial.map(r=>{const dr2=(parseFloat(document.getElementById('i-rate').value)||11900)/30;return `<tr><td>Daily Rate — ${esc(r.name)} (${r.worked} วัน × ${fmt(dr2)}/วัน)</td><td class="num">${r.worked}</td><td class="num">${fmt(dr2)}/วัน</td><td class="num">${fmt(dr2*r.worked)}</td></tr>`;}).join(''):(`<tr><td>Daily Rate (${d.abs} วัน × ${fmt(d.dr)}/วัน)</td><td class="num">${d.abs}</td><td class="num">${fmt(d.dr)}/วัน</td><td class="num">${fmt(d.part_amt)}</td></tr>`)):''}
+      ${d.part_amt>0?(window._lastSummary&&window._lastSummary.partial.length&&window._lastSummary.partial.reduce((s,r)=>s+(+r.worked||0),0)===d.abs?window._lastSummary.partial.map(r=>{const dr2=(parseFloat(document.getElementById('i-rate').value)||11900)/30;return `<tr><td>Daily Rate — ${esc(r.name)} (${r.worked} วัน × ${fmt(dr2)}/วัน)</td><td class="num">${r.worked}</td><td class="num">${fmt(dr2)}/วัน</td><td class="num">${fmt(dr2*r.worked)}</td></tr>`;}).join(''):(`<tr><td>Daily Rate (${d.abs} วัน × ${fmt(d.dr)}/วัน)</td><td class="num">${d.abs}</td><td class="num">${fmt(d.dr)}/วัน</td><td class="num">${fmt(d.part_amt)}</td></tr>`)):''}
       ${d.ot_amt>0?`<tr><td>Over Time Fee (${d.oth} hrs)</td><td class="num">${d.oth} ชม.</td><td class="num">${fmt(d.otr)}/ชม.</td><td class="num">${fmt(d.ot_amt)}</td></tr>`:''}
       ${d.hol_amt>0?`<tr><td>Holiday Work (ทำงานวันหยุด × 2) — ${d.hd} วัน</td><td class="num">${d.hd} วัน</td><td class="num">${fmt(d.hr)}/วัน</td><td class="num">${fmt(d.hol_amt)}</td></tr>`:''}
       ${d.hol_ot>0?`<tr><td>Over Time Holiday — ${d.hot} ชม.</td><td class="num">${d.hot} ชม.</td><td class="num">${fmt(d.hr/8)}/ชม.</td><td class="num">${fmt(d.hol_ot)}</td></tr>`:''}
@@ -2441,11 +2498,13 @@ function showInvPreview(){
     </div>
   </div>
   </div>`;
-  document.getElementById('inv-preview').style.display='block';
-  document.getElementById('inv-preview').scrollIntoView({behavior:'smooth'});
+  const pvEl=document.getElementById('inv-preview');
+  const wasOpen=pvEl.style.display!=='none';
+  pvEl.style.display='block';
+  if(!wasOpen) pvEl.scrollIntoView({behavior:'smooth'});
 }
 
-function saveInv(){
+function saveInv(confirmIt){
   const d=calcInv();
   const plant=document.getElementById('inv-plant').value;
   const dept=document.getElementById('inv-dept').value;
@@ -2454,55 +2513,194 @@ function saveInv(){
   if(!no){alert('กรุณากรอกเลขที่ Invoice');return;}
   if(!dt){alert('กรุณาเลือกวันที่ออก');return;}
   const key=`${plant}__${dept}__${dt.slice(0,7)}`;
-  const old=S.invoices.find(i=>i.type!=='special'&&i.key===key);
+  const editing=_editInvId?S.invoices.find(i=>i.id===_editInvId):null;
+  const old=editing||S.invoices.find(i=>i.type!=='special'&&i.key===key);
   const pName=CFG[plant]?.name||plant, dName=CFG[plant]?.depts?.[dept]?.name||dept;
+  let manual=false;
   if(old){
     const r=taxRecOfInv(old.id);
     if(r){alert(`Invoice ${old.no} อยู่ในใบกำกับภาษี ${r.no} ที่ออกแล้ว จึงแก้ไขไม่ได้\nต้องยกเลิกใบกำกับภาษีก่อน (แท็บใบกำกับภาษี)`);return;}
-    if(!confirm(`มี Invoice ของ ${pName} / ${dName} เดือน ${monthLabel(dt.slice(0,7))} อยู่แล้ว (${old.no})\nต้องการบันทึกทับหรือไม่?`)) return;
+    const oldConf=invStatus(old)==='confirmed';
+    if(oldConf){
+      manual=true;
+      if(!confirm(`Invoice ${old.no} (${pName} / ${dName} เดือน ${monthLabel((old.dt||'').slice(0,7))}) ยืนยันแล้ว\n\nบันทึกการแก้ไขแบบ manual ด้วยค่าบนหน้าจอ?\nยอดเดิม ${fmtNum(old.grand)} → ยอดใหม่ ${fmtNum(d.grand)} บาท`)) return;
+    } else if(!editing){
+      if(!confirm(`มี Invoice ร่างของ ${pName} / ${dName} เดือน ${monthLabel(dt.slice(0,7))} อยู่แล้ว (${old.no})\nต้องการบันทึกทับหรือไม่?`)) return;
+    }
   }
   const dup=S.invoices.find(i=>i.no===no&&i!==old);
   if(dup){alert(`เลขที่ ${no} ถูกใช้กับ Invoice อื่นแล้ว`);return;}
   const ts=window._lastTS;
+  const sum=window._lastSummary;
+  const wasConf=old&&invStatus(old)==='confirmed';
+  const status=(confirmIt||wasConf)?'confirmed':'draft';
   const rec={id:old?old.id:Date.now(),key,plant,dept,no,dt,
     service:document.getElementById('inv-svc').value,
-    tsId:ts?ts.id:null, tsPeriod:ts?`${ts.ds}..${ts.de}`:null, ...d};
+    tsId:ts?ts.id:(old?old.tsId:null), tsPeriod:ts?`${ts.ds}..${ts.de}`:(old?old.tsPeriod:null),
+    partial:sum&&sum.partial?sum.partial.map(r=>({name:r.name,worked:r.worked})):(old?.partial||[]),
+    ...d, status,
+    confirmedAt:status==='confirmed'?(wasConf?old.confirmedAt:new Date().toISOString()):null,
+    edits:old?.edits||[]};
+  if(manual&&Math.abs((old.grand||0)-d.grand)>0.004) rec.edits=[...rec.edits,{at:new Date().toISOString(),grandBefore:old.grand,grandAfter:+d.grand.toFixed(2)}];
   S.invoices=S.invoices.filter(i=>i!==old);
   S.invoices.push(rec);
   persistLocal();
+  if(editing) _editInvId=rec.id;
+  renderInvEditBanner();
   renderInvList();
   refreshMonthSelects();
   buildSum();
   dbSaveInv(rec);
-  alert(`✅ บันทึก Invoice "${no}" เรียบร้อย`);
+  alert(`✅ บันทึก Invoice "${no}" เป็น${status==='confirmed'?' “ยืนยันแล้ว” (ยอดคงที่)':' “ร่าง” (จะตามอัตราในตั้งค่า)'} เรียบร้อย`);
 }
 
+function invStatus(i){ return i.status||'confirmed'; }   // ข้อมูลเก่าก่อนมีสถานะ = ถือว่ายืนยันแล้ว
 function renderInvList(){
   const el=document.getElementById('inv-list');
   if(!el) return;
-  if(!S.invoices.length){el.innerHTML='<p style="color:var(--light);font-size:13px">ยังไม่มี Invoice</p>';return;}
-  const list=[...S.invoices].sort((a,b)=>(b.dt||'').localeCompare(a.dt||'')||String(a.no).localeCompare(String(b.no)));
-  el.innerHTML=`<table class="dt"><thead><tr>
-    <th>Invoice No.</th><th>โรงงาน</th><th>แผนก</th><th>วันที่</th>
+  const monSel=document.getElementById('inv-list-mon');
+  if(monSel){
+    const months=[...new Set(S.invoices.map(i=>(i.dt||'').slice(0,7)).filter(Boolean))].sort().reverse();
+    const cur=monSel.value;
+    monSel.innerHTML='<option value="">ทุกเดือน</option>'+months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+    monSel.value=months.includes(cur)?cur:(cur===''&&monSel.dataset.init?'':(months[0]||''));
+    monSel.dataset.init='1';
+  }
+  const mon=monSel?monSel.value:'';
+  const list=S.invoices.filter(i=>!mon||(i.dt||'').startsWith(mon))
+    .sort((a,b)=>(b.dt||'').localeCompare(a.dt||'')||String(a.no).localeCompare(String(b.no)));
+  if(!list.length){el.innerHTML='<p style="color:var(--light);font-size:13px">ยังไม่มี Invoice</p>';return;}
+  el.innerHTML=`<div style="overflow-x:auto"><table class="dt"><thead><tr>
+    <th>Invoice No.</th><th>สถานะ</th><th>โรงงาน</th><th>แผนก</th><th>วันที่</th>
     <th class="num">Up Total</th><th class="num">VAT 7%</th><th class="num">Grand Total</th><th></th>
   </tr></thead><tbody>`+
   list.map(i=>{
     const r=taxRecOfInv(i.id);
-    return `<tr>
-    <td style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">${esc(i.no)}${i.type==='special'?' <span class="badge bg-gold">⭐ Special</span>':''}${r?` <span class="badge bg-green" title="อยู่ในใบกำกับภาษีที่ออกแล้ว">🔒 ${esc(r.no)}</span>`:''}</td>
+    const conf=invStatus(i)==='confirmed';
+    const st=r?`<span class="badge bg-navy" title="อยู่ในใบกำกับภาษีที่ออกแล้ว">🔒 ${esc(r.no)}</span>`
+      :conf?`<span class="badge bg-green" title="${i.confirmedAt?'ยืนยันเมื่อ '+new Date(i.confirmedAt).toLocaleString('th-TH'):''}">✅ ยืนยันแล้ว</span>`
+      :'<span class="badge bg-gold">ร่าง</span>';
+    const ed=(i.edits||[]).length?` <span class="badge" style="background:#eef0f4;color:var(--muted)" title="${(i.edits||[]).map(e=>new Date(e.at).toLocaleString('th-TH')+': '+fmtNum(e.grandBefore)+' → '+fmtNum(e.grandAfter)).join('\n')}">แก้ไข ${(i.edits||[]).length} ครั้ง</span>`:'';
+    const btns=r?'':`<button class="btn bo bsm" onclick="editInv(${i.id})" title="แก้ไขแบบ manual">✏️</button>
+      ${conf?`<button class="btn bo bsm" onclick="unconfirmInv(${i.id})" title="กลับเป็นร่าง">↩ ร่าง</button>`:`<button class="btn bs bsm" onclick="confirmInv(${i.id})">✅ ยืนยัน</button>`}
+      <button class="btn bd bsm" onclick="delInv(${i.id})">ลบ</button>`;
+    return `<tr${i.id===_editInvId?' style="background:#eef4ff"':''}>
+    <td style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">${esc(i.no)}${i.type==='special'?' <span class="badge bg-gold">⭐ Special</span>':''}</td>
+    <td style="white-space:nowrap">${st}${ed}</td>
     <td><span class="badge bg-navy">${esc((CFG[i.plant]||{}).name||i.plant)}</span></td>
     <td><span class="badge bg-gold">${esc(CFG[i.plant]?.depts?.[i.dept]?.name||i.dept)}</span></td>
     <td style="font-size:11.5px">${esc(i.dt||'')}</td>
     <td class="num">${fmt(i.up)}</td><td class="num">${fmt(i.vat)}</td>
     <td class="num" style="font-weight:700;color:var(--navy)">${fmt(i.grand)}</td>
-    <td>${r?'':`<button class="btn bd bsm" onclick="delInv(${i.id})">ลบ</button>`}</td>
-  </tr>`;}).join('')+'</tbody></table>';
+    <td style="white-space:nowrap">${btns}</td>
+  </tr>`;}).join('')+'</tbody></table></div>';
+}
+
+function setInvStatus(list,status){
+  const now=new Date().toISOString();
+  list.forEach(i=>{i.status=status;i.confirmedAt=status==='confirmed'?now:null;dbSaveInv(i,true);});
+  persistLocal();
+  renderInvList();renderSpSaved();buildSum();renderInvEditBanner();
+}
+function confirmInv(id){
+  const i=S.invoices.find(x=>x.id===id); if(!i) return;
+  if(!confirm(`ยืนยัน Invoice ${i.no}?\nยอด ${fmtNum(i.grand)} บาทจะคงที่ ไม่เปลี่ยนตามการแก้ไขในตั้งค่าอีก`)) return;
+  setInvStatus([i],'confirmed');
+  showToast('✅ ยืนยัน '+i.no+' แล้ว');
+}
+function unconfirmInv(id){
+  const i=S.invoices.find(x=>x.id===id); if(!i) return;
+  if(taxRecOfInv(id)){alert('Invoice นี้อยู่ในใบกำกับภาษีที่ออกแล้ว');return;}
+  if(!confirm(`เปลี่ยน ${i.no} กลับเป็นร่าง?\n${i.type==='special'?'':'ยอดเงินจะถูกคำนวณใหม่ตามอัตราในตั้งค่าครั้งถัดไปที่มีการแก้ไขอัตรา'}`)) return;
+  setInvStatus([i],'draft');
+}
+function confirmMonth(){
+  const mon=document.getElementById('inv-list-mon')?.value;
+  if(!mon){alert('กรุณาเลือกเดือนก่อน');return;}
+  const list=S.invoices.filter(i=>(i.dt||'').startsWith(mon)&&invStatus(i)!=='confirmed');
+  if(!list.length){alert(`Invoice ทุกใบของ ${monthLabel(mon)} ยืนยันแล้ว`);return;}
+  const tot=list.reduce((s,i)=>s+(i.grand||0),0);
+  if(!confirm(`ยืนยัน Invoice ร่างของ ${monthLabel(mon)} ทั้งหมด ${list.length} ใบ (รวม ${fmtNum(tot)} บาท)?\n\nหลังยืนยัน ยอดของเดือนนี้จะคงที่ แม้จะแก้อัตราในตั้งค่าภายหลัง\n(ยังแก้ไขเองได้ทีละใบด้วยปุ่ม ✏️)`)) return;
+  setInvStatus(list,'confirmed');
+  showToast(`✅ ยืนยัน ${list.length} ใบของ ${monthLabel(mon)} แล้ว`);
+}
+
+/* ---- แก้ไข Invoice ที่บันทึกไว้ (manual) ---- */
+var _editInvId=null;
+function editInv(id){
+  const i=S.invoices.find(x=>x.id===id); if(!i) return;
+  if(taxRecOfInv(id)){alert('Invoice นี้อยู่ในใบกำกับภาษีที่ออกแล้ว ต้องยกเลิกใบกำกับภาษีก่อน');return;}
+  if(i.type==='special'){
+    const b=[...document.querySelectorAll('.tb')].find(x=>(x.getAttribute('onclick')||'').includes("'t5'"));
+    sw('t5',b); loadSpInv(id); return;
+  }
+  _editInvId=id;
+  const set=(k,v)=>{const el=document.getElementById(k);if(el) el.value=v??'';};
+  document.getElementById('inv-plant').value=i.plant;
+  document.getElementById('inv-dept').innerHTML=getDeptOptions(i.plant);
+  set('inv-dept',i.dept); set('inv-dt',i.dt); set('inv-no',i.no);
+  document.getElementById('inv-no').dataset.auto='';
+  if(i.service) set('inv-svc',i.service);
+  set('i-cnt',i.cnt); set('i-rate',i.rate); set('i-abs',i.abs);
+  set('i-oth',i.oth); set('i-otp',i.otp); set('i-otr',i.otr);
+  set('i-hp',i.hp); set('i-hd',i.hd); set('i-hr',i.hr); set('i-hot',i.hot);
+  window._lastTS=S.timesheets.find(t=>t.id===i.tsId)||null;
+  window._lastSummary={partial:i.partial||[]};
+  const ss=document.getElementById('inv-staff-summary');
+  if(ss) ss.innerHTML=`กำลังแก้ไขค่าที่บันทึกไว้ใน ${esc(i.no)}${i.tsPeriod?' (จากใบบันทึกเวลางวด '+rangeText(...i.tsPeriod.split('..'))+')':''}`;
+  ['inv-plant','inv-dept','inv-dt'].forEach(k=>document.getElementById(k).disabled=true);
+  renderInvEditBanner();
+  calcInv();
+  renderInvList();
+  const b=[...document.querySelectorAll('.tb')].find(x=>(x.getAttribute('onclick')||'').includes("'t2'"));
+  if(!document.getElementById('t2').classList.contains('on')) sw('t2',b);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function exitEditInv(){
+  _editInvId=null;
+  ['inv-plant','inv-dept','inv-dt'].forEach(k=>document.getElementById(k).disabled=false);
+  const n=document.getElementById('inv-no'); n.value=''; n.dataset.auto='1';
+  renderInvEditBanner();
+  loadTStoInv(true); autoFillInvNo(); calcInv();
+  renderInvList();
+}
+function renderInvEditBanner(){
+  const el=document.getElementById('inv-edit-banner'); if(!el) return;
+  const i=_editInvId?S.invoices.find(x=>x.id===_editInvId):null;
+  const sb=document.getElementById('inv-save-btn');
+  if(!i){ el.innerHTML=''; if(sb) sb.textContent='💾 บันทึกร่าง'; if(_editInvId) _editInvId=null; return; }
+  const conf=invStatus(i)==='confirmed';
+  if(sb) sb.textContent=conf?'💾 บันทึกการแก้ไข':'💾 บันทึกร่าง';
+  el.innerHTML=`<div class="inv-edit ${conf?'conf':'draft'}">✏️ <span>กำลังแก้ไข <strong>${esc(i.no)}</strong> (${conf?'✅ ยืนยันแล้ว — ค่าที่แสดงคือค่าที่บันทึกไว้ ไม่ดึงอัตราใหม่จากตั้งค่า':'ร่าง'}) · ยอดที่บันทึกไว้ ${fmtNum(i.grand)} บาท</span>
+    <button class="btn bo bsm" onclick="exitEditInv()">✕ ปิดการแก้ไข / ทำใบใหม่</button></div>`;
+}
+function pullLatestInv(){
+  if(_editInvId&&!confirm('แทนค่าบนหน้าจอด้วยข้อมูลจากใบบันทึกเวลาและอัตราล่าสุดในตั้งค่า?\n(ยังไม่บันทึกจนกว่าจะกดบันทึก)')) return;
+  loadTStoInv(true);
+}
+
+/* ---- Invoice ร่าง: คำนวณใหม่ตามอัตราล่าสุดในตั้งค่า (ใบที่ยืนยันแล้วไม่เปลี่ยน) ---- */
+function recalcDraftInvoices(pk,dk){
+  let n=0,m=0;
+  S.invoices.filter(i=>i.type!=='special'&&(!pk||i.plant===pk)&&(!dk||i.dept===dk)).forEach(i=>{
+    const cfg=CFG[i.plant]?.depts?.[i.dept];
+    if(!cfg) return;
+    if(invStatus(i)!=='draft'||taxRecOfInv(i.id)){m++;return;}
+    const c=calcFromInputs({...i,rate:cfg.rate,otr:cfg.ot_rate,hr:cfg.hol_rate});
+    if(Math.abs(c.grand-(i.grand||0))<0.004&&i.rate===c.rate&&i.otr===c.otr&&i.hr===c.hr) return;
+    Object.assign(i,c);
+    dbSaveInv(i,true); n++;
+  });
+  if(n){persistLocal();renderInvList();buildSum();}
+  return {n,m};
 }
 
 function delInv(id){
   const r=taxRecOfInv(id);
   if(r){alert(`Invoice นี้อยู่ในใบกำกับภาษี ${r.no} ที่ออกแล้ว — ต้องยกเลิกใบกำกับภาษีก่อนจึงจะลบได้`);return;}
-  if(!confirm('ต้องการลบ Invoice นี้?')) return;
+  const inv=S.invoices.find(i=>i.id===id);
+  if(!confirm(inv&&invStatus(inv)==='confirmed'?`Invoice ${inv.no} ยืนยันแล้ว — ต้องการลบจริงหรือไม่?`:'ต้องการลบ Invoice นี้?')) return;
+  if(_editInvId===id) exitEditInv();
   S.invoices=S.invoices.filter(i=>i.id!==id);
   persistLocal();
   renderInvList();renderSpSaved();refreshMonthSelects();buildSum();
@@ -2542,6 +2740,7 @@ function buildSum(){
   const el=document.getElementById('sum-card');
   const rel=sumInvoices(plant,monKey);
   if(!rel.length){el.innerHTML=`<div class="alert ai">⚠️ ยังไม่มี Invoice ของ ${mon||'เดือนนี้'} — บันทึก Invoice ในแท็บ Invoice ก่อน หรือเลือกเดือนอื่น</div>`;return;}
+  const _drafts=rel.filter(i=>invStatus(i)!=='confirmed').length;
 
   const tUp=rel.reduce((s,i)=>s+i.up,0);
   const tVat=rel.reduce((s,i)=>s+i.vat,0);
@@ -2577,7 +2776,7 @@ function buildSum(){
         <td class="num">${fmt(pUp)}</td><td class="num">${fmt(pVat)}</td><td class="num">${fmt(pG)}</td></tr>`;
   });
 
-  el.innerHTML=`
+  el.innerHTML=`${_drafts?`<div class="alert no-print" style="background:var(--goldbg);color:#6b4a00;border-left:4px solid var(--gold);margin-bottom:10px">⚠️ เดือนนี้มี Invoice ร่าง ${_drafts} ใบ — ยอดอาจเปลี่ยนถ้าแก้อัตราในตั้งค่า กด “✅ ยืนยันทั้งเดือน” ในแท็บ Invoice เพื่อล็อกยอด</div>`:''}
   <div class="sum-letterhead">${getLetterheadHTML(false)}</div>
   <div style="text-align:center;margin-bottom:10px">
     <div style="font-size:16px;font-weight:700;color:var(--navy)">DEBIT NOTE SUMMARY</div>
@@ -2769,13 +2968,15 @@ async function issueTax(mon,g){
   if(!invs.length) return;
   const date=document.getElementById('tax-date')?.value||todayISO();
   const total=invs.reduce((s,i)=>s+(i.grand||i.up||0),0);
-  if(!confirm(`ออกใบกำกับภาษีจริง — กลุ่ม ${g} (${CUSTOMERS[g]?.branch||''})\nInvoice ${invs.length} ใบ ยอดรวม ${fmtNum(total)} บาท\n\nเมื่อออกแล้ว เลขที่จะถูกใช้ทันที และ Invoice ในใบนี้จะถูกล็อกไม่ให้แก้ไข/ลบ\nต้องการดำเนินการต่อ?`)) return;
+  const drafts=invs.filter(i=>invStatus(i)!=='confirmed');
+  if(!confirm(`ออกใบกำกับภาษีจริง — กลุ่ม ${g} (${CUSTOMERS[g]?.branch||''})\nInvoice ${invs.length} ใบ ยอดรวม ${fmtNum(total)} บาท${drafts.length?`\n\n⚠️ มี Invoice ร่าง ${drafts.length} ใบ (${drafts.map(i=>i.no).join(', ')}) จะถูกยืนยันอัตโนมัติ`:''}\n\nเมื่อออกแล้ว เลขที่จะถูกใช้ทันที และ Invoice ในใบนี้จะถูกล็อกไม่ให้แก้ไข/ลบ\nต้องการดำเนินการต่อ?`)) return;
   let no;
   try{ no=await allocTaxNo(); }
   catch(e){ alert('จองเลขที่ใบกำกับภาษีไม่สำเร็จ: '+(e.code||e.message)+'\nยังไม่มีการใช้เลขที่ใด ๆ'); return; }
   const rec={id:`${mon}__G${g}__${no.replace(/\s+/g,'')}`,mon,group:+g,no,date,
     invIds:invs.map(i=>i.id),grand:+total.toFixed(2),status:'issued',issuedAt:new Date().toISOString()};
   S.taxInvoices.push(rec);
+  drafts.forEach(i=>{i.status='confirmed';i.confirmedAt=new Date().toISOString();dbSaveInv(i,true);});
   persistLocal();
   dbSaveTax(rec);
   updateTaxCounterPreview();
@@ -3449,7 +3650,8 @@ function renderCfg(){
           <span style="font-size:13px;font-weight:700;color:var(--navy);flex-shrink:0">🏭</span>
           <input type="text" id="cfg-${pk}-name" value="${esc(pv.name)}" title="แก้ชื่อโรงงาน" placeholder="ชื่อโรงงาน"
             onchange="renamePlant('${pk}',this.value)" style="font-weight:700;color:var(--navy);max-width:360px">
-          <span class="badge bg-gold" title="รหัสโรงงาน (ใช้เชื่อมข้อมูล แก้ไม่ได้)">${pk}</span>
+          <span class="badge bg-gold" title="รหัสโรงงาน">${pk}</span>
+          <button class="btn bo bsm" style="padding:2px 8px;font-size:11.5px" title="แก้รหัสโรงงาน" onclick="renamePlantCode('${pk}')">✏️ รหัส</button>
         </span>
         <button class="btn bd bsm" onclick="removePlant('${pk}')">🗑️ ลบโรงงาน</button>
       </div>
@@ -3468,15 +3670,16 @@ function renderCfg(){
             <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
               <input type="text" id="cfg-${pk}-${dk}-name" value="${esc(dv.name)}" title="แก้ชื่อแผนก" placeholder="ชื่อแผนก"
                 onchange="renameDept('${pk}','${dk}',this.value)" style="max-width:300px;padding:4px 8px;font-size:13px">
-              <span class="badge bg-gold" style="font-size:10px" title="รหัสแผนก (ใช้เชื่อมข้อมูล แก้ไม่ได้)">${pk}/${dk}</span>
+              <span class="badge bg-gold" style="font-size:10px" title="รหัสแผนก">${pk}/${dk}</span>
+              <button class="btn bo bsm" style="padding:2px 8px;font-size:11px;background:#fff" title="แก้รหัสแผนก" onclick="renameDeptCode('${pk}','${dk}')">✏️ รหัส</button>
             </span>
             <button class="btn bd bsm" onclick="removeDept('${pk}','${dk}')">✕</button>
           </div>
           <div class="fbdy"><div class="g4" style="gap:.5rem">
-            <div class="fg"><label>จำนวน (คน)</label><input type="number" id="cfg-${pk}-${dk}-w" value="${dv.workers||1}"></div>
-            <div class="fg"><label>อัตรา/เดือน (฿)</label><input type="number" id="cfg-${pk}-${dk}-r" value="${dv.rate||11900}"></div>
-            <div class="fg"><label>OT/ชม. (฿)</label><input type="number" id="cfg-${pk}-${dk}-o" value="${dv.ot_rate||74.38}" step="0.01"></div>
-            <div class="fg"><label>Holiday/วัน (฿)</label><input type="number" id="cfg-${pk}-${dk}-h" value="${dv.hol_rate||793.34}" step="0.01"></div>
+            <div class="fg"><label>จำนวน (คน)</label><input type="number" id="cfg-${pk}-${dk}-w" value="${dv.workers||1}" onchange="setCfgVal('${pk}','${dk}','workers',this.value)"></div>
+            <div class="fg"><label>อัตรา/เดือน (฿)</label><input type="number" id="cfg-${pk}-${dk}-r" value="${dv.rate||11900}" onchange="setCfgVal('${pk}','${dk}','rate',this.value)"></div>
+            <div class="fg"><label>OT/ชม. (฿)</label><input type="number" id="cfg-${pk}-${dk}-o" value="${dv.ot_rate||74.38}" step="0.01" onchange="setCfgVal('${pk}','${dk}','ot_rate',this.value)"></div>
+            <div class="fg"><label>Holiday/วัน (฿)</label><input type="number" id="cfg-${pk}-${dk}-h" value="${dv.hol_rate||793.34}" step="0.01" onchange="setCfgVal('${pk}','${dk}','hol_rate',this.value)"></div>
           </div></div>
         </div>`).join('')}
       </div>
@@ -3582,6 +3785,96 @@ function refreshAllSelects(){
   });
 }
 
+
+/* ---- ค่าตั้งต้นของแผนก: แก้แล้วมีผลทันที กับ Invoice ที่กำลังทำ (Invoice ที่บันทึกไว้แล้วไม่เปลี่ยน) ---- */
+const CFG_LABEL={workers:'จำนวนคน',rate:'อัตรา/เดือน',ot_rate:'OT/ชม.',hol_rate:'Holiday/วัน'};
+function setCfgVal(pk,dk,field,val){
+  const d=CFG[pk]?.depts?.[dk];
+  if(!d) return;
+  const n=field==='workers'?parseInt(val):parseFloat(val);
+  if(!(n>0)){alert('กรุณากรอกตัวเลขที่มากกว่า 0');renderCfg();return;}
+  if(d[field]===n) return;
+  d[field]=n;
+  persistSettings();
+  const rc=field==='workers'?{n:0,m:0}:recalcDraftInvoices(pk,dk);
+  refreshInvForm(pk,dk);
+  showToast(`✅ ${CFG[pk].depts[dk].name}: ${CFG_LABEL[field]} = ${n.toLocaleString('th-TH')}`
+    +(rc.n?` · ปรับ Invoice ร่าง ${rc.n} ใบ`:'')+(rc.m?` · ใบที่ยืนยันแล้ว ${rc.m} ใบไม่เปลี่ยน`:''));
+}
+/* โหลดค่าใหม่เข้าฟอร์ม Invoice ถ้าฟอร์มกำลังแสดงแผนกนี้อยู่ (หรือไม่ระบุแผนก) */
+function refreshInvForm(pk,dk){
+  if(_editInvId){ const i=S.invoices.find(x=>x.id===_editInvId); if(i&&invStatus(i)==='draft') editInv(_editInvId); return; }
+  const p=document.getElementById('inv-plant')?.value, d=document.getElementById('inv-dept')?.value;
+  if(pk&&(p!==pk||(dk&&d!==dk))) return;
+  loadTStoInv();
+}
+
+/* ---- แก้รหัสโรงงาน/แผนก: ย้ายข้อมูลที่ผูกกับรหัสเดิมทั้งหมดไปรหัสใหม่ (ยอดเงินที่บันทึกไว้ไม่เปลี่ยน) ---- */
+function askNewCode(kind,old,exists){
+  let v=prompt(`รหัส${kind}ใหม่ (แทน "${old}")\nใช้ A–Z, 0–9, จุด หรือขีด`,old);
+  if(v===null) return null;
+  v=v.trim().toUpperCase();
+  if(v===old) return null;
+  if(!/^[A-Z0-9][A-Z0-9.\-]*$/.test(v)||v.length>20){alert('รหัสใช้ได้เฉพาะ A–Z, 0–9, จุด (.) และขีด (-) ไม่เกิน 20 ตัว');return null;}
+  if(exists(v)){alert(`รหัส "${v}" มีอยู่แล้ว`);return null;}
+  return v;
+}
+function renameKey(obj,oldK,newK){
+  const out={};
+  Object.keys(obj).forEach(k=>{out[k===oldK?newK:k]=obj[k];});
+  return out;
+}
+function migrateCodes(match,apply,label){
+  const ts=S.timesheets.filter(match), inv=S.invoices.filter(match);
+  const locked=inv.filter(i=>taxRecOfInv(i.id)).length;
+  if(!confirm(`${label}\n\nข้อมูลที่จะย้ายไปใช้รหัสใหม่:\n- ใบบันทึกเวลา ${ts.length} งวด\n- Invoice ${inv.length} ใบ${locked?` (ในนี้ ${locked} ใบอยู่ในใบกำกับภาษีที่ออกแล้ว — เปลี่ยนเฉพาะรหัสอ้างอิง ยอดเงินและเลขที่เอกสารคงเดิม)`:''}\n\nเลขที่ Invoice ที่ออกไปแล้วจะไม่ถูกเปลี่ยน ต้องการดำเนินการต่อ?`)) return null;
+  ts.forEach(t=>{apply(t);normTS(t);});
+  inv.forEach(i=>{apply(i);normInv(i);});
+  // ร่างใบบันทึกเวลาที่ค้างอยู่
+  try{
+    const d=JSON.parse(localStorage.getItem('ts_draft')||'null');
+    if(d&&match(d)){apply(d);localStorage.setItem('ts_draft',JSON.stringify(d));}
+  }catch(e){}
+  persistLocal();
+  if(ensureDB()&&(ts.length||inv.length)){
+    const b=_db.batch(), clean=o=>JSON.parse(JSON.stringify(o));
+    ts.forEach(t=>b.set(_db.collection('timesheets').doc(String(t.id)),clean(t)));
+    inv.forEach(i=>b.set(_db.collection('invoices').doc(String(i.id)),clean(i)));
+    b.commit().catch(e=>showToast('⚠️ อัปเดตรหัสบน Firebase ไม่สำเร็จ ('+(e.code||e.message)+') — กด Backup → DB อีกครั้ง'));
+  }
+  return {ts:ts.length,inv:inv.length};
+}
+function afterCodeChange(selMap){
+  // ให้ dropdown ที่เลือกรหัสเดิมอยู่ ชี้ไปรหัสใหม่
+  Object.entries(selMap).forEach(([id,[oldV,newV]])=>{const el=document.getElementById(id);if(el&&el.value===oldV){el.innerHTML+=`<option value="${newV}"></option>`;el.value=newV;}});
+  renderCfg();refreshAllSelects();persistSettings();
+  renderSavedTS();renderInvList();renderSpSaved();buildSum();buildGrid();loadTStoInv();
+}
+function renamePlantCode(pk){
+  const nk=askNewCode('โรงงาน',pk,v=>!!CFG[v]);
+  if(!nk) return;
+  const r=migrateCodes(x=>x.plant===pk,x=>{x.plant=nk;},`เปลี่ยนรหัสโรงงาน ${pk} → ${nk}`);
+  if(!r) return;
+  CFG=renameKey(CFG,pk,nk);
+  if(PLANT_GROUP[pk]!==undefined){PLANT_GROUP[nk]=PLANT_GROUP[pk];delete PLANT_GROUP[pk];}
+  if(_curPlant===pk) _curPlant=nk;
+  afterCodeChange({'tf-plant':[pk,nk],'inv-plant':[pk,nk],'sp-plant':[pk,nk],'sum-plant':[pk,nk]});
+  showToast(`✅ เปลี่ยนรหัสโรงงานเป็น ${nk} แล้ว (ย้าย ${r.ts} งวด, ${r.inv} Invoice)`);
+}
+function renameDeptCode(pk,dk){
+  const nk=askNewCode('แผนก',dk,v=>!!CFG[pk]?.depts?.[v]);
+  if(!nk) return;
+  const r=migrateCodes(x=>x.plant===pk&&x.dept===dk,x=>{x.dept=nk;},`เปลี่ยนรหัสแผนก ${pk}/${dk} → ${pk}/${nk}`);
+  if(!r) return;
+  CFG[pk].depts=renameKey(CFG[pk].depts,dk,nk);
+  if(_curPlant===pk&&_curDept===dk) _curDept=nk;
+  const pSel=id=>document.getElementById(id)?.value===pk;
+  const map={};
+  ['tf','inv','sp'].forEach(p=>{if(pSel(p+'-plant')) map[p+'-dept']=[dk,nk];});
+  afterCodeChange(map);
+  showToast(`✅ เปลี่ยนรหัสแผนกเป็น ${nk} แล้ว (ย้าย ${r.ts} งวด, ${r.inv} Invoice)`);
+}
+
 function saveCfg(){
   Object.entries(CFG).forEach(([pk,pv])=>{
     const pn=(document.getElementById(`cfg-${pk}-name`)?.value||'').trim();
@@ -3599,7 +3892,9 @@ function saveCfg(){
   persistSettings();
   refreshAllSelects();
   renderSavedTS();renderInvList();renderSpSaved();buildSum();
-  alert('✅ บันทึกการตั้งค่าเรียบร้อย');
+  const rc=recalcDraftInvoices();
+  refreshInvForm();
+  alert('✅ บันทึกการตั้งค่าเรียบร้อย'+(rc.n?`\nปรับ Invoice ร่างตามอัตราใหม่ ${rc.n} ใบ`:'')+(rc.m?`\nInvoice ที่ยืนยันแล้ว ${rc.m} ใบไม่เปลี่ยน`:''));
 }
 
 /* ============================================================
@@ -4041,13 +4336,13 @@ async function dbSaveTS(ts,quiet){
   }catch(e){ setDBStatus('error'); console.error('dbSaveTS:',e.message); showToast('⚠️ บันทึกขึ้น Firebase ไม่สำเร็จ ('+(e.code||e.message)+') — ข้อมูลยังอยู่ในเครื่อง'); }
 }
 
-async function dbSaveInv(inv){
+async function dbSaveInv(inv,quiet){
   if(!ensureDB()) return;
   setDBStatus('saving');
   try{
-    await _db.collection('invoices').doc(String(inv.id)).set(inv);
+    await _db.collection('invoices').doc(String(inv.id)).set(JSON.parse(JSON.stringify(inv)));
     setDBStatus('connected');
-    showToast('💾 บันทึก Invoice ขึ้น Firebase แล้ว');
+    if(!quiet) showToast('💾 บันทึก Invoice ขึ้น Firebase แล้ว');
   }catch(e){ setDBStatus('error'); console.error('dbSaveInv:',e.message); showToast('⚠️ บันทึกขึ้น Firebase ไม่สำเร็จ ('+(e.code||e.message)+') — ข้อมูลยังอยู่ในเครื่อง'); }
 }
 
@@ -4514,7 +4809,7 @@ function saveSpInv(){
   if(old){
     const r=taxRecOfInv(old.id);
     if(r){alert(`Special Invoice ${old.no} อยู่ในใบกำกับภาษี ${r.no} ที่ออกแล้ว จึงแก้ไขไม่ได้\nต้องยกเลิกใบกำกับภาษีก่อน`);return;}
-    if(!confirm(`บันทึกทับ Special Invoice ${old.no}?\n(ถ้าต้องการสร้างใบใหม่ ให้กด Cancel แล้วกดปุ่ม "🆕 ใบใหม่")`)) return;
+    if(!confirm(`${invStatus(old)==='confirmed'?'⚠️ Invoice นี้ยืนยันแล้ว — ':''}บันทึกทับ Special Invoice ${old.no}?\n(ถ้าต้องการสร้างใบใหม่ ให้กด Cancel แล้วกดปุ่ม "🆕 ใบใหม่")`)) return;
   }
   const dup=S.invoices.find(i=>i.no===no&&i!==old);
   if(dup){alert(`เลขที่ ${no} ถูกใช้กับ Invoice อื่นแล้ว`);return;}
@@ -4527,7 +4822,8 @@ function saveSpInv(){
     dept:document.getElementById('sp-dept')?.value,
     title:document.getElementById('sp-title')?.value,
     messrs:document.getElementById('sp-messrs')?.value,
-    items:JSON.parse(JSON.stringify(SP_ITEMS)), up, vat, grand
+    items:JSON.parse(JSON.stringify(SP_ITEMS)), up, vat, grand,
+    status:old?invStatus(old):'draft', confirmedAt:old?old.confirmedAt||null:null
   };
   S.invoices=S.invoices.filter(i=>i!==old);
   S.invoices.push(inv);
@@ -4552,7 +4848,7 @@ function renderSpSaved(){
         <strong style="margin-left:8px;font-size:13px">${esc(inv.no)}</strong>
         <span style="font-size:12px;color:var(--muted);margin-left:6px">${esc(inv.dt||'')}</span>
         <span style="font-size:12px;color:var(--navy);margin-left:8px;font-weight:600">${fmtNum(inv.grand)} ฿</span>
-        ${r?`<span class="badge bg-green" style="margin-left:6px">🔒 ${esc(r.no)}</span>`:''}
+        ${r?`<span class="badge bg-navy" style="margin-left:6px">🔒 ${esc(r.no)}</span>`:invStatus(inv)==='confirmed'?'<span class="badge bg-green" style="margin-left:6px">✅ ยืนยันแล้ว</span>':'<span class="badge bg-gold" style="margin-left:6px">ร่าง</span>'}
         ${inv.id===_loadedSpId?'<span class="badge bg-green" style="margin-left:6px">กำลังแก้ไข</span>':''}
       </div>
       <div style="display:flex;gap:6px">
