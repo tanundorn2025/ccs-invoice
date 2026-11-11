@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-10a | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-11b | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -168,6 +168,21 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .ovl-box .brow{margin-top:8px}
 .ovl-box.compact{padding:6px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 
+/* บันทึกอัตโนมัติ / ถามก่อนออก */
+.ts-save-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:.6rem;font-size:12.5px}
+.ts-save-bar label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:var(--navy)}
+.ts-save-bar input[type=checkbox]{width:16px;height:16px;accent-color:var(--navy2)}
+#ts-save-status{padding:3px 10px;border-radius:20px;font-weight:600}
+#ts-save-status.ok{background:#e6f5ec;color:#16723c}
+#ts-save-status.pending{background:#fff4dc;color:#8a5a00}
+#ts-save-status.warn{background:#fff0f0;color:#c8060a}
+.draft-box{margin-top:.75rem;padding:10px 13px;border-radius:var(--r);background:#eef4ff;border:1px solid #b8cdf0;border-left:4px solid var(--navy2);font-size:13px;color:var(--navy);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ask-ov{position:fixed;inset:0;background:rgba(10,25,50,.45);display:flex;align-items:center;justify-content:center;z-index:3000;padding:16px}
+.ask-box{background:#fff;border-radius:12px;max-width:480px;width:100%;padding:18px 20px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.ask-box h3{font-size:16px;color:var(--navy);margin-bottom:8px}
+.ask-box .ask-msg{font-size:13.5px;color:#333;line-height:1.6}
+.ask-box .ask-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
+
 /* DATA TABLE */
 .dt{width:100%;border-collapse:collapse;font-size:13px}
 .dt th{background:var(--surf2);padding:8px 10px;text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--bord)}
@@ -261,7 +276,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-10a</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11b</div>
 </header>
 
 <nav class="tabs">
@@ -292,7 +307,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     <div class="g4" style="gap:.75rem">
       <div class="fg">
         <label>โรงงาน (Plant)</label>
-        <select id="tf-plant" onchange="onPlantChange()">
+        <select id="tf-plant" onchange="tsSelChange()">
           <option value="SLR">HOYA OPTICS SLR</option>
           <option value="GMO">HOYA OPTICS GMO</option>
           <option value="PO">HOYA OPTICS PO</option>
@@ -301,21 +316,22 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
       </div>
       <div class="fg">
         <label>แผนก (Department)</label>
-        <select id="tf-dept" onchange="onDeptChange()">
+        <select id="tf-dept" onchange="tsSelChange()">
           <option value="MAIN">MAIN (แผนกหลัก)</option>
         </select>
       </div>
       <div class="fg">
         <label>วันที่เริ่ม</label>
-        <input type="date" id="tf-ds" value="2024-10-11" onchange="buildGrid()">
+        <input type="date" id="tf-ds" value="2024-10-11" onchange="onRangeChange()">
       </div>
       <div class="fg">
         <label>วันที่สิ้นสุด</label>
-        <input type="date" id="tf-de" value="2024-11-10" onchange="buildGrid()">
+        <input type="date" id="tf-de" value="2024-11-10" onchange="onRangeChange()">
       </div>
     </div>
 
-    <div id="ts-overlap"></div>
+    <div id="ts-draft"></div>
+<div id="ts-overlap"></div>
 
     <!-- วันหยุดพิเศษ -->
     <div class="st">🎌 กำหนดวันหยุดพิเศษในงวดนี้ (นอกเหนือจากวันอาทิตย์)</div>
@@ -343,6 +359,10 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     <div class="brow">
       <button class="btn bp" onclick="saveTS()">💾 บันทึกใบบันทึกเวลา</button>
       <button class="btn ba" onclick="goInv()">➡️ ต่อสร้าง Invoice</button>
+    </div>
+    <div class="ts-save-bar">
+      <label title="บันทึกงวดให้เองหลังหยุดพิมพ์ 2–3 วินาที (ยกเว้นกรณีช่วงวันที่ซ้ำ ซึ่งต้องยืนยันเอง)"><input type="checkbox" id="ts-autosave" onchange="setAutoSave(this.checked)"> บันทึกอัตโนมัติ</label>
+      <span id="ts-save-status"></span>
     </div>
   </div>
 
@@ -1098,7 +1118,7 @@ function findOverlaps(plant,dept,ds,de,excludeFn){
 function setTsRange(ds,de){
   if(ds) document.getElementById('tf-ds').value=ds;
   if(de) document.getElementById('tf-de').value=de;
-  buildGrid();
+  onRangeChange();
 }
 function renderOverlapBanner(list,ds,de){
   const el=document.getElementById('ts-overlap');
@@ -1222,7 +1242,13 @@ function sumRowOT(row){
 }
 
 /* tabs */
-function sw(id,btn){
+function sw(id,btn,force){
+  const cur=document.querySelector('.panel.on')?.id;
+  if(!force&&cur==='t1'&&id!=='t1'){
+    const name=(btn?.textContent||'').replace(/^[^\wก-๙]+/,'').trim();
+    askSaveFirst('ไปหน้า '+name,false).then(ok=>{if(ok) sw(id,btn,true);});
+    return;
+  }
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
   document.getElementById(id).classList.add('on');
@@ -1239,7 +1265,7 @@ function sw(id,btn){
    ============================================================ */
 function getDeptOptions(plant){
   const depts = (CFG[plant]||{}).depts||{};
-  return Object.entries(depts).map(([k,d])=>`<option value="${k}">${d.name}</option>`).join('');
+  return Object.entries(depts).map(([k,d])=>`<option value="${k}">${esc(d.name)}</option>`).join('');
 }
 
 function onPlantChange(){
@@ -1252,9 +1278,25 @@ function onDeptChange(){
   _loadedTsId=null; tsRemark=''; _ovlAckSig='';
   const plant=document.getElementById('tf-plant').value;
   const dept=document.getElementById('tf-dept').value;
+  _curPlant=plant; _curDept=dept;
   const cfg=(CFG[plant]?.depts?.[dept])||{};
   initRows(cfg.workers||3, 8);
   buildGrid();
+  markTsClean(true);
+}
+/* ผู้ใช้เปลี่ยนโรงงาน/แผนก → ถามก่อนถ้ามีข้อมูลที่ยังไม่บันทึก */
+function tsSelChange(){
+  const pEl=document.getElementById('tf-plant'), dEl=document.getElementById('tf-dept');
+  const plantChanged=pEl.value!==_curPlant;
+  askSaveFirst('เปลี่ยน'+(plantChanged?'โรงงาน':'แผนก'),true).then(ok=>{
+    if(!ok){
+      pEl.value=_curPlant;
+      dEl.innerHTML=getDeptOptions(_curPlant);
+      dEl.value=_curDept;
+      return;
+    }
+    if(plantChanged) onPlantChange(); else onDeptChange();
+  });
 }
 function onInvPlantChange(){
   const plant=document.getElementById('inv-plant').value;
@@ -1272,11 +1314,13 @@ function addHoliday(){
   document.getElementById('hday-input').value='';
   renderHolidays();
   buildGridKeepData();
+  markTsDirty();
 }
 function removeHoliday(d){
   holidays=holidays.filter(x=>x!==d);
   renderHolidays();
   buildGridKeepData();
+  markTsDirty();
 }
 /* buildGrid แต่ไม่เคลียร์ data (ใช้เมื่อแค่เปลี่ยนวันหยุด) */
 function buildGridKeepData(){
@@ -1307,11 +1351,13 @@ function addRow(type){
   if(type==='reg') regRows.push({name:'',days:{},otDays:{},ot:'',h:'',oth:'',total:''});
   else subRows.push({letter:String.fromCharCode(65+subRows.length),name:'',days:{},otDays:{},ot:'',h:'',oth:'',total:''});
   buildGrid();
+  markTsDirty();
 }
 function removeRow(type){
   if(type==='reg'&&regRows.length>1) regRows.pop();
   else if(type==='sub'&&subRows.length>0) subRows.pop();
   buildGrid();
+  markTsDirty();
 }
 
 /* ============================================================
@@ -1330,8 +1376,7 @@ function buildGrid(){
     // เปลี่ยนช่วงวันที่:
     //  - ถ้าเปิดงวดที่บันทึกแล้วอยู่ แล้วเปลี่ยนวันเริ่ม = เริ่มงวดใหม่ → ล้างข้อมูลวัน เก็บไว้แค่ชื่อ
     //  - ถ้าเป็นร่างที่ยังไม่บันทึก (หรือแค่แก้วันสิ้นสุด) → เก็บข้อมูลของวันที่ยังอยู่ในช่วงใหม่
-    const loaded=_loadedTsId?S.timesheets.find(t=>t.id===_loadedTsId):null;
-    const startNew=!!(loaded&&loaded.ds!==ds);
+    const startNew=_tsStartNew; _tsStartNew=false;
     if(startNew){_loadedTsId=null;tsRemark='';}
     [...regRows,...subRows].forEach(r=>{
       if(startNew){r.days={};r.otDays={};}
@@ -1851,13 +1896,218 @@ function doCopyNames(){
   ts.subRows.forEach((r,i)=>{if(i<subRows.length&&r.name) subRows[i].name=r.name;});
   document.getElementById('copy-modal').style.display='none';
   buildGrid();
+  markTsDirty();
   alert('✅ ดึงชื่อพนักงานจากงวด '+ts.ds+' – '+ts.de+' เรียบร้อย');
 }
+
+
+/* ============================================================
+   บันทึกอัตโนมัติ + ถามก่อนออกจากหน้า (ใบบันทึกเวลา)
+   - ทุกการแก้ไข → สำรอง "ร่าง" ในเบราว์เซอร์ทันที (กันเบราว์เซอร์ปิด/ไฟดับ)
+   - เปิด "บันทึกอัตโนมัติ" → บันทึกเป็นงวดให้เองหลังหยุดพิมพ์ ~2.5 วินาที
+     ยกเว้นช่วงวันที่ซ้ำกับงวดอื่น (ต้องยืนยันเอง)
+   - ยังมีข้อมูลไม่ได้บันทึก → ถามก่อนเปลี่ยนแท็บ/แผนก/งวด และก่อนปิดหน้า
+   ============================================================ */
+let _tsDirty=false, _tsDraftTimer=null, _tsAutoTimer=null, _tsSavedAt=null, _tsAutoNote='';
+let _tsStartNew=false, _curPlant='', _curDept='';
+let _tsBooting=true;   // ระหว่างเปิดหน้า ห้ามลบร่างที่ค้างไว้
+let TS_AUTOSAVE=(()=>{try{return localStorage.getItem('ts_autosave')!=='0';}catch(e){return true;}})();
+
+function hasTsContent(){
+  return hasGridData()||[...regRows,...subRows].some(r=>String(r.name||'').trim()!=='')||String(tsRemark||'').trim()!=='';
+}
+function tsSnapshot(){
+  return {plant:document.getElementById('tf-plant').value,dept:document.getElementById('tf-dept').value,
+    ds:document.getElementById('tf-ds').value,de:document.getElementById('tf-de').value,
+    regRows,subRows,holidays,remark:tsRemark,loadedTsId:_loadedTsId,at:new Date().toISOString()};
+}
+function writeDraft(){
+  clearTimeout(_tsDraftTimer);
+  if(!_tsDirty) return;
+  try{localStorage.setItem('ts_draft',JSON.stringify(tsSnapshot()));}catch(e){console.warn('draft',e);}
+}
+function clearDraft(){if(_tsBooting) return;try{localStorage.removeItem('ts_draft');}catch(e){}}
+
+function markTsDirty(){
+  _tsDirty=true; _tsAutoNote='';
+  clearTimeout(_tsDraftTimer); _tsDraftTimer=setTimeout(writeDraft,500);
+  clearTimeout(_tsAutoTimer);
+  if(TS_AUTOSAVE) _tsAutoTimer=setTimeout(autoSaveTS,2500);
+  updateTsStatus();
+}
+function markTsClean(fresh){
+  _tsDirty=false; _tsAutoNote='';
+  clearTimeout(_tsAutoTimer); clearTimeout(_tsDraftTimer);
+  clearDraft();
+  if(fresh) _tsSavedAt=null;
+  updateTsStatus();
+}
+function setAutoSave(on){
+  TS_AUTOSAVE=!!on;
+  try{localStorage.setItem('ts_autosave',on?'1':'0');}catch(e){}
+  if(on&&_tsDirty){clearTimeout(_tsAutoTimer);_tsAutoTimer=setTimeout(autoSaveTS,600);}
+  updateTsStatus();
+}
+
+/* คืนค่า '' ถ้าบันทึกอัตโนมัติได้ ไม่งั้นคืนเหตุผล */
+function autoSaveBlock(){
+  const plant=document.getElementById('tf-plant').value, dept=document.getElementById('tf-dept').value;
+  const ds=document.getElementById('tf-ds').value, de=document.getElementById('tf-de').value;
+  if(!ds||!de||ds>de) return 'ช่วงวันที่ไม่ถูกต้อง';
+  if(!hasTsContent()) return 'empty';
+  const ovl=findOverlaps(plant,dept,ds,de,t=>t.id===_loadedTsId&&t.ds===ds);
+  if(ovl.some(o=>o.sameKey)) return 'มีงวดที่เริ่มวันเดียวกันบันทึกไว้แล้ว';
+  if(ovl.length){
+    const sig=ds+'|'+de+'|'+ovl.map(o=>o.ts.id).join(',');
+    if(_ovlAckSig!==sig) return 'ช่วงวันที่ซ้ำกับงวดที่บันทึกแล้ว';
+  }
+  return '';
+}
+function autoSaveTS(){
+  clearTimeout(_tsAutoTimer);
+  if(!_tsDirty||!TS_AUTOSAVE) return;
+  const why=autoSaveBlock();
+  if(why){ _tsAutoNote=why; updateTsStatus(); return; }
+  saveTS({silent:true});
+}
+function updateTsStatus(){
+  const el=document.getElementById('ts-save-status');
+  const cb=document.getElementById('ts-autosave');
+  if(cb) cb.checked=TS_AUTOSAVE;
+  if(!el) return;
+  const t=d=>d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  let cls='', txt='';
+  if(_tsDirty&&hasTsContent()){
+    if(_tsAutoNote&&_tsAutoNote!=='empty'){cls='warn';txt=`⚠️ ยังไม่บันทึก — ${_tsAutoNote} กด 💾 บันทึก เพื่อยืนยัน`;}
+    else if(TS_AUTOSAVE){cls='pending';txt='✏️ กำลังจะบันทึกอัตโนมัติ…';}
+    else {cls='pending';txt='✏️ มีการแก้ไขที่ยังไม่บันทึก (สำรองร่างไว้ในเครื่องแล้ว)';}
+  } else if(_tsSavedAt){cls='ok';txt='✅ บันทึกแล้ว '+t(_tsSavedAt);}
+  el.className=cls; el.textContent=txt;
+}
+
+/* ---- กล่องถามแบบหลายปุ่ม ---- */
+function askChoice(title,msgHtml,buttons){
+  return new Promise(res=>{
+    const ov=document.createElement('div');
+    ov.className='ask-ov no-print';
+    ov.innerHTML=`<div class="ask-box" role="dialog" aria-modal="true"><h3>${title}</h3><div class="ask-msg">${msgHtml}</div><div class="ask-btns"></div></div>`;
+    const bx=ov.querySelector('.ask-btns');
+    const done=v=>{document.removeEventListener('keydown',onKey);ov.remove();res(v);};
+    buttons.forEach(b=>{
+      const el=document.createElement('button');
+      el.className='btn '+(b.cls||'bo');
+      el.textContent=b.label;
+      el.onclick=()=>done(b.value);
+      bx.appendChild(el);
+    });
+    const onKey=e=>{if(e.key==='Escape') done('cancel');};
+    document.addEventListener('keydown',onKey);
+    ov.addEventListener('click',e=>{if(e.target===ov) done('cancel');});
+    document.body.appendChild(ov);
+    bx.lastChild?.focus();
+  });
+}
+/* ถามก่อนทำ action ถ้ามีข้อมูลยังไม่บันทึก — replace=true แปลว่าข้อมูลบนจอจะถูกแทนที่ */
+async function askSaveFirst(action,replace){
+  if(!(_tsDirty&&hasTsContent())) return true;
+  const plant=_curPlant||document.getElementById('tf-plant').value, dept=_curDept||document.getElementById('tf-dept').value;
+  const ds=document.getElementById('tf-ds').value, de=document.getElementById('tf-de').value;
+  const where=`${esc(CFG[plant]?.name||plant)} / ${esc(CFG[plant]?.depts?.[dept]?.name||dept)} งวด ${rangeText(ds,de)}`;
+  const block=autoSaveBlock();
+  const note=block&&block!=='empty'?`<br><span style="color:var(--red)">⚠️ ${block} — ถ้าเลือกบันทึกจะมีการถามยืนยันอีกครั้ง</span>`:'';
+  const v=await askChoice('💾 ใบบันทึกเวลายังไม่ได้บันทึก',
+    `มีการแก้ไขใบบันทึกเวลา <strong>${where}</strong> ที่ยังไม่ได้บันทึก${note}<br><br>ต้องการบันทึกก่อน${esc(action)} หรือไม่?`,
+    [{label:'ยกเลิก',value:'cancel',cls:'bo'},
+     {label:replace?'ทิ้งการแก้ไข':'ไปต่อโดยไม่บันทึก',value:'discard',cls:replace?'bd':'bo'},
+     {label:'💾 บันทึกแล้วไปต่อ',value:'save',cls:'bp'}]);
+  if(v==='cancel') return false;
+  if(v==='save') return saveTS()===true;
+  if(replace) markTsClean();
+  return true;
+}
+
+/* ผู้ใช้เปลี่ยนช่วงวันที่ */
+let _rangeBusy=false;
+async function onRangeChange(){
+  if(_rangeBusy) return;           // กล่องถามเปิดอยู่แล้ว (เช่น พิมพ์วันที่ทีละช่อง)
+  _rangeBusy=true;
+  try{ await _onRangeChange(); } finally{ _rangeBusy=false; }
+}
+async function _onRangeChange(){
+  const dsEl=document.getElementById('tf-ds'), deEl=document.getElementById('tf-de');
+  const loaded=_loadedTsId?S.timesheets.find(t=>t.id===_loadedTsId):null;
+  if(loaded&&dsEl.value&&dsEl.value!==_lastDS){
+    const v=await askChoice('📅 เปลี่ยนวันเริ่มของงวดที่บันทึกไว้',
+      `ตอนนี้กำลังแก้ไขงวด <strong>${rangeText(loaded.ds,loaded.de)}</strong><br>วันเริ่มใหม่: <strong>${fmtThShort(dsEl.value)}</strong> — ต้องการทำอย่างไร?`,
+      [{label:'ยกเลิก',value:'cancel',cls:'bo'},
+       {label:'ย้ายงวดนี้ (เก็บข้อมูลเดิม)',value:'move',cls:'bo'},
+       {label:'🆕 เริ่มงวดใหม่ (เก็บแค่รายชื่อ)',value:'new',cls:'bp'}]);
+    if(v==='cancel'){dsEl.value=_lastDS;deEl.value=_lastDE;return;}
+    if(v==='new'){
+      const nds=dsEl.value, nde=deEl.value;
+      dsEl.value=_lastDS; deEl.value=_lastDE;
+      if(!(await askSaveFirst('เริ่มงวดใหม่',true))) return;
+      dsEl.value=nds; deEl.value=nde;
+      _tsStartNew=true; _tsSavedAt=null;
+      buildGrid();
+      markTsClean(true);
+      return;
+    }
+  }
+  buildGrid();
+  markTsDirty();
+}
+
+/* ---- กู้คืนร่างที่ยังไม่ได้บันทึก ---- */
+function checkDraftOnStart(){
+  let d=null;
+  try{d=JSON.parse(localStorage.getItem('ts_draft')||'null');}catch(e){}
+  const el=document.getElementById('ts-draft');
+  if(!el) return;
+  if(!d||!CFG[d.plant]){el.innerHTML='';return;}
+  const has=[...(d.regRows||[]),...(d.subRows||[])].some(r=>String(r.name||'').trim()||Object.values(r.days||{}).some(v=>String(v).trim())||Object.values(r.otDays||{}).some(v=>String(v).trim()));
+  if(!has){clearDraft();el.innerHTML='';return;}
+  el.innerHTML=`<div class="draft-box">🗂️ <span>พบใบบันทึกเวลาที่ยังไม่ได้บันทึก: <strong>${esc(CFG[d.plant]?.name||d.plant)} / ${esc(CFG[d.plant]?.depts?.[d.dept]?.name||d.dept)}</strong> งวด ${rangeText(d.ds,d.de)} · แก้ไขล่าสุด ${new Date(d.at).toLocaleString('th-TH')}</span>
+    <button class="btn bp bsm" onclick="restoreDraft()">↩ กู้คืน</button>
+    <button class="btn bo bsm" onclick="discardDraft()">ทิ้ง</button></div>`;
+}
+function restoreDraft(){
+  let d=null;
+  try{d=JSON.parse(localStorage.getItem('ts_draft')||'null');}catch(e){}
+  document.getElementById('ts-draft').innerHTML='';
+  if(!d) return;
+  document.getElementById('tf-plant').value=d.plant;
+  document.getElementById('tf-dept').innerHTML=getDeptOptions(d.plant);
+  document.getElementById('tf-dept').value=d.dept;
+  document.getElementById('tf-ds').value=d.ds;
+  document.getElementById('tf-de').value=d.de;
+  _curPlant=d.plant; _curDept=d.dept;
+  regRows=d.regRows||[]; subRows=d.subRows||[];
+  holidays=d.holidays||[]; tsRemark=d.remark||'';
+  _loadedTsId=S.timesheets.some(t=>t.id===d.loadedTsId)?d.loadedTsId:null;
+  _lastDS=d.ds; _lastDE=d.de; _ovlAckSig='';
+  renderHolidays();
+  buildGrid();
+  regRows.forEach((_,i)=>recalcRow(regRows,i,null));
+  subRows.forEach((_,i)=>recalcRow(subRows,i,null));
+  renderSavedTS();
+  markTsDirty();
+  showToast('↩ กู้คืนข้อมูลที่ยังไม่ได้บันทึกแล้ว');
+}
+function discardDraft(){clearDraft();document.getElementById('ts-draft').innerHTML='';}
+
+/* พิมพ์อะไรก็ได้ในตาราง (ชื่อ, เวลา, OT, หมายเหตุ) → dirty */
+document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('#ts-out')) markTsDirty();},true);
+/* ปิด/รีเฟรชหน้า */
+window.addEventListener('beforeunload',e=>{
+  if(_tsDirty&&hasTsContent()){ writeDraft(); e.preventDefault(); e.returnValue=''; return ''; }
+});
 
 /* ============================================================
    SAVE / LOAD TIMESHEET
    ============================================================ */
-function saveTS(){
+function saveTS(opts){
+  const silent=!!(opts&&opts.silent);
   const plant=document.getElementById('tf-plant').value;
   const dept=document.getElementById('tf-dept').value;
   const ds=document.getElementById('tf-ds').value;
@@ -1869,8 +2119,8 @@ function saveTS(){
   // ตรวจวันซ้ำกับงวดที่บันทึกไว้แล้ว
   const ovl=findOverlaps(plant,dept,ds,de,t=>t.id===_loadedTsId&&t.ds===ds);
   const same=ovl.filter(o=>o.sameKey), other=ovl.filter(o=>!o.sameKey);
-  if(same.length && !confirm(`มีใบบันทึกเวลาของแผนกนี้ที่เริ่มวันที่ ${fmtThShort(ds)} บันทึกไว้แล้ว (${rangeText(same[0].ts.ds,same[0].ts.de)})\n\nกด OK = เขียนทับงวดเดิมด้วยข้อมูลบนหน้าจอ\nกด Cancel = ยกเลิก (แนะนำให้กด "เปิดงวดนั้น" เพื่อแก้ไขแทน)`)) return false;
-  if(other.length){
+  if(!silent && same.length && !confirm(`มีใบบันทึกเวลาของแผนกนี้ที่เริ่มวันที่ ${fmtThShort(ds)} บันทึกไว้แล้ว (${rangeText(same[0].ts.ds,same[0].ts.de)})\n\nกด OK = เขียนทับงวดเดิมด้วยข้อมูลบนหน้าจอ\nกด Cancel = ยกเลิก (แนะนำให้กด "เปิดงวดนั้น" เพื่อแก้ไขแทน)`)) return false;
+  if(!silent && other.length){
     const lines=other.map(o=>`• งวด ${rangeText(o.ts.ds,o.ts.de)}: ซ้ำ ${o.keys.length} วัน (${rangeText(o.from,o.to)})${o.filled?` — งวดนั้นมีข้อมูลในวันที่ซ้ำแล้ว ${o.filled} วัน`:''}`).join('\n');
     if(!confirm(`⚠️ ช่วงวันที่นี้ทับกับงวดที่บันทึกไว้แล้ว:\n${lines}\n\nวันที่ซ้ำจะถูกนับในทั้งสองงวด และอาจถูกคิดเงินซ้ำใน Invoice\n\nกด OK = บันทึกต่อ (ตั้งใจให้ซ้ำ)\nกด Cancel = กลับไปแก้ช่วงวันที่`)) return false;
   }
@@ -1880,8 +2130,10 @@ function saveTS(){
   const tOTH=regRows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0)+subRows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0);
 
   const prev=S.timesheets.filter(t=>t.key===key);
+  // งวดที่เปิดแก้ไขอยู่แต่ถูกย้ายช่วงวันที่ → แทนที่งวดเดิม (ไม่สร้างงวดซ้ำ)
+  const moved=_loadedTsId?S.timesheets.find(t=>t.id===_loadedTsId&&t.key!==key):null;
   const rec={
-    id:prev.length?prev[0].id:Date.now(),key,plant,dept,ds,de,
+    id:prev.length?prev[0].id:(moved?moved.id:Date.now()),key,plant,dept,ds,de,
     regRows:JSON.parse(JSON.stringify(regRows)),
     subRows:JSON.parse(JSON.stringify(subRows)),
     holidays:[...holidays],
@@ -1891,12 +2143,17 @@ function saveTS(){
   };
   // ข้อมูลเก่าที่ key ซ้ำ (จากเวอร์ชันก่อน) ลบออกจาก DB ด้วย
   prev.filter(t=>t.id!==rec.id).forEach(t=>dbDeleteTS(t.id));
-  S.timesheets=S.timesheets.filter(t=>t.key!==key);
+  if(moved&&moved.id!==rec.id) dbDeleteTS(moved.id);
+  S.timesheets=S.timesheets.filter(t=>t.key!==key&&!(moved&&t.id===moved.id));
   S.timesheets.push(rec);
   _loadedTsId=rec.id;
+  _curPlant=plant; _curDept=dept;
   persistLocal();
   renderSavedTS();
-  dbSaveTS(rec);
+  dbSaveTS(rec,silent);
+  _tsSavedAt=new Date();
+  markTsClean();
+  if(silent) return true;
   buildGrid();
   alert(`✅ บันทึกใบบันทึกเวลา ${CFG[plant]?.name||plant} / ${CFG[plant]?.depts?.[dept]?.name||dept}\nงวด ${rangeText(ds,de)} เรียบร้อย`);
   return true;
@@ -1945,11 +2202,10 @@ function hasGridData(){
   return [...regRows,...subRows].some(r=>Object.values(r.days||{}).some(v=>String(v).trim()!=='')||Object.values(r.otDays||{}).some(v=>String(v).trim()!==''));
 }
 
-function useTS(id){
+function useTS(id,force){
   const t=S.timesheets.find(x=>x.id===id);
   if(!t) return;
-  if(_loadedTsId!==id && _loadedTsId===null && hasGridData()
-     && !confirm('ข้อมูลที่กรอกบนหน้าจอ (ยังไม่ได้บันทึก) จะถูกแทนที่ด้วยงวดที่เลือก ต้องการเปิดงวดนี้?')) return;
+  if(!force){ askSaveFirst('เปิดงวด '+rangeText(t.ds,t.de),true).then(ok=>{if(ok) useTS(id,true);}); return; }
   document.getElementById('tf-plant').value=t.plant;
   onPlantChange();
   document.getElementById('tf-dept').value=t.dept;
@@ -1959,10 +2215,15 @@ function useTS(id){
   subRows=JSON.parse(JSON.stringify(t.subRows||[]));
   holidays=[...(t.holidays||[])];
   tsRemark=t.remark||'';
-  _loadedTsId=t.id; _ovlAckSig=''; _lastDS='';
+  _loadedTsId=t.id; _ovlAckSig=''; _lastDS=t.ds; _lastDE=t.de;
+  _curPlant=t.plant; _curDept=t.dept;
   renderHolidays();
   buildGrid();
+  regRows.forEach((_,i)=>recalcRow(regRows,i,null));
+  subRows.forEach((_,i)=>recalcRow(subRows,i,null));
   renderSavedTS();
+  _tsSavedAt=null;
+  markTsClean(true);
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -3184,7 +3445,12 @@ function renderCfg(){
   document.getElementById('fac-cfg').innerHTML=Object.entries(data).map(([pk,pv])=>`
     <div style="margin-bottom:1.25rem;border:1px solid var(--bord);border-radius:var(--r);overflow:hidden">
       <div style="background:#e0eaf7;padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;font-weight:700;color:var(--navy)">🏭 ${pv.name} <span class="badge bg-gold">${pk}</span></span>
+        <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+          <span style="font-size:13px;font-weight:700;color:var(--navy);flex-shrink:0">🏭</span>
+          <input type="text" id="cfg-${pk}-name" value="${esc(pv.name)}" title="แก้ชื่อโรงงาน" placeholder="ชื่อโรงงาน"
+            onchange="renamePlant('${pk}',this.value)" style="font-weight:700;color:var(--navy);max-width:360px">
+          <span class="badge bg-gold" title="รหัสโรงงาน (ใช้เชื่อมข้อมูล แก้ไม่ได้)">${pk}</span>
+        </span>
         <button class="btn bd bsm" onclick="removePlant('${pk}')">🗑️ ลบโรงงาน</button>
       </div>
       <div style="padding:10px 12px">
@@ -3198,8 +3464,12 @@ function renderCfg(){
         </div>
         ${Object.entries(pv.depts).map(([dk,dv])=>`
         <div class="fcrd" style="margin-bottom:.5rem">
-          <div class="fhdr" style="display:flex;justify-content:space-between;align-items:center">
-            <span>${dv.name} <span class="badge bg-gold" style="font-size:10px">${pk}/${dk}</span></span>
+          <div class="fhdr" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+            <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+              <input type="text" id="cfg-${pk}-${dk}-name" value="${esc(dv.name)}" title="แก้ชื่อแผนก" placeholder="ชื่อแผนก"
+                onchange="renameDept('${pk}','${dk}',this.value)" style="max-width:300px;padding:4px 8px;font-size:13px">
+              <span class="badge bg-gold" style="font-size:10px" title="รหัสแผนก (ใช้เชื่อมข้อมูล แก้ไม่ได้)">${pk}/${dk}</span>
+            </span>
             <button class="btn bd bsm" onclick="removeDept('${pk}','${dk}')">✕</button>
           </div>
           <div class="fbdy"><div class="g4" style="gap:.5rem">
@@ -3212,6 +3482,32 @@ function renderCfg(){
       </div>
     </div>`
   ).join('');
+}
+
+/* แก้ชื่อโรงงาน/แผนก — รหัสไม่เปลี่ยน ข้อมูลที่บันทึกไว้จึงยังเชื่อมกันอยู่ และเอกสารทุกใบจะแสดงชื่อใหม่ */
+function renamePlant(pk,name){
+  name=String(name||'').trim();
+  if(!CFG[pk]) return;
+  if(!name){alert('ชื่อโรงงานต้องไม่ว่าง');renderCfg();return;}
+  if(name===CFG[pk].name) return;
+  CFG[pk].name=name;
+  afterRename('ชื่อโรงงาน → "'+name+'"');
+}
+function renameDept(pk,dk,name){
+  name=String(name||'').trim();
+  const d=CFG[pk]?.depts?.[dk];
+  if(!d) return;
+  if(!name){alert('ชื่อแผนกต้องไม่ว่าง');renderCfg();return;}
+  if(name===d.name) return;
+  d.name=name;
+  afterRename('ชื่อแผนก → "'+name+'"');
+}
+function afterRename(msg){
+  refreshAllSelects();
+  persistSettings();
+  renderSavedTS();renderInvList();renderSpSaved();buildSum();
+  if(typeof buildGrid==='function') buildGrid();
+  showToast('✅ แก้'+msg+' แล้ว');
 }
 
 function addPlant(){
@@ -3260,21 +3556,21 @@ function removeDept(pk,dk){
 
 /* refresh all plant/dept dropdowns everywhere */
 function refreshAllSelects(){
-  const plantSelIds=['tf-plant','inv-plant','sum-plant'];
+  const plantSelIds=['tf-plant','inv-plant','sum-plant','sp-plant'];
   plantSelIds.forEach(id=>{
     const el=document.getElementById(id);
     if(!el) return;
     const cur=el.value;
     if(id==='sum-plant'){
-      el.innerHTML=Object.entries(CFG).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('')
+      el.innerHTML=Object.entries(CFG).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('')
         +'<option value="ALL">ทุกโรงงาน</option>';
     } else {
-      el.innerHTML=Object.entries(CFG).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+      el.innerHTML=Object.entries(CFG).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('');
     }
-    if(CFG[cur]) el.value=cur;
+    if(CFG[cur]||(id==='sum-plant'&&cur==='ALL')) el.value=cur;
   });
   // refresh dept selects
-  ['tf','inv'].forEach(pfx=>{
+  ['tf','inv','sp'].forEach(pfx=>{
     const pEl=document.getElementById(pfx+'-plant');
     const dEl=document.getElementById(pfx+'-dept');
     if(pEl&&dEl){
@@ -3288,8 +3584,12 @@ function refreshAllSelects(){
 
 function saveCfg(){
   Object.entries(CFG).forEach(([pk,pv])=>{
+    const pn=(document.getElementById(`cfg-${pk}-name`)?.value||'').trim();
+    if(pn) pv.name=pn;
     Object.entries(pv.depts||{}).forEach(([dk,dv])=>{
       const v=(suffix)=>document.getElementById(`cfg-${pk}-${dk}-${suffix}`)?.value;
+      const dn=(v('name')||'').trim();
+      if(dn) dv.name=dn;
       dv.workers=parseInt(v('w'))||dv.workers||1;
       dv.rate=parseFloat(v('r'))||dv.rate||11900;
       dv.ot_rate=parseFloat(v('o'))||dv.ot_rate||74.38;
@@ -3297,6 +3597,8 @@ function saveCfg(){
     });
   });
   persistSettings();
+  refreshAllSelects();
+  renderSavedTS();renderInvList();renderSpSaved();buildSum();
   alert('✅ บันทึกการตั้งค่าเรียบร้อย');
 }
 
@@ -3580,7 +3882,8 @@ function printSum(){
 /* ============================================================
    SAMPLE DATA
    ============================================================ */
-function loadSample(){
+function loadSample(force){
+  if(!force){ askSaveFirst('โหลดตัวอย่าง',true).then(ok=>{if(ok) loadSample(true);}); return; }
   document.getElementById('tf-plant').value='GMO';
   onPlantChange();
   document.getElementById('tf-dept').value='PACKDAY';
@@ -3728,13 +4031,13 @@ async function fbLogout(){
   }
 }
 
-async function dbSaveTS(ts){
+async function dbSaveTS(ts,quiet){
   if(!ensureDB()) return;
   setDBStatus('saving');
   try{
-    await _db.collection('timesheets').doc(String(ts.id)).set(ts);
+    await _db.collection('timesheets').doc(String(ts.id)).set(JSON.parse(JSON.stringify(ts)));
     setDBStatus('connected');
-    showToast('💾 บันทึกใบบันทึกเวลาขึ้น Firebase แล้ว');
+    if(!quiet) showToast('💾 บันทึกใบบันทึกเวลาขึ้น Firebase แล้ว');
   }catch(e){ setDBStatus('error'); console.error('dbSaveTS:',e.message); showToast('⚠️ บันทึกขึ้น Firebase ไม่สำเร็จ ('+(e.code||e.message)+') — ข้อมูลยังอยู่ในเครื่อง'); }
 }
 
@@ -4020,7 +4323,7 @@ function onSpPlantChange(){
 function initSpDropdowns(){
   const pEl=document.getElementById('sp-plant');
   if(!pEl) return;
-  pEl.innerHTML=Object.entries(CFG).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join('');
+  pEl.innerHTML=Object.entries(CFG).map(([k,v])=>`<option value="${k}">${esc(v.name)}</option>`).join('');
   onSpPlantChange();
   // set วันที่เริ่มต้น = วันนี้
   const dtEl=document.getElementById('sp-dt');
@@ -4303,6 +4606,7 @@ function setDefaultPeriod(){
   document.getElementById('tf-de').value=`${y}-${p(m)}-10`;
 }
 
+{ const _ls=loadSample; loadSample=function(force){ const r=_ls(force); if(force) markTsDirty(); return r; }; }
 loadLocalSettings();     // การตั้งค่า (บริษัท/ลูกค้า/อัตรา) ที่เคยบันทึกในเครื่อง
 loadLocalData();         // ใบบันทึกเวลา/Invoice/ใบกำกับภาษี ที่เคยบันทึกในเครื่อง
 refreshAllSelects();
@@ -4323,6 +4627,9 @@ initTaxMonDropdown();
 onInvPlantChange();
 autoFillInvNo();
 calcInv();
+updateTsStatus();
+_tsBooting=false;
+checkDraftOnStart();
 
 
 /* โหลด Firebase config จาก localStorage (ถ้ามี) */
