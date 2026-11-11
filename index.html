@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-11d | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-11f | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -288,7 +288,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11d</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11f</div>
 </header>
 
 <nav class="tabs">
@@ -1060,6 +1060,11 @@ function saveSettingsLocal(){
   }catch(e){console.warn('saveSettingsLocal',e);showToast('⚠️ เก็บการตั้งค่าในเบราว์เซอร์ไม่สำเร็จ (โลโก้อาจใหญ่เกินไป)');}
 }
 function persistSettings(){saveSettingsLocal();dbSaveSettings();}
+function initAutoRatesFlags(){
+  Object.values(CFG).forEach(p=>Object.values(p.depts||{}).forEach(d=>{
+    if(d.autoRates===undefined) d.autoRates=Math.abs(d.ot_rate-otFromRate(d.rate))<0.005&&Math.abs(d.hol_rate-holFromRate(d.rate))<0.005;
+  }));
+}
 function applySettings(st,render=true){
   if(!st) return;
   if(st.CFG&&Object.keys(st.CFG).length) CFG=st.CFG;
@@ -3678,9 +3683,9 @@ function renderCfg(){
           <div class="fbdy"><div class="g4" style="gap:.5rem">
             <div class="fg"><label>จำนวน (คน)</label><input type="number" id="cfg-${pk}-${dk}-w" value="${dv.workers||1}" onchange="setCfgVal('${pk}','${dk}','workers',this.value)"></div>
             <div class="fg"><label>อัตรา/เดือน (฿)</label><input type="number" id="cfg-${pk}-${dk}-r" value="${dv.rate||11900}" onchange="setCfgVal('${pk}','${dk}','rate',this.value)"></div>
-            <div class="fg"><label>OT/ชม. (฿)</label><input type="number" id="cfg-${pk}-${dk}-o" value="${dv.ot_rate||74.38}" step="0.01" onchange="setCfgVal('${pk}','${dk}','ot_rate',this.value)"></div>
-            <div class="fg"><label>Holiday/วัน (฿)</label><input type="number" id="cfg-${pk}-${dk}-h" value="${dv.hol_rate||793.34}" step="0.01" onchange="setCfgVal('${pk}','${dk}','hol_rate',this.value)"></div>
-          </div></div>
+            <div class="fg"><label>OT/ชม. (฿)</label><input type="number" id="cfg-${pk}-${dk}-o" value="${dv.ot_rate||74.38}" step="0.01" ${dv.autoRates?'readonly title="คำนวณจากอัตรา/เดือนอัตโนมัติ"':''} onchange="setCfgVal('${pk}','${dk}','ot_rate',this.value)"></div>
+            <div class="fg"><label>Holiday/วัน (฿)</label><input type="number" id="cfg-${pk}-${dk}-h" value="${dv.hol_rate||793.34}" step="0.01" ${dv.autoRates?'readonly title="คำนวณจากอัตรา/เดือนอัตโนมัติ"':''} onchange="setCfgVal('${pk}','${dk}','hol_rate',this.value)"></div>
+          </div>${rateFormulaRow(pk,dk,dv)}</div>
         </div>`).join('')}
       </div>
     </div>`
@@ -3742,7 +3747,7 @@ function addDept(pk){
   const rate=parseFloat(document.getElementById('ndept-'+pk+'-r').value)||11900;
   if(!id||!name){alert('กรุณากรอกรหัสและชื่อแผนก');return;}
   if(CFG[pk].depts[id]){alert('รหัสแผนก "'+id+'" มีอยู่แล้วใน '+CFG[pk].name);return;}
-  CFG[pk].depts[id]={name,workers,rate,ot_rate:74.38,hol_rate:793.34};
+  CFG[pk].depts[id]={name,workers,rate,ot_rate:otFromRate(rate),hol_rate:holFromRate(rate),autoRates:true};
   renderCfg();
   refreshAllSelects();
   persistSettings();
@@ -3786,6 +3791,68 @@ function refreshAllSelects(){
 }
 
 
+
+/* ---- OT/ชม. และ Holiday/วัน จากอัตรา/เดือน ----
+   สูตรที่ตรงกับค่าเดิมทุกค่าในระบบ (ปัดขึ้นเป็นสตางค์):
+     OT/ชม.      = อัตรา ÷ 30 ÷ 8 × 1.5
+     Holiday/วัน = อัตรา ÷ 30 × 2
+   ติ๊ก "คำนวณตามอัตรา/เดือน" รายแผนก → แก้อัตรา/เดือนแล้ว OT/Holiday เปลี่ยนตามให้เอง
+   ไม่ติ๊ก → ใช้ค่าที่กรอกเอง (สำหรับแผนกที่สัญญากำหนดฐาน OT ต่างจากอัตรา/เดือน) */
+function ceil2(x){return Math.ceil(Math.round(x*1e6)/1e4)/100;}
+function otFromRate(r){return ceil2((+r||0)/30/8*1.5);}
+function holFromRate(r){return ceil2((+r||0)/30*2);}
+function rateFormulaRow(pk,dk,dv){
+  const ot=otFromRate(dv.rate), hol=holFromRate(dv.rate);
+  const okOT=Math.abs((+dv.ot_rate||0)-ot)<0.005, okH=Math.abs((+dv.hol_rate||0)-hol)<0.005;
+  const f=n=>Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fixed=`${f(dv.ot_rate)} / ${f(dv.hol_rate)}`;
+  const diff=(!okOT||!okH)&&!dv.autoRates&&dv.manualOk
+    ?`<span style="color:var(--navy);font-weight:600">📌 ใช้ค่าตามที่บันทึกในตั้งค่า (OT / Holiday = ${fixed}) — ไม่เปลี่ยนตามอัตรา/เดือน</span>
+       <button class="btn bo bsm" style="padding:2px 8px;font-size:11.5px" onclick="applyRateFormula('${pk}','${dk}')">ใช้ค่าตามสูตรแทน</button>`
+    :(!okOT||!okH)&&!dv.autoRates
+    ?`<span style="color:var(--red);font-weight:600">⚠️ ไม่ตรงสูตร${!okOT?` · OT ใช้ ${f(dv.ot_rate)} (สูตร ${f(ot)})`:''}${!okH?` · Holiday ใช้ ${f(dv.hol_rate)} (สูตร ${f(hol)})`:''}</span>
+       <button class="btn bo bsm" style="padding:2px 8px;font-size:11.5px" onclick="applyRateFormula('${pk}','${dk}')">ใช้ค่าตามสูตร</button>
+       <button class="btn bo bsm" style="padding:2px 8px;font-size:11.5px" onclick="keepManualRates('${pk}','${dk}')">📌 ยึดค่าที่บันทึกไว้</button>`
+    :`<span style="color:#16723c">✓ ตรงสูตร</span>`;
+  return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--bord);font-size:12px;color:var(--muted)">
+    <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:var(--navy);text-transform:none;letter-spacing:0;font-size:12.5px;margin:0">
+      <input type="checkbox" style="width:15px;height:15px;accent-color:var(--navy2)" ${dv.autoRates?'checked':''} onchange="setAutoRates('${pk}','${dk}',this.checked)"> คำนวณ OT/Holiday ตามอัตรา/เดือน</label>
+    <span>สูตร: OT = อัตรา÷30÷8×1.5 = <strong>${f(ot)}</strong> · Holiday = อัตรา÷30×2 = <strong>${f(hol)}</strong></span>
+    ${diff}
+  </div>`;
+}
+function applyRateFormula(pk,dk,silent){
+  const d=CFG[pk]?.depts?.[dk]; if(!d) return null;
+  const ot=otFromRate(d.rate), hol=holFromRate(d.rate);
+  if(!silent&&!confirm(`${d.name}: ใช้ค่าตามสูตรจากอัตรา/เดือน ${Number(d.rate).toLocaleString('th-TH')} บาท\n\nOT/ชม.: ${d.ot_rate} → ${ot}\nHoliday/วัน: ${d.hol_rate} → ${hol}\n\nInvoice ร่างจะคำนวณใหม่ ส่วนที่ยืนยันแล้วไม่เปลี่ยน`)) return null;
+  d.ot_rate=ot; d.hol_rate=hol; d.manualOk=false;
+  persistSettings();
+  const rc=recalcDraftInvoices(pk,dk);
+  renderCfg(); refreshInvForm(pk,dk);
+  if(!silent) showToast(`✅ ${d.name}: OT ${ot} / Holiday ${hol}`+(rc.n?` · ปรับ Invoice ร่าง ${rc.n} ใบ`:''));
+  return rc;
+}
+function keepManualRates(pk,dk){
+  const d=CFG[pk]?.depts?.[dk]; if(!d) return;
+  d.autoRates=false; d.manualOk=true;
+  persistSettings(); renderCfg();
+  showToast(`📌 ${d.name}: ใช้ OT ${d.ot_rate} / Holiday ${d.hol_rate} ตามที่บันทึกไว้`);
+}
+function setAutoRates(pk,dk,on){
+  const d=CFG[pk]?.depts?.[dk]; if(!d) return;
+  if(on){
+    const ot=otFromRate(d.rate), hol=holFromRate(d.rate);
+    const same=Math.abs(d.ot_rate-ot)<0.005&&Math.abs(d.hol_rate-hol)<0.005;
+    if(!same&&!confirm(`${d.name}: เปิดการคำนวณอัตโนมัติจะเปลี่ยนค่าเป็นตามสูตร\nOT/ชม.: ${d.ot_rate} → ${ot}\nHoliday/วัน: ${d.hol_rate} → ${hol}\n\nต้องการดำเนินการต่อ?`)){renderCfg();return;}
+    d.autoRates=true;
+    applyRateFormula(pk,dk,true);
+    showToast(`✅ ${d.name}: OT/Holiday จะเปลี่ยนตามอัตรา/เดือนอัตโนมัติ`);
+  }else{
+    d.autoRates=false;
+    persistSettings(); renderCfg();
+  }
+}
+
 /* ---- ค่าตั้งต้นของแผนก: แก้แล้วมีผลทันที กับ Invoice ที่กำลังทำ (Invoice ที่บันทึกไว้แล้วไม่เปลี่ยน) ---- */
 const CFG_LABEL={workers:'จำนวนคน',rate:'อัตรา/เดือน',ot_rate:'OT/ชม.',hol_rate:'Holiday/วัน'};
 function setCfgVal(pk,dk,field,val){
@@ -3795,10 +3862,16 @@ function setCfgVal(pk,dk,field,val){
   if(!(n>0)){alert('กรุณากรอกตัวเลขที่มากกว่า 0');renderCfg();return;}
   if(d[field]===n) return;
   d[field]=n;
+  let extra='';
+  if(field==='rate'&&d.autoRates){
+    d.ot_rate=otFromRate(n); d.hol_rate=holFromRate(n);
+    extra=` · OT ${d.ot_rate} / Holiday ${d.hol_rate}`;
+  }
   persistSettings();
   const rc=field==='workers'?{n:0,m:0}:recalcDraftInvoices(pk,dk);
+  renderCfg();
   refreshInvForm(pk,dk);
-  showToast(`✅ ${CFG[pk].depts[dk].name}: ${CFG_LABEL[field]} = ${n.toLocaleString('th-TH')}`
+  showToast(`✅ ${CFG[pk].depts[dk].name}: ${CFG_LABEL[field]} = ${n.toLocaleString('th-TH')}${extra}`
     +(rc.n?` · ปรับ Invoice ร่าง ${rc.n} ใบ`:'')+(rc.m?` · ใบที่ยืนยันแล้ว ${rc.m} ใบไม่เปลี่ยน`:''));
 }
 /* โหลดค่าใหม่เข้าฟอร์ม Invoice ถ้าฟอร์มกำลังแสดงแผนกนี้อยู่ (หรือไม่ระบุแผนก) */
@@ -3887,6 +3960,7 @@ function saveCfg(){
       dv.rate=parseFloat(v('r'))||dv.rate||11900;
       dv.ot_rate=parseFloat(v('o'))||dv.ot_rate||74.38;
       dv.hol_rate=parseFloat(v('h'))||dv.hol_rate||793.34;
+      if(dv.autoRates){ dv.ot_rate=otFromRate(dv.rate); dv.hol_rate=holFromRate(dv.rate); }
     });
   });
   persistSettings();
@@ -4391,7 +4465,7 @@ async function dbLoad(quiet){
     S.timesheets=tsSnap.docs.map(d=>d.data()).filter(Boolean).map(normTS);
     S.invoices=invSnap.docs.map(d=>d.data()).filter(Boolean).map(normInv);
     S.taxInvoices=taxSnap.docs.map(d=>d.data()).filter(Boolean);
-    if(cfgSnap.exists){ applySettings(cfgSnap.data()); saveSettingsLocal(); }
+    if(cfgSnap.exists){ applySettings(cfgSnap.data()); initAutoRatesFlags(); renderCfg(); saveSettingsLocal(); }
     if(ctrSnap.exists){
       const n=parseInt(ctrSnap.data().next);
       if(n){ TAX_INV_COUNTER=n; localStorage.setItem('tax_inv_counter',n); }
@@ -4904,6 +4978,7 @@ function setDefaultPeriod(){
 
 { const _ls=loadSample; loadSample=function(force){ const r=_ls(force); if(force) markTsDirty(); return r; }; }
 loadLocalSettings();     // การตั้งค่า (บริษัท/ลูกค้า/อัตรา) ที่เคยบันทึกในเครื่อง
+initAutoRatesFlags();
 loadLocalData();         // ใบบันทึกเวลา/Invoice/ใบกำกับภาษี ที่เคยบันทึกในเครื่อง
 refreshAllSelects();
 setDefaultPeriod();
