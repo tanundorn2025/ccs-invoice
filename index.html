@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-11k | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-11n | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -288,7 +288,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11k</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11n</div>
 </header>
 
 <nav class="tabs">
@@ -311,6 +311,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
         <button class="btn bo bsm" onclick="loadSample()">📂 โหลดตัวอย่าง</button>
         <button class="btn bs bsm" onclick="showCopyNamesDialog()">📋 ดึงชื่อจากงวดก่อน</button>
         <button class="btn bs bsm" onclick="exportTSExcel()">📥 Export Excel</button>
+        <button class="btn bs bsm" onclick="exportTSPdf()">📄 Export PDF</button>
         <button class="btn bp bsm" onclick="showTSPreview()">👁️ Preview / พิมพ์ใบบันทึก</button>
       </div>
     </div>
@@ -466,7 +467,8 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
   <div class="card no-print">
     <div class="ch">
       <div class="ct"><div class="ci">📄</div>ข้อมูล Invoice</div>
-      <button class="btn bp bsm" onclick="printInv()">🖨️ พิมพ์ Invoice</button>
+      <span style="display:flex;gap:6px"><button class="btn bs bsm" onclick="exportInvPdf()">📄 Export PDF</button>
+      <button class="btn bp bsm" onclick="printInv()">🖨️ พิมพ์ Invoice</button></span>
     </div>
     <div id="inv-edit-banner"></div>
     <div class="g2">
@@ -572,6 +574,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
         <button class="btn bp bsm" onclick="buildSum()">สร้าง Summary</button>
         <button class="btn bp bsm" onclick="showSumPreview()">👁️ Preview / พิมพ์</button>
         <button class="btn bs bsm" onclick="exportXlsx()">📥 Export Excel</button>
+        <button class="btn bs bsm" onclick="exportSumPdf()">📄 Export PDF</button>
         <button class="btn bo bsm" onclick="printSum()">🖨️ พิมพ์</button>
       </div>
     </div>
@@ -654,6 +657,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
       <div class="ct">👁️ Special Invoice Preview</div>
       <div style="display:flex;gap:6px">
         <button class="btn bp bsm" onclick="downloadSpInv()">📥 บันทึกไฟล์ (.html)</button>
+        <button class="btn bs bsm" onclick="exportSpPdf()">📄 Export PDF</button>
         <button class="btn bo bsm" onclick="document.getElementById('sp-preview-card').style.display='none'">✕ ปิด</button>
       </div>
     </div>
@@ -1027,8 +1031,105 @@ function renderLetterheadPreview(){
 }
 
 /* ============================================================
+   EXPORT — ดาวน์โหลดไฟล์ / PDF (เหมือนหน้าที่พิมพ์) / Excel ที่จัดหน้า A4
+   ============================================================ */
+const LIBS={
+  html2pdf:'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
+  exceljs:'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js'
+};
+function loadScriptIn(win,url){
+  return new Promise((res,rej)=>{
+    const d=win.document, sc=d.createElement('script');
+    sc.src=url; sc.onload=()=>res(); sc.onerror=()=>rej(new Error('โหลดไลบรารีไม่สำเร็จ (ต้องต่ออินเทอร์เน็ต): '+url));
+    d.head.appendChild(sc);
+  });
+}
+const _libs={};
+function loadLib(k){ if(!_libs[k]) _libs[k]=loadScriptIn(window,LIBS[k]).catch(e=>{delete _libs[k];throw e;}); return _libs[k]; }
+function safeFileName(n){ return String(n).replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,' ').trim(); }
+function downloadBlob(blob,filename){
+  const url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download=safeFileName(filename); a.style.display='none';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+function downloadText(text,filename,type){ downloadBlob(new Blob([text],{type:(type||'text/plain')+';charset=utf-8'}),filename); }
+
+/* สร้าง PDF จากเอกสาร HTML ชุดเดียวกับที่ใช้พิมพ์ — แสดงผลใน iframe แยก แล้วแปลงทีละหน้า A4 */
+let _pdfBusy=false;
+async function exportPDF(doc){
+  if(_pdfBusy) return;
+  _pdfBusy=true;
+  showToast('⏳ กำลังสร้าง PDF…');
+  const orient=doc.orient||'portrait';
+  const pageW=orient==='landscape'?297:210;
+  const m=doc.margin||[10,10,10,10];               // [บน, ขวา, ล่าง, ซ้าย] มม.
+  const contentPx=Math.round((pageW-m[1]-m[3])/25.4*96);
+  const ifr=document.createElement('iframe');
+  ifr.setAttribute('aria-hidden','true');
+  // กว้างกว่าหน้ากระดาษเล็กน้อยและสูงมาก เพื่อไม่ให้มี scrollbar ไปเบียดความกว้างตอนแปลงเป็นภาพ
+  ifr.style.cssText=`position:fixed;left:-${contentPx+400}px;top:0;width:${contentPx+60}px;height:6000px;border:0;background:#fff`;
+  const html=doc.html.replace(/\sonload="[^"]*print\(\)[^"]*"/g,'')
+    .replace('</head>','<style>@media screen{html,body{background:#fff}.ti-page{min-height:0!important;border:none!important;box-shadow:none!important}}</style></head>');
+  try{
+    await new Promise((res,rej)=>{ ifr.onload=res; ifr.onerror=rej; ifr.srcdoc=html; document.body.appendChild(ifr); });
+    const w=ifr.contentWindow;
+    try{ await Promise.race([w.document.fonts.ready,new Promise(r=>setTimeout(r,4000))]); }catch(e){}
+    // โลโก้แบบ SVG → แปลงเป็นรูป เพื่อให้แสดงใน PDF
+    w.document.querySelectorAll('svg').forEach(svg=>{
+      const r=svg.getBoundingClientRect(); if(!r.width||!r.height) return;
+      const c=svg.cloneNode(true); c.setAttribute('width',r.width); c.setAttribute('height',r.height);
+      if(!c.getAttribute('xmlns')) c.setAttribute('xmlns','http://www.w3.org/2000/svg');
+      const img=w.document.createElement('img');
+      img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(c));
+      img.style.cssText=`width:${r.width}px;height:${r.height}px;display:block`;
+      svg.replaceWith(img);
+    });
+    // รูป SVG (เช่น โลโก้หัวกระดาษ) ต้องมีขนาดในตัว ไม่งั้นจะไม่ถูกวาดลง PDF
+    w.document.querySelectorAll('img[src^="data:image/svg+xml"]').forEach(im=>{
+      try{
+        const r=im.getBoundingClientRect(); if(!r.width||!r.height) return;
+        const src=im.getAttribute('src'), i=src.indexOf(',');
+        const txt=/;base64,/.test(src.slice(0,i+1))?atob(src.slice(i+1)):decodeURIComponent(src.slice(i+1));
+        const svg=new DOMParser().parseFromString(txt,'image/svg+xml').documentElement;
+        if(svg.nodeName.toLowerCase()!=='svg') return;
+        svg.setAttribute('width',r.width); svg.setAttribute('height',r.height);
+        im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(svg));
+      }catch(e){}
+    });
+    await Promise.all([...w.document.images].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;})));
+    await loadScriptIn(w,LIBS.html2pdf);
+    // สร้าง options ภายใน iframe เอง (array ข้ามหน้าต่างจะไม่ถูกมองว่าเป็น Array)
+    const opt=w.JSON.parse(JSON.stringify({
+      margin:m,
+      image:{type:'jpeg',quality:0.97},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:contentPx+60,windowHeight:6000,scrollX:0,scrollY:0},
+      jsPDF:{unit:'mm',format:'a4',orientation:orient},
+      pagebreak:{mode:['css','legacy'],avoid:['tr','.sgrid','.no-break']}
+    }));
+    const blob=await w.html2pdf().set(opt).from(w.document.body).outputPdf('blob');
+    downloadBlob(blob,(doc.name||'document')+'.pdf');
+    showToast('📄 สร้าง PDF แล้ว');
+  }catch(e){
+    console.error('exportPDF',e);
+    alert('สร้าง PDF ไม่สำเร็จ: '+(e.message||e)+'\n\nทางเลือก: ใช้ปุ่มพิมพ์ แล้วเลือกเครื่องพิมพ์เป็น "Save as PDF"');
+  }finally{
+    ifr.remove(); _pdfBusy=false;
+  }
+}
+
+/* ============================================================
    HELPERS — escape, วันที่, การเก็บข้อมูล (localStorage + Firestore)
    ============================================================ */
+/* ขนาดตัวอักษร (pt) ที่ทำให้ข้อความกว้างไม่เกิน maxPx — ใช้ย่อข้อความยาวในเอกสาร */
+function fitPt(text,maxPx,basePt,minPt){
+  try{
+    const c=fitPt._c||(fitPt._c=document.createElement('canvas').getContext('2d'));
+    c.font=basePt+'pt Sarabun, "TH Sarabun New", Tahoma, sans-serif';
+    const w=c.measureText(String(text)).width*1.06;
+    return w<=maxPx?basePt:Math.max(minPt||6,Math.floor(basePt*maxPx/w*10)/10);
+  }catch(e){ return basePt; }
+}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function todayISO(){const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
 function dkey(d){return d.toISOString().slice(0,10);}
@@ -2842,17 +2943,29 @@ function buildSum(){
 }
 
 async function showSumPreview(){
-  if(!(await confirmDraftsForSummary('พิมพ์',false))) return;
-  if(sumInvoices(document.getElementById('sum-plant').value,document.getElementById('sum-mon').value).some(i=>invStatus(i)!=='confirmed')) return;
+  if(!(await sumReadyForOutput('พิมพ์'))) return;
+  const d=sumPrintDoc(); if(!d) return;
+  downloadText(d.html, d.name+'.html', 'text/html');
+}
+async function exportSumPdf(){
+  if(!(await sumReadyForOutput('Export PDF'))) return;
+  const d=sumPrintDoc(); if(d) exportPDF(d);
+}
+async function sumReadyForOutput(action){
+  if(!(await confirmDraftsForSummary(action,false))) return false;
+  if(sumInvoices(document.getElementById('sum-plant').value,document.getElementById('sum-mon').value).some(i=>invStatus(i)!=='confirmed')) return false;
   buildSum();
+  return true;
+}
+function sumPrintDoc(){
   const sumCard=document.getElementById('sum-card');
   if(!sumCard||!sumCard.innerHTML.trim()||sumCard.innerHTML.includes('ยังไม่มี Invoice')){
-    alert('กรุณาสร้าง Invoice ก่อนแล้วดู Summary');return;
+    alert('กรุณาสร้าง Invoice ก่อนแล้วดู Summary');return null;
   }
   const plant=document.getElementById('sum-plant').value;
   const mon=document.getElementById('sum-mon').value;
   const clone=sumCard.cloneNode(true);
-  clone.querySelectorAll('button').forEach(b=>b.remove());
+  clone.querySelectorAll('button,.no-print').forEach(b=>b.remove());
 
   const css=`
     *{box-sizing:border-box;margin:0;padding:0}
@@ -2876,19 +2989,13 @@ async function showSumPreview(){
     .sum-letterhead img{max-height:50pt}
   `;
 
-  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Summary '+mon+'</title>'
+  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Summary '+mon+'</title>'+'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">'
     +'<style>'+css+'</style>'
     +'</head><body onload="setTimeout(function(){window.print();},400)">'
     +clone.innerHTML
     +'</body></html>';
 
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download='SUMMARY-'+plant+'-'+mon+'.html';
-  a.style.display='none'; document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),8000);
+  return {html, name:'SUMMARY-'+plant+'-'+mon, orient:'portrait', margin:[15,12,15,12]};
 }
 
 /* ============================================================
@@ -2957,6 +3064,7 @@ function genTaxInvoices(){
       no=rec.no; date=rec.date;
       head=`<span class="badge bg-green">ออกแล้ว ${esc(rec.no)}</span>`;
       actions=`<button class="btn bp bsm" onclick="downloadTaxInv('tax-inv-${g}-${mon}','${g}','${mon}')">📥 บันทึกไฟล์</button>
+        <button class="btn bs bsm" onclick="exportTaxPdf('tax-inv-${g}-${mon}','${g}','${mon}')">📄 Export PDF</button>
         <button class="btn bd bsm" onclick="cancelTax('${rec.id}')">ยกเลิกใบนี้</button>`;
       if(extra.length) warn+=`<div class="alert" style="background:var(--redbg);color:var(--red);border-left:4px solid var(--red)">⚠️ มี Invoice ใหม่ ${extra.length} ใบในกลุ่มนี้ที่ยังไม่อยู่ในใบกำกับภาษีนี้: ${extra.map(i=>esc(i.no)).join(', ')} — ถ้าต้องการรวม ให้ยกเลิกใบนี้แล้วออกใหม่</div>`;
       if(invs.length!==rec.invIds.length) warn+=`<div class="alert" style="background:var(--redbg);color:var(--red);border-left:4px solid var(--red)">⚠️ Invoice บางใบในใบกำกับภาษีนี้ไม่พบในระบบแล้ว (${rec.invIds.length-invs.length} ใบ) ยอดที่ออกไว้ ${fmtNum(rec.grand)} บาท</div>`;
@@ -3288,8 +3396,10 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   const rows=(invs||[]).map((inv,i)=>({no:String(i+1),desc:(inv.no||'—')+' '+(inv.svc||'CLEANING SERVICE FEE.'),amt:fmt((+inv.up>0)?inv.up:(+inv.grand||0)*100/107)}));
   const n=Math.max(rows.length,13);
   const col=(cls,get)=>{let h='';for(let i=0;i<n;i++) h+='<div class="ti-r '+cls+'">'+(rows[i]?get(rows[i]):'')+'</div>';return h;};
+  // รายการยาว (เลขที่ Invoice รูปแบบใหม่) → ย่อขนาดตัวอักษรให้พอดีช่อง แทนการดันช่องจำนวนเงินตกขอบ
+  const fitDesc=t=>{const pt=fitPt(t,352,10,6.5);return pt<10?'<span style="font-size:'+pt+'pt">'+esc(t)+'</span>':esc(t);};
 
-  const css='.ti-page,.ti-page *{box-sizing:border-box}'
+  const css='.ti-page,.ti-page *{box-sizing:border-box}.ti-col{min-width:0}'
   +'.ti-page{width:210mm;margin:0 auto;padding:5mm 10.2mm 0 12.6mm;background:#fff;color:#000;font-family:Sarabun,"TH Sarabun New",Tahoma,sans-serif;font-size:10pt;line-height:1.2;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
   +'@media screen{.ti-page{min-height:297mm;border:1px solid #cfd4dc;box-shadow:0 2px 10px rgba(0,0,0,.12)}}'
   +'.ti-page b{font-weight:700}'
@@ -3356,7 +3466,7 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   +'</div>'
   +'<div class="ti-items">'
     +'<div class="ti-col"><div class="ti-h">ลำดับ</div>'+col('c',r=>r.no)+'</div>'
-    +'<div class="ti-col"><div class="ti-h">รายการ</div>'+col('',r=>esc(r.desc))+'</div>'
+    +'<div class="ti-col"><div class="ti-h">รายการ</div>'+col('',r=>fitDesc(r.desc))+'</div>'
     +'<div class="ti-col"><div class="ti-h">จำนวน</div>'+col('',()=>'')+'</div>'
     +'<div class="ti-col"><div class="ti-h">ราคาต่อหน่วย</div>'+col('',()=>'')+'</div>'
     +'<div class="ti-col"><div class="ti-h">จำนวนเงิน</div>'+col('rt',r=>r.amt)+'</div>'
@@ -3385,21 +3495,20 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   +'</div>';
 }
 
-function downloadTaxInv(divId, group, mon, taxDate){
+function taxPrintDoc(divId, group, mon){
   const el=document.getElementById(divId);
-  if(!el) return;
+  if(!el) return null;
+  const c=el.cloneNode(true);
+  c.querySelectorAll('[data-draft-mark]').forEach(x=>x.remove());
   const css='*{margin:0;padding:0}@page{size:A4 portrait;margin:0}body{margin:0;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}';
   const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ใบกำกับภาษี</title>'
     +'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">'
     +'<style>'+css+'</style></head>'
-    +'<body onload="setTimeout(function(){window.print();},700)">'+el.innerHTML+'</body></html>';
-  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download='ใบกำกับภาษี-กลุ่ม'+group+'-'+mon+'.html';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),8000);
+    +'<body onload="setTimeout(function(){window.print();},700)">'+c.innerHTML+'</body></html>';
+  return {html, name:'ใบกำกับภาษี-กลุ่ม'+group+'-'+mon, orient:'portrait', margin:[0,0,0,0]};
 }
+function downloadTaxInv(divId, group, mon){ const d=taxPrintDoc(divId,group,mon); if(d) downloadText(d.html, d.name+'.html', 'text/html'); }
+function exportTaxPdf(divId, group, mon){ const d=taxPrintDoc(divId,group,mon); if(d) exportPDF(d); }
 
 
 
@@ -3524,150 +3633,215 @@ function downloadTaxInv(divId, group, mon, taxDate){
 
 
 
-async function exportXlsx(){
-  if(!(await confirmDraftsForSummary('Export Excel',false))) return;
-  const plant=document.getElementById('sum-plant').value;
-  if(sumInvoices(plant,document.getElementById('sum-mon').value).some(i=>invStatus(i)!=='confirmed')) return;
-  const monKey=document.getElementById('sum-mon').value;
-  const mon=monthLabel(monKey);
-  const rel=sumInvoices(plant,monKey);
-  if(!rel.length){alert('ไม่มีข้อมูล');return;}
-  const rows=[
-    ['HOYA OPTICS (THAILAND) LTD.'],
-    ['DEBIT NOTE SUMMARY ON '+mon],[],
-    ['NO.','INVOICE NO.','UP TOTAL','VAT 7%','GRAND TOTAL'],
-    ...rel.map((i,n)=>[n+1,i.no,i.up,i.vat,i.grand]),
-    [],
-    ['','TOTAL',rel.reduce((s,i)=>s+i.up,0),rel.reduce((s,i)=>s+i.vat,0),rel.reduce((s,i)=>s+i.grand,0)],
-    [],[],[],
-    ['','','','','CHIANGMAI CLEANING AND SUPPLY SERVICE PART., LTD.'],
-    ['','','','','(MISS. MONTIRA YAINTHORN)'],['','','','','081-2879000']
-  ];
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:5},{wch:58},{wch:14},{wch:13},{wch:16}];
-  XLSX.utils.book_append_sheet(wb,ws,'SUMMARY');
-  XLSX.writeFile(wb,`SUMMARY-${plant}-${mon.replace(' ','-')}.xlsx`);
-}
 
 /* ============================================================
    EXPORT TIMESHEET EXCEL
    ============================================================ */
-function exportTSExcel(){
+/* ============================================================
+   EXCEL (ExcelJS) — จัดหน้า A4 ตีกรอบ พร้อมพิมพ์
+   ============================================================ */
+const XL={
+  font:'Tahoma',
+  navy:'FF1A3A5C', pink:'FFC8006A', grey:'FFBFBFBF', light:'FFF4F6FA', line:'FF9AA3B2',
+  thin(c){ return {style:'thin',color:{argb:c||'FF9AA3B2'}}; },
+  box(c){ const t=XL.thin(c); return {top:t,left:t,bottom:t,right:t}; },
+  fill(c){ return {type:'pattern',pattern:'solid',fgColor:{argb:c}}; },
+  money:'#,##0.00;[Red]-#,##0.00;"-"'
+};
+function xlNum(v){ const s=String(v??'').trim(); if(s==='') return null; const n=Number(s); return isFinite(n)&&/^-?\d+(\.\d+)?$/.test(s)?n:s; }
+function xlStyleRange(ws,r1,c1,r2,c2,fn){ for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++) fn(ws.getCell(r,c),r,c); }
+function xlPage(ws,orientation,printTitles){
+  ws.pageSetup={paperSize:9,orientation,fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,
+    margins:{left:0.35,right:0.35,top:0.45,bottom:0.5,header:0.2,footer:0.25}};
+  if(printTitles) ws.pageSetup.printTitlesRow=printTitles;
+  ws.headerFooter={oddFooter:'&L&8'+String(CO.nameEn||'').replace(/&/g,'&&')+'&R&8หน้า &P / &N'};
+  ws.views=[{showGridLines:false}];
+}
+/* หัวกระดาษบริษัท (ชื่อ ที่อยู่ โทร) + โลโก้ถ้าเป็น PNG/JPG — คืนแถวถัดไป */
+function xlLetterhead(wb,ws,lastCol){
+  const hasLogo=/^data:image\/(png|jpe?g);base64,/.test(CO.logoData||'');
+  const c1=hasLogo?2:1;
+  const rows=[[CO.nameTh,13,true,XL.pink],[CO.addr,9,false,'FF555555'],['โทร. '+(CO.tel||'')+'    Email : '+(CO.email||''),9,false,'FF555555']];
+  rows.forEach(([t,sz,b,col],i)=>{
+    ws.mergeCells(i+1,c1,i+1,lastCol);
+    const c=ws.getCell(i+1,c1); c.value=t||''; c.font={name:XL.font,size:sz,bold:b,color:{argb:col}};
+    c.alignment={vertical:'middle'}; ws.getRow(i+1).height=i===0?22:15;
+  });
+  if(hasLogo){
+    const m=CO.logoData.match(/^data:image\/(png|jpe?g);base64,(.*)$/);
+    const id=wb.addImage({base64:m[2],extension:m[1]==='png'?'png':'jpeg'});
+    ws.addImage(id,{tl:{col:0.1,row:0.1},ext:{width:48,height:48}});
+  }
+  xlStyleRange(ws,3,1,3,lastCol,c=>{c.border={bottom:{style:'medium',color:{argb:XL.pink}}};});
+  return 5;
+}
+async function xlSave(wb,name){
+  const buf=await wb.xlsx.writeBuffer();
+  downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name+'.xlsx');
+}
+
+/* ---------- Summary ---------- */
+async function exportXlsx(){
+  if(!(await sumReadyForOutput('Export Excel'))) return;
+  const plant=document.getElementById('sum-plant').value;
+  const monKey=document.getElementById('sum-mon').value;
+  const mon=monthLabel(monKey);
+  const rel=sumInvoices(plant,monKey);
+  if(!rel.length){alert('ไม่มีข้อมูล');return;}
+  try{ await loadLib('exceljs'); }catch(e){ alert(e.message); return; }
+  const wb=new ExcelJS.Workbook(); wb.creator=CO.nameEn||'CCS';
+  const ws=wb.addWorksheet('SUMMARY');
+  ws.columns=[{width:6},{width:52},{width:16},{width:14},{width:17}];
+  const L=5;
+  let r=xlLetterhead(wb,ws,L);
+  const title=(t,sz)=>{ws.mergeCells(r,1,r,L);const c=ws.getCell(r,1);c.value=t;c.font={name:XL.font,size:sz,bold:sz>11,color:{argb:XL.navy}};c.alignment={horizontal:'center'};r++;};
+  title('DEBIT NOTE SUMMARY',14); title('ON '+mon,10); r++;
+  ws.getCell(r,1).value='MESSRS: HOYA OPTICS (THAILAND) LTD.'; ws.mergeCells(r,1,r,3);
+  ws.mergeCells(r,4,r,5); ws.getCell(r,4).value='DATE: '+new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+  ws.getCell(r,4).alignment={horizontal:'right'};
+  [1,4].forEach(c=>ws.getCell(r,c).font={name:XL.font,size:9,bold:true});
+  r+=2;
+  const hdr=r;
+  ['NO.','INVOICE NO.','UP TOTAL (฿)','VAT 7% (฿)','GRAND TOTAL (฿)'].forEach((t,i)=>{
+    const c=ws.getCell(r,i+1); c.value=t; c.font={name:XL.font,size:9,bold:true,color:{argb:'FFFFFFFF'}};
+    c.fill=XL.fill(XL.navy); c.border=XL.box(XL.navy); c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+  });
+  ws.getRow(r).height=24; r++;
+  const byPlant={}; rel.forEach(i=>{(byPlant[i.plant]=byPlant[i.plant]||[]).push(i);});
+  const multi=Object.keys(byPlant).length>1;
+  let n=1;
+  Object.entries(byPlant).forEach(([p,invs])=>{
+    invs.forEach(inv=>{
+      ws.getRow(r).values=[n,inv.no,+inv.up||0,+inv.vat||0,+inv.grand||0];
+      xlStyleRange(ws,r,1,r,L,(c,_,ci)=>{
+        c.font={name:XL.font,size:9,bold:ci===5}; c.border=XL.box();
+        c.alignment={vertical:'middle',horizontal:ci===1?'center':ci===2?'left':'right',wrapText:ci===2};
+        if(ci>=3) c.numFmt=XL.money;
+        if(n%2===0) c.fill=XL.fill(XL.light);
+      });
+      ws.getRow(r).height=18; n++; r++;
+    });
+    if(multi){
+      ws.mergeCells(r,1,r,2); ws.getCell(r,1).value='รวม '+(CFG[p]?.name||p);
+      [3,4,5].forEach((ci,k)=>ws.getCell(r,ci).value=invs.reduce((s,i)=>s+(+[i.up,i.vat,i.grand][k]||0),0));
+      xlStyleRange(ws,r,1,r,L,(c,_,ci)=>{c.font={name:XL.font,size:9,bold:true};c.fill=XL.fill('FFE8E8E8');c.border=XL.box();c.alignment={horizontal:ci<=2?'right':'right'};if(ci>=3)c.numFmt=XL.money;});
+      r++;
+    }
+  });
+  const tUp=rel.reduce((s,i)=>s+(+i.up||0),0), tVat=rel.reduce((s,i)=>s+(+i.vat||0),0), tG=rel.reduce((s,i)=>s+(+i.grand||0),0);
+  ws.mergeCells(r,1,r,2); ws.getCell(r,1).value=`TOTAL (${rel.length} invoices)`;
+  ws.getCell(r,3).value=tUp; ws.getCell(r,4).value=tVat; ws.getCell(r,5).value=tG;
+  xlStyleRange(ws,r,1,r,L,(c,_,ci)=>{c.font={name:XL.font,size:10,bold:true,color:{argb:'FFFFFFFF'}};c.fill=XL.fill(XL.navy);
+    c.border={top:{style:'medium',color:{argb:XL.navy}},bottom:{style:'medium',color:{argb:XL.navy}},left:XL.thin(XL.navy),right:XL.thin(XL.navy)};
+    c.alignment={horizontal:'right',vertical:'middle'}; if(ci>=3)c.numFmt=XL.money;});
+  ws.getRow(r).height=22; r++;
+  ws.mergeCells(r,1,r,L); const w=ws.getCell(r,1); w.value='( '+numToEng(tG)+' )';
+  w.font={name:XL.font,size:9,italic:true,color:{argb:XL.navy}}; w.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+  w.fill=XL.fill('FFF0F7FF'); xlStyleRange(ws,r,1,r,L,c=>c.border=XL.box()); ws.getRow(r).height=22;
+  r+=4;
+  ws.getCell(r,2).value='HOYA OPTICS (THAILAND) LTD.'; ws.getCell(r,2).border={top:XL.thin('FF333333')};
+  ws.mergeCells(r,4,r,5); ws.getCell(r,4).value=CO.nameEn||''; ws.getCell(r,4).alignment={horizontal:'center',wrapText:true};
+  xlStyleRange(ws,r,4,r,5,c=>c.border={top:XL.thin('FF333333')});
+  ws.mergeCells(r+1,4,r+1,5); ws.getCell(r+1,4).value=CO.contact||''; ws.getCell(r+1,4).alignment={horizontal:'center'};
+  [ws.getCell(r,2),ws.getCell(r,4),ws.getCell(r+1,4)].forEach(c=>c.font={name:XL.font,size:9});
+  ws.getRow(r).height=30;
+  xlPage(ws,'portrait',`${hdr}:${hdr}`);
+  ws.pageSetup.printArea=`A1:E${r+1}`;
+  await xlSave(wb,'SUMMARY-'+plant+'-'+monKey);
+  showToast('📥 Export Excel แล้ว');
+}
+
+/* ---------- ใบบันทึกเวลา ---------- */
+async function exportTSExcel(){
   const plant=document.getElementById('tf-plant').value;
   const dept=document.getElementById('tf-dept').value;
-  const ds=document.getElementById('tf-ds').value;
-  const de=document.getElementById('tf-de').value;
-  const dates=getDates(ds,de);
-  const plantName=(CFG[plant]||{}).name||plant;
-  const deptName=(CFG[plant]?.depts?.[dept]?.name)||dept;
-  const hdrRow=['No.','ชื่อ - นามสกุล',...dates.map(d=>d.getDate()),'O.T.','H','O.T.H','Total'];
-  const regSumMin=regRows.reduce((s,r)=>s+(r.totalMin||0),0);
-  const subSumMin=subRows.reduce((s,r)=>s+(r.totalMin||0),0);
-  const regData=regRows.map((r,i)=>[(i+1)+'*',r.name,...dates.map(d=>r.days[d.toISOString().slice(0,10)]||''),(r.ot||''),(r.h||''),(r.oth||''),(r.total||'')]);
-  const subData=subRows.map(r=>[r.letter,r.name,...dates.map(d=>r.days[d.toISOString().slice(0,10)]||''),(r.ot||''),(r.h||''),(r.oth||''),(r.total||'')]);
-  const regTotRow=['','รวม',...dates.map(()=>''),
-    regRows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0)||0,
-    regRows.reduce((s,r)=>s+(parseInt(r.h)||0),0)||0,
-    regRows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0)||0,
-    minToDisplay(regSumMin)];
-  const subTotRow=['','รวม',...dates.map(()=>''),
-    subRows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0)||0,
-    subRows.reduce((s,r)=>s+(parseInt(r.h)||0),0)||0,
-    subRows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0)||0,
-    minToDisplay(subSumMin)];
-
-  const aoa=[
-    ['HOYA OPTICS (THAILAND) LTD.'],
-    ['ใบบันทึกเวลาทำงานของพนักงาน CCS'],
-    [plantName+' — '+deptName,'','','ประจำวันที่ '+ds+' ถึง '+de],
-    [],
-    ['★ พนักงานประจำ'],
-    hdrRow,...regData,regTotRow,
-    [],
-    ['★ พนักงานแทน / สำรอง'],
-    hdrRow,...subData,subTotRow,
-    [],
-    ['หมายเหตุ :','']
-  ];
-
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet(aoa);
-  const nCols=2+dates.length+4;
-  ws['!cols']=[{wch:5},{wch:24},...dates.map(()=>({wch:4.2})),{wch:7},{wch:5},{wch:7},{wch:7}];
-
-  // Apply thin borders to all cells
-  const thin={style:'thin',color:{rgb:'AAAAAA'}};
-  const bord={top:thin,bottom:thin,left:thin,right:thin};
-  const thickBord={top:{style:'medium',color:{rgb:'1a3a5c'}},bottom:{style:'medium',color:{rgb:'1a3a5c'}},left:{style:'medium',color:{rgb:'1a3a5c'}},right:{style:'medium',color:{rgb:'1a3a5c'}}};
-  for(let R=0;R<aoa.length;R++){
-    for(let C=0;C<nCols;C++){
-      const addr=XLSX.utils.encode_cell({r:R,c:C});
-      if(!ws[addr]) ws[addr]={t:'z',v:''};
-      if(!ws[addr].s) ws[addr].s={};
-      ws[addr].s.border=bord;
-      ws[addr].s.alignment={horizontal:'center',vertical:'center',wrapText:false};
-    }
-  }
-
-  // Title rows — no border on outer, bigger font
-  [[0,13,true],[1,11,true],[2,10,false]].forEach(([r,sz,bold])=>{
-    const addr=XLSX.utils.encode_cell({r,c:0});
-    if(ws[addr]){ws[addr].s.font={sz,bold};ws[addr].s.alignment={horizontal:'left'};}
+  const ds=document.getElementById('tf-ds').value, de=document.getElementById('tf-de').value;
+  if(!ds||!de){alert('กรุณากรอกช่วงวันที่ก่อน');return;}
+  try{ await loadLib('exceljs'); }catch(e){ alert(e.message); return; }
+  const dates=getDates(ds,de), nD=dates.length;
+  const pName=CFG[plant]?.name||plant, dName=CFG[plant]?.depts?.[dept]?.name||dept;
+  const fmtD=d=>new Date(d).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+  const C0=4, cOT=C0+nD, cH=cOT+1, cOTH=cOT+2, cTot=cOT+3, L=cTot;   // 1:No 2:ชื่อ 3:OT/W 4..: วันที่
+  const wb=new ExcelJS.Workbook(); wb.creator=CO.nameEn||'CCS';
+  const ws=wb.addWorksheet(String(dName).replace(/[\\/?*[\]:]/g,' ').slice(0,31)||'Timesheet');
+  ws.columns=[{width:5},{width:25},{width:3.6},...dates.map(()=>({width:4.1})),{width:6.5},{width:5},{width:6.5},{width:7.5}];
+  const dayFill=d=>isSunday(d)?'FFE8E8E8':isHoliday(d)?'FFF0E8D0':null;
+  const hdrFill=d=>isSunday(d)?'FFA8A8A8':isHoliday(d)?'FFC8B88C':'FFBFBFBF';
+  const sumFill=['FFEEF5E8','FFE8F5EE','FFF5E8F2','FFE8EEF5'];
+  const f=(sz,o)=>Object.assign({name:XL.font,size:sz},o||{});
+  let r=1;
+  const title=(t,sz,b)=>{ws.mergeCells(r,1,r,L);const c=ws.getCell(r,1);c.value=t;c.font=f(sz,{bold:b});c.alignment={horizontal:'center',vertical:'middle'};ws.getRow(r).height=sz+8;r++;};
+  title('HOYA OPTICS (THAILAND) LTD.',14,true);
+  title('ใบบันทึกเวลาทำงานของพนักงาน CCS',12,true);
+  title(`${pName} — ${dName}  |  ประจำวันที่ ${fmtD(ds)} ถึง ${fmtD(de)}`,10,false);
+  r++;
+  const firstHdr=r;
+  const header=label=>{
+    const r1=r, r2=r+1;
+    [[1,'No.'],[2,label],[3,''],[cOT,'O.T.'],[cH,'H'],[cOTH,'O.T.H'],[cTot,'Total']].forEach(([c,t])=>{ws.mergeCells(r1,c,r2,c);ws.getCell(r1,c).value=t;});
+    dates.forEach((d,i)=>{ ws.getCell(r1,C0+i).value=d.getDate(); ws.getCell(r2,C0+i).value=d.toLocaleDateString('th-TH',{month:'short'}); });
+    xlStyleRange(ws,r1,1,r2,L,(c,ri,ci)=>{
+      const d=ci>=C0&&ci<cOT?dates[ci-C0]:null;
+      c.fill=XL.fill(d?hdrFill(d):'FFBFBFBF'); c.border=XL.box('FF888888');
+      c.font=f(ri===r1?(d?8:8):6.5,{bold:true}); c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+    });
+    ws.getRow(r1).height=15; ws.getRow(r2).height=11; r+=2;
+  };
+  const person=(row,label)=>{
+    const r1=r, r2=r+1;
+    ws.mergeCells(r1,1,r2,1); ws.getCell(r1,1).value=label;
+    ws.mergeCells(r1,2,r2,2); ws.getCell(r1,2).value=row.name||'';
+    ws.getCell(r1,3).value='OT'; ws.getCell(r2,3).value='W';
+    dates.forEach((d,i)=>{const k=dkey(d); ws.getCell(r1,C0+i).value=xlNum(row.otDays?.[k]); ws.getCell(r2,C0+i).value=xlNum(row.days?.[k]);});
+    [[cOT,row.ot],[cH,row.h],[cOTH,row.oth],[cTot,row.total]].forEach(([c,v])=>{ws.mergeCells(r1,c,r2,c);ws.getCell(r1,c).value=xlNum(v)??'-';});
+    xlStyleRange(ws,r1,1,r2,L,(c,ri,ci)=>{
+      const d=ci>=C0&&ci<cOT?dates[ci-C0]:null;
+      c.alignment={horizontal:ci===2?'left':'center',vertical:'middle',indent:ci===2?1:0,shrinkToFit:ci===2};
+      if(ci===3){c.fill=XL.fill('FF222222');c.font=f(6,{bold:true,color:{argb:ri===r1?'FFFFAAAA':'FFAADDFF'}});}
+      else if(d){c.font=ri===r1?f(7,{bold:true,color:{argb:'FFC8060A'}}):f(8);const fl=dayFill(d);if(fl)c.fill=XL.fill(fl);
+        c.border={left:XL.thin('FFAAAAAA'),right:XL.thin('FFAAAAAA'),top:ri===r1?XL.thin('FFAAAAAA'):{style:'hair',color:{argb:'FFDDDDDD'}},bottom:ri===r2?XL.thin('FFAAAAAA'):{style:'hair',color:{argb:'FFDDDDDD'}}};return;}
+      else if(ci>=cOT){c.fill=XL.fill(sumFill[ci-cOT]);c.font=f(8.5,{bold:ci===cOT||ci===cTot});}
+      else if(ci===1){c.fill=XL.fill('FFF5F5F5');c.font=f(8.5,{bold:true});}
+      else c.font=f(9);
+      c.border=XL.box('FFAAAAAA');
+    });
+    ws.getRow(r1).height=12; ws.getRow(r2).height=14; r+=2;
+  };
+  const total=rows=>{
+    const tOT=rows.reduce((s,x)=>s+(parseFloat(x.ot)||0),0), tH=rows.reduce((s,x)=>s+(parseInt(x.h)||0),0);
+    const tOTH=rows.reduce((s,x)=>s+(parseFloat(x.oth)||0),0), min=rows.reduce((s,x)=>s+(x.totalMin||0),0);
+    ws.getCell(r,1).value='รวม';
+    ws.getCell(r,cOT).value=tOT?xlNum(fmtOT(tOT)):'-'; ws.getCell(r,cH).value=tH>0?tH:'-';
+    ws.getCell(r,cOTH).value=tOTH?xlNum(fmtOT(tOTH)):'-'; ws.getCell(r,cTot).value=xlNum(minToDisplay(min))||'-';
+    xlStyleRange(ws,r,1,r,L,(c,_,ci)=>{
+      c.font=f(9,{bold:true}); c.alignment={horizontal:'center',vertical:'middle'};
+      c.border={top:{style:'medium',color:{argb:'FF333333'}},bottom:XL.thin('FFAAAAAA'),left:XL.thin('FFAAAAAA'),right:XL.thin('FFAAAAAA')};
+      if(ci===3) c.fill=XL.fill('FF222222'); else if(ci>=cOT) c.fill=XL.fill(sumFill[ci-cOT]); else if(ci===1) c.fill=XL.fill('FFF5F5F5');
+    });
+    ws.getRow(r).height=16; r++;
+  };
+  header('ชื่อ - นามสกุล');
+  regRows.forEach((x,i)=>{
+    let w=0,ab=0; dates.forEach(d=>{if(isSunday(d)||isHoliday(d))return; String(x.days?.[dkey(d)]||'').trim()===''?ab++:w++;});
+    person(x,(i+1)+(w>0&&ab<=3?'*':''));
   });
-
-  // Header rows styling (row index 5 and row after subData header)
-  const hdrIdxs=[5];
-  // find second header
-  let cumRow=5+1+regData.length+1+1+1; // after regData+total+blank+subtitle
-  hdrIdxs.push(cumRow);
-  hdrIdxs.forEach(rIdx=>{
-    for(let C=0;C<nCols;C++){
-      const addr=XLSX.utils.encode_cell({r:rIdx,c:C});
-      if(!ws[addr]) ws[addr]={t:'z',v:''};
-      if(!ws[addr].s) ws[addr].s={};
-      ws[addr].s.fill={patternType:'solid',fgColor:{rgb:'1A3A5C'}};
-      ws[addr].s.font={color:{rgb:'FFFFFF'},bold:true,sz:9};
-      ws[addr].s.border=thickBord;
-      ws[addr].s.alignment={horizontal:'center',vertical:'center'};
-    }
-  });
-
-  // Total rows — gold background
-  [5+1+regData.length, cumRow+1+subData.length].forEach(rIdx=>{
-    for(let C=0;C<nCols;C++){
-      const addr=XLSX.utils.encode_cell({r:rIdx,c:C});
-      if(!ws[addr]) ws[addr]={t:'z',v:''};
-      if(!ws[addr].s) ws[addr].s={};
-      ws[addr].s.fill={patternType:'solid',fgColor:{rgb:'FEF3DC'}};
-      ws[addr].s.font={bold:true,sz:9,color:{rgb:'1A3A5C'}};
-      ws[addr].s.border=thickBord;
-    }
-  });
-
-  // Weekend column highlight
-  dates.forEach((d,i)=>{
-    if(isSunday(d)||isHoliday(d)){
-      for(let R=0;R<aoa.length;R++){
-        const addr=XLSX.utils.encode_cell({r:R,c:2+i});
-        if(!ws[addr]) ws[addr]={t:'z',v:''};
-        if(!ws[addr].s) ws[addr].s={};
-        if(!ws[addr].s.fill) ws[addr].s.fill={patternType:'solid',fgColor:{rgb:isSunday(d)?'E8F0FF':'FFF3E0'}};
-      }
-    }
-  });
-
-  // Merges for title
-  ws['!merges']=[
-    {s:{r:0,c:0},e:{r:0,c:5}},
-    {s:{r:1,c:0},e:{r:1,c:5}},
-    {s:{r:2,c:0},e:{r:2,c:2}},
-    {s:{r:2,c:3},e:{r:2,c:7}},
-  ];
-
-  XLSX.utils.book_append_sheet(wb,ws,deptName.slice(0,31));
-  XLSX.writeFile(wb,'ใบบันทึกเวลา-'+plant+'-'+dept+'-'+ds.slice(0,7)+'.xlsx');
+  total(regRows);
+  header('ชื่อ - นามสกุล (พนักงานแทน, สำรอง)');
+  subRows.forEach(x=>person(x,x.letter));
+  total(subRows);
+  ws.mergeCells(r,1,r,L); const rm=ws.getCell(r,1);
+  rm.value={richText:[{text:'หมายเหตุ : ',font:f(9,{bold:true})},{text:tsRemark||'',font:f(9)}]};
+  rm.fill=XL.fill('FFFFFBE0'); rm.alignment={vertical:'middle'}; xlStyleRange(ws,r,1,r,L,c=>c.border=XL.box('FFCCCCCC'));
+  ws.getRow(r).height=18; r+=2;
+  ws.getCell(r,2).value='■ วันอาทิตย์'; ws.getCell(r,2).font=f(8,{color:{argb:'FF8A8A8A'}});
+  ws.mergeCells(r,C0,r,Math.min(C0+8,L)); ws.getCell(r,C0).value='■ วันหยุดพิเศษที่กำหนด'; ws.getCell(r,C0).font=f(8,{color:{argb:'FFB09A5C'}});
+  xlPage(ws,'landscape',`${firstHdr}:${firstHdr+1}`);
+  ws.pageSetup.fitToHeight=1;
+  ws.pageSetup.printArea=`A1:${ws.getColumn(L).letter}${r}`;
+  await xlSave(wb,'ใบบันทึกเวลา-'+plant+'-'+dept+'-'+ds+'_to_'+de);
+  showToast('📥 Export Excel แล้ว');
 }
+
 
 /* ============================================================
    SETTINGS
@@ -4064,7 +4238,7 @@ function showTSPreview(){
   document.getElementById('ts-preview-modal').scrollTop=0;
 }
 
-function doPrintTS(){
+function tsPrintDoc(){
   // สร้างตาราง print จากข้อมูลจริง (ไม่ clone DOM)
   const plant=document.getElementById('tf-plant').value;
   const dept =document.getElementById('tf-dept').value;
@@ -4242,25 +4416,35 @@ ${resolve(`<table style="${tableStyle}">
 </div>`)}
 </body></html>`;
 
-  const blob=new Blob([body],{type:'text/html;charset=utf-8'});
-  const url =URL.createObjectURL(blob);
-  const a   =document.createElement('a');
-  a.href=url;
-  a.download='ใบบันทึกเวลา-'+plant+'-'+dept+'-'+ds+'_to_'+de+'.html';
-  a.style.display='none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),8000);
-
+  return {html:body, name:'ใบบันทึกเวลา-'+plant+'-'+dept+'-'+ds+'_to_'+de, orient:'landscape', margin:[6,5,6,5]};
+}
+function doPrintTS(){
+  const d=tsPrintDoc(); if(!d) return;
+  downloadText(d.html, d.name+'.html', 'text/html');
   const msg=document.getElementById('ts-print-msg');
   if(msg){msg.style.display='block';setTimeout(()=>{msg.style.display='none';},10000);}
 }
+function exportTSPdf(){ const d=tsPrintDoc(); if(d) exportPDF(d); }
 
 function printTS(){ showTSPreview(); }
 
 
 
+
+/* เอกสาร Invoice สำหรับ PDF: ใช้หน้า Preview เดียวกับที่พิมพ์ + สไตล์ของหน้าแอป */
+function invPrintDoc(){
+  showInvPreview();
+  const el=document.querySelector('#inv-html .inv-page')||document.getElementById('inv-html');
+  if(!el||!el.innerHTML.trim()){alert('ยังไม่มีข้อมูล Invoice');return null;}
+  const styles=[...document.querySelectorAll('head style')].filter(x=>x.id!=='print-ps').map(x=>x.textContent).join('\n');
+  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoice</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">'
+    +'<style>'+styles+'\nhtml,body{background:#fff!important;margin:0;padding:0}.inv-page{box-shadow:none!important;border:none!important;margin:0!important;max-width:none!important;background:#fff!important}</style>'
+    +'</head><body>'+el.outerHTML+'</body></html>';
+  const no=(document.getElementById('inv-no').value||'Invoice').trim();
+  return {html, name:'Invoice-'+no, orient:'portrait', margin:[10,10,10,10]};
+}
+function exportInvPdf(){ const d=invPrintDoc(); if(d) exportPDF(d); }
 
 function printInv(){
   showInvPreview();
@@ -4953,8 +5137,8 @@ function showSpPreview(){
   card?.scrollIntoView({behavior:'smooth'});
 }
 
-function downloadSpInv(){
-  if(SP_ITEMS.length===0){alert('กรุณาเพิ่มรายการก่อน');return;}
+function spPrintDoc(){
+  if(SP_ITEMS.length===0){alert('กรุณาเพิ่มรายการก่อน');return null;}
   const no=document.getElementById('sp-no')?.value||'SP';
   const css=`*{box-sizing:border-box;margin:0;padding:0}
   @page{size:A4 portrait;margin:15mm 12mm}
@@ -4962,17 +5146,13 @@ function downloadSpInv(){
   table{width:100%;border-collapse:collapse}
   th{background:#1a3a5c!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:8px 10px}
   td{border-bottom:1px solid #eee;padding:7px 10px}`;
-  const body='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+no+'</title>'
+  const body='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+esc(no)+'</title>'+'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">'
     +'<style>'+css+'</style></head>'
     +'<body onload="setTimeout(function(){window.print();},400)">'+getSpInvHTML(true)+'</body></html>';
-  const blob=new Blob([body],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download='Special-Invoice-'+no+'.html';
-  a.style.display='none'; document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),8000);
+  return {html:body, name:'Special-Invoice-'+no, orient:'portrait', margin:[15,12,15,12]};
 }
+function downloadSpInv(){ const d=spPrintDoc(); if(d) downloadText(d.html, d.name+'.html', 'text/html'); }
+function exportSpPdf(){ const d=spPrintDoc(); if(d) exportPDF(d); }
 
 function saveSpInv(){
   if(SP_ITEMS.length===0){alert('กรุณาเพิ่มรายการก่อน');return;}
