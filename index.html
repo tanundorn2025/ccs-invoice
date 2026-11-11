@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-11j | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-11k | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -288,7 +288,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11j</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11k</div>
 </header>
 
 <nav class="tabs">
@@ -1290,10 +1290,16 @@ function sumRowOT(row){
 
 /* tabs */
 function sw(id,btn,force){
+  const stage=force===true?2:(force||0);   // 0 = ตรวจทั้งหมด, 1 = ผ่านใบบันทึกเวลาแล้ว, 2 = ไปเลย
   const cur=document.querySelector('.panel.on')?.id;
-  if(!force&&cur==='t1'&&id!=='t1'){
+  if(stage<1&&cur==='t1'&&id!=='t1'){
     const name=(btn?.textContent||'').replace(/^[^\wก-๙]+/,'').trim();
-    askSaveFirst('ไปหน้า '+name,false).then(ok=>{if(ok) sw(id,btn,true);});
+    askSaveFirst('ไปหน้า '+name,false).then(ok=>{if(ok) sw(id,btn,1);});
+    return;
+  }
+  if(stage<2&&id==='t3'&&cur!=='t3'){
+    refreshMonthSelects();
+    confirmDraftsForSummary('เปิด Summary').then(v=>{if(v) sw(id,btn,2);});
     return;
   }
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -2785,22 +2791,19 @@ function buildSum(){
     const pVat=invs.reduce((s,i)=>s+i.vat,0);
     const pG=invs.reduce((s,i)=>s+i.grand,0);
     invs.forEach(inv=>{
-      const dName=CFG[p]?.depts?.[inv.dept]?.name||inv.dept;
       tableRows+=`<tr>
         <td style="font-weight:700;color:var(--muted)">${rowNum++}</td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">${inv.no}</td>
-        <td>${pName}</td>
-        <td><span class="badge bg-gold">${dName}</span></td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;word-break:break-word">${esc(inv.no)}</td>
         <td class="num">${fmt(inv.up)}</td><td class="num">${fmt(inv.vat)}</td>
         <td class="num" style="font-weight:700">${fmt(inv.grand)}</td>
       </tr>`;
     });
     if(Object.keys(byPlant).length>1)
-      tableRows+=`<tr class="tr-sub"><td colspan="4" style="text-align:right">รวม ${pName}</td>
+      tableRows+=`<tr class="tr-sub"><td colspan="2" style="text-align:right">รวม ${esc(pName)}</td>
         <td class="num">${fmt(pUp)}</td><td class="num">${fmt(pVat)}</td><td class="num">${fmt(pG)}</td></tr>`;
   });
 
-  el.innerHTML=`${_drafts?`<div class="alert no-print" style="background:var(--goldbg);color:#6b4a00;border-left:4px solid var(--gold);margin-bottom:10px">⚠️ เดือนนี้มี Invoice ร่าง ${_drafts} ใบ — ยอดอาจเปลี่ยนถ้าแก้อัตราในตั้งค่า กด “✅ ยืนยันทั้งเดือน” ในแท็บ Invoice เพื่อล็อกยอด</div>`:''}
+  el.innerHTML=`${_drafts?`<div class="alert no-print" style="background:var(--goldbg);color:#6b4a00;border-left:4px solid var(--gold);margin-bottom:10px">⚠️ เดือนนี้มี Invoice ร่าง ${_drafts} ใบ — ยอดอาจเปลี่ยนถ้าแก้อัตราในตั้งค่า และต้องยืนยันก่อนพิมพ์/Export <button class="btn bs bsm" style="margin-left:8px" onclick="confirmSumMonth()">✅ ยืนยันทั้งเดือน</button></div>`:''}
   <div class="sum-letterhead">${getLetterheadHTML(false)}</div>
   <div style="text-align:center;margin-bottom:10px">
     <div style="font-size:16px;font-weight:700;color:var(--navy)">DEBIT NOTE SUMMARY</div>
@@ -2821,14 +2824,14 @@ function buildSum(){
   </div>
   <div style="overflow-x:auto">
   <table class="dt"><thead><tr>
-    <th style="width:32px">NO.</th><th>INVOICE NO.</th><th>โรงงาน</th><th>แผนก</th>
+    <th style="width:32px">NO.</th><th>INVOICE NO.</th>
     <th class="num">UP TOTAL (฿)</th><th class="num">VAT 7% (฿)</th><th class="num">GRAND TOTAL (฿)</th>
   </tr></thead><tbody>${tableRows}</tbody>
   <tfoot><tr class="tr-tot">
-    <td colspan="4" style="text-align:right;font-weight:700">TOTAL (${rel.length} invoices)</td>
+    <td colspan="2" style="text-align:right;font-weight:700">TOTAL (${rel.length} invoices)</td>
     <td class="num">${fmt(tUp)}</td><td class="num">${fmt(tVat)}</td><td class="num">${fmt(tG)}</td>
   </tr>
-  <tr><td colspan="7" style="text-align:center;font-size:12.5px;color:var(--navy);font-style:italic;padding:8px 12px;background:#f0f7ff">
+  <tr><td colspan="5" style="text-align:center;font-size:12.5px;color:var(--navy);font-style:italic;padding:8px 12px;background:#f0f7ff">
     ( ${numToEng(tG)} )
   </td></tr></tfoot></table>
   </div>
@@ -2838,7 +2841,10 @@ function buildSum(){
   </div>`;
 }
 
-function showSumPreview(){
+async function showSumPreview(){
+  if(!(await confirmDraftsForSummary('พิมพ์',false))) return;
+  if(sumInvoices(document.getElementById('sum-plant').value,document.getElementById('sum-mon').value).some(i=>invStatus(i)!=='confirmed')) return;
+  buildSum();
   const sumCard=document.getElementById('sum-card');
   if(!sumCard||!sumCard.innerHTML.trim()||sumCard.innerHTML.includes('ยังไม่มี Invoice')){
     alert('กรุณาสร้าง Invoice ก่อนแล้วดู Summary');return;
@@ -3518,8 +3524,10 @@ function downloadTaxInv(divId, group, mon, taxDate){
 
 
 
-function exportXlsx(){
+async function exportXlsx(){
+  if(!(await confirmDraftsForSummary('Export Excel',false))) return;
   const plant=document.getElementById('sum-plant').value;
+  if(sumInvoices(plant,document.getElementById('sum-mon').value).some(i=>invStatus(i)!=='confirmed')) return;
   const monKey=document.getElementById('sum-mon').value;
   const mon=monthLabel(monKey);
   const rel=sumInvoices(plant,monKey);
@@ -3527,18 +3535,17 @@ function exportXlsx(){
   const rows=[
     ['HOYA OPTICS (THAILAND) LTD.'],
     ['DEBIT NOTE SUMMARY ON '+mon],[],
-    ['NO.','INVOICE NO.','โรงงาน','แผนก','UP TOTAL','VAT 7%','GRAND TOTAL'],
-    ...rel.map((i,n)=>[n+1,i.no,(CFG[i.plant]||{}).name||i.plant,
-      CFG[i.plant]?.depts?.[i.dept]?.name||i.dept,i.up,i.vat,i.grand]),
+    ['NO.','INVOICE NO.','UP TOTAL','VAT 7%','GRAND TOTAL'],
+    ...rel.map((i,n)=>[n+1,i.no,i.up,i.vat,i.grand]),
     [],
-    ['','','','TOTAL',rel.reduce((s,i)=>s+i.up,0),rel.reduce((s,i)=>s+i.vat,0),rel.reduce((s,i)=>s+i.grand,0)],
+    ['','TOTAL',rel.reduce((s,i)=>s+i.up,0),rel.reduce((s,i)=>s+i.vat,0),rel.reduce((s,i)=>s+i.grand,0)],
     [],[],[],
-    ['','','','','','CHIANGMAI CLEANING AND SUPPLY SERVICE PART., LTD.'],
-    ['','','','','','(MISS. MONTIRA YAINTHORN)'],['','','','','','081-2879000']
+    ['','','','','CHIANGMAI CLEANING AND SUPPLY SERVICE PART., LTD.'],
+    ['','','','','(MISS. MONTIRA YAINTHORN)'],['','','','','081-2879000']
   ];
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:5},{wch:40},{wch:22},{wch:18},{wch:14},{wch:13},{wch:16}];
+  ws['!cols']=[{wch:5},{wch:58},{wch:14},{wch:13},{wch:16}];
   XLSX.utils.book_append_sheet(wb,ws,'SUMMARY');
   XLSX.writeFile(wb,`SUMMARY-${plant}-${mon.replace(' ','-')}.xlsx`);
 }
@@ -4265,7 +4272,31 @@ function printInv(){
     setTimeout(()=>document.querySelectorAll('#t2 .no-print').forEach(el=>el.style.display=''),500);
   },400);
 }
-function printSum(){
+/* Invoice ร่างในเดือน/โรงงานที่เลือกใน Summary → ต้องยืนยันก่อน
+   คืนค่า true = ไปต่อได้ ; allowView = ให้เลือก "ดูก่อน (ยังไม่ยืนยัน)" ได้ */
+async function confirmDraftsForSummary(action,allowView=true){
+  const plant=document.getElementById('sum-plant')?.value||'ALL';
+  const monKey=document.getElementById('sum-mon')?.value||'';
+  const drafts=sumInvoices(plant,monKey).filter(i=>invStatus(i)!=='confirmed');
+  if(!drafts.length) return true;
+  const tot=drafts.reduce((s,i)=>s+(i.grand||0),0);
+  const btns=[{label:'ยกเลิก',value:'cancel',cls:'bo'}];
+  if(allowView) btns.push({label:'ดูก่อน (ยังไม่ยืนยัน)',value:'view',cls:'bo'});
+  btns.push({label:`✅ ยืนยันทั้ง ${drafts.length} ใบแล้ว${allowView?'ไปต่อ':action}`,value:'confirm',cls:'bp'});
+  const v=await askChoice('✅ ยืนยัน Invoice ก่อน'+action,
+    `${monthLabel(monKey)} มี Invoice ที่ยังเป็น <strong>ร่าง ${drafts.length} ใบ</strong> (รวม ${fmtNum(tot)} บาท):<br>
+     <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;margin:6px 0 2px;max-height:140px;overflow:auto">${drafts.map(i=>esc(i.no)).join('<br>')}</div>
+     หลังยืนยัน ยอดจะคงที่ ไม่เปลี่ยนตามการแก้อัตราในตั้งค่า (แก้แบบ manual ได้ภายหลัง)`+(allowView?'':'<br><strong>ต้องยืนยันก่อนจึงจะ'+action+'ได้</strong>'),
+    btns);
+  if(v==='cancel') return false;
+  if(v==='confirm'){ setInvStatus(drafts,'confirmed'); showToast(`✅ ยืนยัน ${drafts.length} ใบแล้ว`); }
+  return true;
+}
+function confirmSumMonth(){ confirmDraftsForSummary('',false).then(()=>buildSum()); }
+
+async function printSum(){
+  if(!(await confirmDraftsForSummary('พิมพ์',false))) return;
+  if(sumInvoices(document.getElementById('sum-plant').value,document.getElementById('sum-mon').value).some(i=>invStatus(i)!=='confirmed')) return;
   buildSum();
   setPrintPage('portrait');
   setPrintTarget('t3');
