@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-11f | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-11g | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -288,7 +288,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11f</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11g</div>
 </header>
 
 <nav class="tabs">
@@ -1064,6 +1064,20 @@ function initAutoRatesFlags(){
   Object.values(CFG).forEach(p=>Object.values(p.depts||{}).forEach(d=>{
     if(d.autoRates===undefined) d.autoRates=Math.abs(d.ot_rate-otFromRate(d.rate))<0.005&&Math.abs(d.hol_rate-holFromRate(d.rate))<0.005;
   }));
+}
+/* แผนกที่ติ๊ก "คำนวณตามอัตรา/เดือน" → ให้ค่าตรงกับสูตรปัจจุบันเสมอ (เช่น หลังเปลี่ยนกติกาฐาน) */
+function syncAutoRates(){
+  let changed=[];
+  Object.entries(CFG).forEach(([pk,p])=>Object.entries(p.depts||{}).forEach(([dk,d])=>{
+    if(!d.autoRates) return;
+    const ot=otFromRate(d.rate), hol=holFromRate(d.rate);
+    if(Math.abs(d.ot_rate-ot)>=0.005||Math.abs(d.hol_rate-hol)>=0.005){d.ot_rate=ot;d.hol_rate=hol;changed.push([pk,dk]);}
+  }));
+  if(changed.length){
+    saveSettingsLocal();
+    let n=0; changed.forEach(([pk,dk])=>{n+=recalcDraftInvoices(pk,dk).n;});
+    setTimeout(()=>{dbSaveSettings();showToast(`ปรับ OT/Holiday ตามสูตรใหม่ ${changed.length} แผนก`+(n?` · Invoice ร่าง ${n} ใบ`:''));},800);
+  }
 }
 function applySettings(st,render=true){
   if(!st) return;
@@ -3799,8 +3813,11 @@ function refreshAllSelects(){
    ติ๊ก "คำนวณตามอัตรา/เดือน" รายแผนก → แก้อัตรา/เดือนแล้ว OT/Holiday เปลี่ยนตามให้เอง
    ไม่ติ๊ก → ใช้ค่าที่กรอกเอง (สำหรับแผนกที่สัญญากำหนดฐาน OT ต่างจากอัตรา/เดือน) */
 function ceil2(x){return Math.ceil(Math.round(x*1e6)/1e4)/100;}
-function otFromRate(r){return ceil2((+r||0)/30/8*1.5);}
-function holFromRate(r){return ceil2((+r||0)/30*2);}
+/* ฐานที่ใช้คิด OT/Holiday: อัตรา/เดือนไม่เกิน 10,000 บาท → ใช้ อัตรา × 2 เป็นฐาน */
+const LOW_RATE_LIMIT=10000;
+function rateBase(r){r=+r||0;return r<=LOW_RATE_LIMIT?r*2:r;}
+function otFromRate(r){return ceil2(rateBase(r)/30/8*1.5);}
+function holFromRate(r){return ceil2(rateBase(r)/30*2);}
 function rateFormulaRow(pk,dk,dv){
   const ot=otFromRate(dv.rate), hol=holFromRate(dv.rate);
   const okOT=Math.abs((+dv.ot_rate||0)-ot)<0.005, okH=Math.abs((+dv.hol_rate||0)-hol)<0.005;
@@ -3817,7 +3834,7 @@ function rateFormulaRow(pk,dk,dv){
   return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--bord);font-size:12px;color:var(--muted)">
     <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:var(--navy);text-transform:none;letter-spacing:0;font-size:12.5px;margin:0">
       <input type="checkbox" style="width:15px;height:15px;accent-color:var(--navy2)" ${dv.autoRates?'checked':''} onchange="setAutoRates('${pk}','${dk}',this.checked)"> คำนวณ OT/Holiday ตามอัตรา/เดือน</label>
-    <span>สูตร: OT = อัตรา÷30÷8×1.5 = <strong>${f(ot)}</strong> · Holiday = อัตรา÷30×2 = <strong>${f(hol)}</strong></span>
+    <span>${(+dv.rate||0)<=LOW_RATE_LIMIT?`ฐาน = อัตรา×2 = <strong>${f(rateBase(dv.rate))}</strong> (อัตราไม่เกิน 10,000) · `:''}สูตร: OT = ฐาน÷30÷8×1.5 = <strong>${f(ot)}</strong> · Holiday = ฐาน÷30×2 = <strong>${f(hol)}</strong></span>
     ${diff}
   </div>`;
 }
@@ -4465,7 +4482,7 @@ async function dbLoad(quiet){
     S.timesheets=tsSnap.docs.map(d=>d.data()).filter(Boolean).map(normTS);
     S.invoices=invSnap.docs.map(d=>d.data()).filter(Boolean).map(normInv);
     S.taxInvoices=taxSnap.docs.map(d=>d.data()).filter(Boolean);
-    if(cfgSnap.exists){ applySettings(cfgSnap.data()); initAutoRatesFlags(); renderCfg(); saveSettingsLocal(); }
+    if(cfgSnap.exists){ applySettings(cfgSnap.data()); initAutoRatesFlags(); syncAutoRates(); renderCfg(); saveSettingsLocal(); }
     if(ctrSnap.exists){
       const n=parseInt(ctrSnap.data().next);
       if(n){ TAX_INV_COUNTER=n; localStorage.setItem('tax_inv_counter',n); }
@@ -4980,6 +4997,7 @@ function setDefaultPeriod(){
 loadLocalSettings();     // การตั้งค่า (บริษัท/ลูกค้า/อัตรา) ที่เคยบันทึกในเครื่อง
 initAutoRatesFlags();
 loadLocalData();         // ใบบันทึกเวลา/Invoice/ใบกำกับภาษี ที่เคยบันทึกในเครื่อง
+syncAutoRates();
 refreshAllSelects();
 setDefaultPeriod();
 onPlantChange();
