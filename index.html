@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-11h | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-11i | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -288,7 +288,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11h</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11i</div>
 </header>
 
 <nav class="tabs">
@@ -470,7 +470,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     </div>
     <div id="inv-edit-banner"></div>
     <div class="g2">
-      <div class="fg"><label>เลขที่ Invoice</label><input type="text" id="inv-no" placeholder="เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-NOV.-1(26)" oninput="this.dataset.auto='';calcInv()"></div>
+      <div class="fg"><label style="display:flex;justify-content:space-between;align-items:center">เลขที่ Invoice <a href="#" onclick="resetInvNo();return false" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--navy2)" title="สร้างเลขที่ใหม่จากโรงงาน/แผนก/วันที่">↻ สร้างเลขอัตโนมัติ</a></label><input type="text" id="inv-no" autocomplete="off" placeholder="เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-NOV.-1(26)" oninput="this.dataset.manual=this.value.trim()?'1':'';calcInv()"></div>
       <div class="fg"><label>วันที่ออก</label><input type="date" id="inv-dt" onchange="_preferTsId=null;loadTStoInv();autoFillInvNo();calcInv()"></div>
       <div class="fg">
         <label>โรงงาน (Plant)</label>
@@ -598,8 +598,8 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     <div class="g2" style="gap:.75rem">
       <div class="fg"><label>เลขที่ Invoice</label>
         <div style="display:flex;gap:6px;align-items:center">
-          <input type="text" id="sp-no" placeholder="เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-SP-NOV.-1(26)" style="flex:1" oninput="this.dataset.auto=''">
-          <button class="btn bo bsm" onclick="document.getElementById('sp-no').value='';autoFillSpNo(true)" title="สร้างเลขอัตโนมัติ">🔄</button>
+          <input type="text" id="sp-no" autocomplete="off" placeholder="เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-SP-NOV.-1(26)" style="flex:1" oninput="this.dataset.manual=this.value.trim()?'1':''">
+          <button class="btn bo bsm" onclick="resetSpNo()" title="สร้างเลขอัตโนมัติ">🔄</button>
         </div></div>
       <div class="fg"><label>วันที่ออก</label>
         <input type="date" id="sp-dt" onchange="autoFillSpNo()"></div>
@@ -2658,7 +2658,7 @@ function editInv(id){
   document.getElementById('inv-plant').value=i.plant;
   document.getElementById('inv-dept').innerHTML=getDeptOptions(i.plant);
   set('inv-dept',i.dept); set('inv-dt',i.dt); set('inv-no',i.no);
-  document.getElementById('inv-no').dataset.auto='';
+  document.getElementById('inv-no').dataset.manual='1';
   if(i.service) set('inv-svc',i.service);
   set('i-cnt',i.cnt); set('i-rate',i.rate); set('i-abs',i.abs);
   set('i-oth',i.oth); set('i-otp',i.otp); set('i-otr',i.otr);
@@ -2678,7 +2678,7 @@ function editInv(id){
 function exitEditInv(){
   _editInvId=null;
   ['inv-plant','inv-dept','inv-dt'].forEach(k=>document.getElementById(k).disabled=false);
-  const n=document.getElementById('inv-no'); n.value=''; n.dataset.auto='1';
+  const n=document.getElementById('inv-no'); n.value=''; n.dataset.manual='';
   renderInvEditBanner();
   loadTStoInv(true); autoFillInvNo(); calcInv();
   renderInvList();
@@ -4680,16 +4680,20 @@ function genInvNo(plant, dept, dt, isSpecial){
   return no;
 }
 
+function resetInvNo(){
+  if(_editInvId&&!confirm('กำลังแก้ไข Invoice ที่บันทึกไว้ — ต้องการเปลี่ยนเป็นเลขที่ที่สร้างใหม่หรือไม่?')) return;
+  const n=document.getElementById('inv-no'); n.dataset.manual=''; autoFillInvNo(); calcInv();
+}
+function resetSpNo(){ const n=document.getElementById('sp-no'); n.dataset.manual=''; autoFillSpNo(true); }
 function autoFillInvNo(){
   const plant=document.getElementById('inv-plant')?.value||'';
   const dept =document.getElementById('inv-dept')?.value||'';
   const dt   =document.getElementById('inv-dt')?.value||todayISO();
   const noEl =document.getElementById('inv-no');
   if(!noEl) return;
-  if(noEl.value&&noEl.dataset.auto!=='1') return; // ผู้ใช้พิมพ์เอง → ไม่ทับ
+  if(noEl.dataset.manual==='1') return; // ผู้ใช้พิมพ์เอง หรือกำลังแก้ใบที่บันทึกไว้ → ไม่ทับ
   const ex=S.invoices.find(i=>i.type!=='special'&&i.key===`${plant}__${dept}__${dt.slice(0,7)}`);
   noEl.value=ex?ex.no:genInvNo(plant,dept,dt,false);
-  noEl.dataset.auto='1';
 }
 
 function autoFillSpNo(force){
@@ -4700,10 +4704,9 @@ function autoFillSpNo(force){
   if(!noEl) return;
   if(!force){
     if(_loadedSpId) return;
-    if(noEl.value&&noEl.dataset.auto!=='1') return;
+    if(noEl.dataset.manual==='1') return;
   }
   noEl.value=genInvNo(plant,dept,dt,true);
-  noEl.dataset.auto='1';
 }
 
 /* ============================================================
@@ -4717,7 +4720,7 @@ function newSpInv(){
   _loadedSpId=null;
   SP_ITEMS=[];
   const noEl=document.getElementById('sp-no');
-  if(noEl){noEl.value='';noEl.dataset.auto='';}
+  if(noEl){noEl.value='';noEl.dataset.manual='';}
   autoFillSpNo();
   renderSpItems();
   renderSpSaved();
@@ -4979,7 +4982,7 @@ function loadSpInv(id){
   if(!inv) return;
   _loadedSpId=id;
   const noEl=document.getElementById('sp-no');
-  noEl.value=inv.no; noEl.dataset.auto='';
+  noEl.value=inv.no; noEl.dataset.manual='1';
   document.getElementById('sp-dt').value=inv.dt;
   document.getElementById('sp-plant').value=inv.plant;
   onSpPlantChange();
@@ -5038,6 +5041,8 @@ renderSpSaved();
 loadCustomerSettings();
 initTaxMonDropdown();
 (function(){const el=document.getElementById('inv-dt'); if(el&&!el.value) el.value=todayISO();})();
+// เบราว์เซอร์อาจคืนค่าเลขที่เก่าในช่องตอนรีเฟรช → ล้างทิ้ง แล้วสร้างใหม่
+['inv-no','sp-no'].forEach(id=>{const el=document.getElementById(id); if(el){el.value='';el.dataset.manual='';}});
 onInvPlantChange();
 autoFillInvNo();
 calcInv();
