@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-11i | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-11j | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -288,7 +288,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11i</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11j</div>
 </header>
 
 <nav class="tabs">
@@ -470,7 +470,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     </div>
     <div id="inv-edit-banner"></div>
     <div class="g2">
-      <div class="fg"><label style="display:flex;justify-content:space-between;align-items:center">เลขที่ Invoice <a href="#" onclick="resetInvNo();return false" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--navy2)" title="สร้างเลขที่ใหม่จากโรงงาน/แผนก/วันที่">↻ สร้างเลขอัตโนมัติ</a></label><input type="text" id="inv-no" autocomplete="off" placeholder="เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-NOV.-1(26)" oninput="this.dataset.manual=this.value.trim()?'1':'';calcInv()"></div>
+      <div class="fg"><label style="display:flex;justify-content:space-between;align-items:center">เลขที่ Invoice <a href="#" onclick="resetInvNo();return false" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--navy2)" title="สร้างเลขที่ใหม่จากโรงงาน/แผนก/วันที่">↻ สร้างเลขอัตโนมัติ</a></label><input type="text" id="inv-no" autocomplete="off" placeholder="เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-NOV.-1(26)" oninput="this.dataset.manual=this.value.trim()?'1':'';invNoNote();calcInv()"></div>
       <div class="fg"><label>วันที่ออก</label><input type="date" id="inv-dt" onchange="_preferTsId=null;loadTStoInv();autoFillInvNo();calcInv()"></div>
       <div class="fg">
         <label>โรงงาน (Plant)</label>
@@ -2278,11 +2278,15 @@ function useTS(id,force){
 function goInv(){
   if(!saveTS()) return;
   _preferTsId=_loadedTsId;
+  if(_editInvId) exitEditInv();
   document.querySelectorAll('.tb')[1].click();
   document.getElementById('inv-plant').value=document.getElementById('tf-plant').value;
   onInvPlantChange();
   document.getElementById('inv-dept').value=document.getElementById('tf-dept').value;
   loadTStoInv();
+  // สร้างเลขที่ Invoice ใหม่ตามโรงงาน/แผนก/เดือนเสมอเมื่อมาจากปุ่มนี้
+  const n=document.getElementById('inv-no'); n.dataset.manual='';
+  autoFillInvNo(); calcInv();
 }
 
 /* ============================================================
@@ -2669,6 +2673,7 @@ function editInv(id){
   if(ss) ss.innerHTML=`กำลังแก้ไขค่าที่บันทึกไว้ใน ${esc(i.no)}${i.tsPeriod?' (จากใบบันทึกเวลางวด '+rangeText(...i.tsPeriod.split('..'))+')':''}`;
   ['inv-plant','inv-dept','inv-dt'].forEach(k=>document.getElementById(k).disabled=true);
   renderInvEditBanner();
+  invNoNote();
   calcInv();
   renderInvList();
   const b=[...document.querySelectorAll('.tb')].find(x=>(x.getAttribute('onclick')||'').includes("'t2'"));
@@ -4691,9 +4696,29 @@ function autoFillInvNo(){
   const dt   =document.getElementById('inv-dt')?.value||todayISO();
   const noEl =document.getElementById('inv-no');
   if(!noEl) return;
-  if(noEl.dataset.manual==='1') return; // ผู้ใช้พิมพ์เอง หรือกำลังแก้ใบที่บันทึกไว้ → ไม่ทับ
+  if(noEl.dataset.manual==='1'){ invNoNote(); return; } // ผู้ใช้พิมพ์เอง หรือกำลังแก้ใบที่บันทึกไว้ → ไม่ทับ
+  noEl.value=genInvNo(plant,dept,dt,false);   // ใช้รูปแบบปัจจุบันเสมอ
+  invNoNote();
+}
+/* แจ้งเมื่อแผนก+เดือนนี้มี Invoice บันทึกไว้แล้ว (บันทึกใหม่จะแทนใบเดิม) */
+function invNoNote(){
+  const noEl=document.getElementById('inv-no'); if(!noEl) return;
+  let el=document.getElementById('inv-no-note');
+  if(!el){el=document.createElement('div');el.id='inv-no-note';el.style.cssText='font-size:12px;margin-top:4px';noEl.insertAdjacentElement('afterend',el);}
+  if(_editInvId){el.innerHTML='';return;}
+  const plant=document.getElementById('inv-plant')?.value||'', dept=document.getElementById('inv-dept')?.value||'';
+  const dt=document.getElementById('inv-dt')?.value||todayISO();
   const ex=S.invoices.find(i=>i.type!=='special'&&i.key===`${plant}__${dept}__${dt.slice(0,7)}`);
-  noEl.value=ex?ex.no:genInvNo(plant,dept,dt,false);
+  if(!ex){el.innerHTML='';return;}
+  const same=ex.no===noEl.value.trim();
+  el.innerHTML=`<span style="color:#8a5a00">ℹ️ แผนกนี้มี Invoice เดือน ${monthLabel(dt.slice(0,7))} บันทึกไว้แล้ว: <strong>${esc(ex.no)}</strong>${same?'':' — ถ้าบันทึก จะแทนใบเดิมด้วยเลขที่บนหน้าจอ'}</span>
+    ${same?'':`<a href="#" onclick="useOldInvNo();return false" style="margin-left:6px;font-weight:600;color:var(--navy2)">ใช้เลขเดิม</a>`}`;
+}
+function useOldInvNo(){
+  const plant=document.getElementById('inv-plant').value, dept=document.getElementById('inv-dept').value, dt=document.getElementById('inv-dt').value||todayISO();
+  const ex=S.invoices.find(i=>i.type!=='special'&&i.key===`${plant}__${dept}__${dt.slice(0,7)}`);
+  if(!ex) return;
+  const n=document.getElementById('inv-no'); n.value=ex.no; n.dataset.manual='1'; invNoNote(); calcInv();
 }
 
 function autoFillSpNo(force){
