@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-11g | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-11h | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -288,7 +288,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11g</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11h</div>
 </header>
 
 <nav class="tabs">
@@ -470,7 +470,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     </div>
     <div id="inv-edit-banner"></div>
     <div class="g2">
-      <div class="fg"><label>เลขที่ Invoice</label><input type="text" id="inv-no" placeholder="เช่น CCS-H.OPTICS-SLR-NOV.-1(24)" oninput="this.dataset.auto='';calcInv()"></div>
+      <div class="fg"><label>เลขที่ Invoice</label><input type="text" id="inv-no" placeholder="เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-NOV.-1(26)" oninput="this.dataset.auto='';calcInv()"></div>
       <div class="fg"><label>วันที่ออก</label><input type="date" id="inv-dt" onchange="_preferTsId=null;loadTStoInv();autoFillInvNo();calcInv()"></div>
       <div class="fg">
         <label>โรงงาน (Plant)</label>
@@ -598,7 +598,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     <div class="g2" style="gap:.75rem">
       <div class="fg"><label>เลขที่ Invoice</label>
         <div style="display:flex;gap:6px;align-items:center">
-          <input type="text" id="sp-no" placeholder="เช่น CCS-H.OPTICS-SLR-SP-NOV.-1(24)" style="flex:1" oninput="this.dataset.auto=''">
+          <input type="text" id="sp-no" placeholder="เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-SP-NOV.-1(26)" style="flex:1" oninput="this.dataset.auto=''">
           <button class="btn bo bsm" onclick="document.getElementById('sp-no').value='';autoFillSpNo(true)" title="สร้างเลขอัตโนมัติ">🔄</button>
         </div></div>
       <div class="fg"><label>วันที่ออก</label>
@@ -3691,6 +3691,9 @@ function renderCfg(){
                 onchange="renameDept('${pk}','${dk}',this.value)" style="max-width:300px;padding:4px 8px;font-size:13px">
               <span class="badge bg-gold" style="font-size:10px" title="รหัสแผนก">${pk}/${dk}</span>
               <button class="btn bo bsm" style="padding:2px 8px;font-size:11px;background:#fff" title="แก้รหัสแผนก" onclick="renameDeptCode('${pk}','${dk}')">✏️ รหัส</button>
+              <label style="display:inline-flex;align-items:center;gap:6px;margin:0 0 0 6px;color:#fff;font-size:11.5px;text-transform:none;letter-spacing:0;white-space:nowrap" title="ตัวเลขลำดับในเลขที่ Invoice ของแผนกนี้">ลำดับเลขที่
+                <input type="number" min="1" id="cfg-${pk}-${dk}-seq" value="${deptSeq(pk,dk)}" onchange="setCfgVal('${pk}','${dk}','seq',this.value)" style="width:64px;padding:4px 6px;font-size:13px${seqDup(pk,dk)?';border:2px solid #ff8a8a':''}"></label>
+              ${seqDup(pk,dk)?'<span style="color:#ffb3b3;font-size:11.5px;font-weight:700">⚠️ ลำดับซ้ำ</span>':''}
             </span>
             <button class="btn bd bsm" onclick="removeDept('${pk}','${dk}')">✕</button>
           </div>
@@ -3725,6 +3728,7 @@ function renameDept(pk,dk,name){
   afterRename('ชื่อแผนก → "'+name+'"');
 }
 function afterRename(msg){
+  autoFillInvNo(); autoFillSpNo();
   refreshAllSelects();
   persistSettings();
   renderSavedTS();renderInvList();renderSpSaved();buildSum();
@@ -3761,7 +3765,8 @@ function addDept(pk){
   const rate=parseFloat(document.getElementById('ndept-'+pk+'-r').value)||11900;
   if(!id||!name){alert('กรุณากรอกรหัสและชื่อแผนก');return;}
   if(CFG[pk].depts[id]){alert('รหัสแผนก "'+id+'" มีอยู่แล้วใน '+CFG[pk].name);return;}
-  CFG[pk].depts[id]={name,workers,rate,ot_rate:otFromRate(rate),hol_rate:holFromRate(rate),autoRates:true};
+  const nextSeq=Math.max(0,...Object.keys(CFG[pk].depts).map(k=>deptSeq(pk,k)))+1;
+  CFG[pk].depts[id]={name,workers,rate,ot_rate:otFromRate(rate),hol_rate:holFromRate(rate),autoRates:true,seq:nextSeq};
   renderCfg();
   refreshAllSelects();
   persistSettings();
@@ -3871,11 +3876,11 @@ function setAutoRates(pk,dk,on){
 }
 
 /* ---- ค่าตั้งต้นของแผนก: แก้แล้วมีผลทันที กับ Invoice ที่กำลังทำ (Invoice ที่บันทึกไว้แล้วไม่เปลี่ยน) ---- */
-const CFG_LABEL={workers:'จำนวนคน',rate:'อัตรา/เดือน',ot_rate:'OT/ชม.',hol_rate:'Holiday/วัน'};
+const CFG_LABEL={seq:'ลำดับเลขที่ Invoice',workers:'จำนวนคน',rate:'อัตรา/เดือน',ot_rate:'OT/ชม.',hol_rate:'Holiday/วัน'};
 function setCfgVal(pk,dk,field,val){
   const d=CFG[pk]?.depts?.[dk];
   if(!d) return;
-  const n=field==='workers'?parseInt(val):parseFloat(val);
+  const n=(field==='workers'||field==='seq')?parseInt(val):parseFloat(val);
   if(!(n>0)){alert('กรุณากรอกตัวเลขที่มากกว่า 0');renderCfg();return;}
   if(d[field]===n) return;
   d[field]=n;
@@ -3885,9 +3890,10 @@ function setCfgVal(pk,dk,field,val){
     extra=` · OT ${d.ot_rate} / Holiday ${d.hol_rate}`;
   }
   persistSettings();
-  const rc=field==='workers'?{n:0,m:0}:recalcDraftInvoices(pk,dk);
+  const rc=(field==='workers'||field==='seq')?{n:0,m:0}:recalcDraftInvoices(pk,dk);
   renderCfg();
   refreshInvForm(pk,dk);
+  if(field==='seq'){ autoFillInvNo(); autoFillSpNo(); }
   showToast(`✅ ${CFG[pk].depts[dk].name}: ${CFG_LABEL[field]} = ${n.toLocaleString('th-TH')}${extra}`
     +(rc.n?` · ปรับ Invoice ร่าง ${rc.n} ใบ`:'')+(rc.m?` · ใบที่ยืนยันแล้ว ${rc.m} ใบไม่เปลี่ยน`:''));
 }
@@ -4644,15 +4650,34 @@ function loadCustomerSettings(){
 const MON_ABBR=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 
 /* รูปแบบ: CCS-H.OPTICS-{PLANT}[-{DEPT}][-SP]-{MON}.-{ลำดับในเดือนของโรงงาน}({YY}) — DEPT ไม่ใส่ถ้าเป็น MAIN */
+/* ลำดับของแผนกในเลขที่ Invoice (ตั้งในตั้งค่า) — ยังไม่ได้ตั้ง = ตำแหน่งของแผนกในโรงงาน */
+function deptSeq(pk,dk){
+  const d=CFG[pk]?.depts?.[dk];
+  if(d&&+d.seq>0) return +d.seq;
+  const i=Object.keys(CFG[pk]?.depts||{}).indexOf(dk);
+  return i>=0?i+1:1;
+}
+function seqDup(pk,dk){
+  const n=deptSeq(pk,dk);
+  return Object.keys(CFG[pk]?.depts||{}).some(k=>k!==dk&&deptSeq(pk,k)===n);
+}
+/* รูปแบบ: CCS-{ชื่อโรงงาน}-{ชื่อแผนก}[-SP]-{เดือนที่ออก}.-{ลำดับแผนก}({ปี ค.ศ. 2 หลัก})
+   เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-NOV.-1(26) */
 function genInvNo(plant, dept, dt, isSpecial){
   const ds=dt||todayISO();
   const d=new Date(ds+'T00:00:00');
   const mon=MON_ABBR[d.getMonth()];
   const yy=String(d.getFullYear()).slice(2);
-  const ym=ds.slice(0,7);
-  const running=S.invoices.filter(i=>i.plant===plant&&(i.dt||'').startsWith(ym)).length+1;
-  const deptPart=(dept&&dept!=='MAIN')?`-${dept}`:'';
-  return `CCS-H.OPTICS-${plant}${deptPart}${isSpecial?'-SP':''}-${mon}.-${running}(${yy})`;
+  const pName=String(CFG[plant]?.name||plant).trim();
+  const dName=String(CFG[plant]?.depts?.[dept]?.name||dept).trim();
+  const seq=deptSeq(plant,dept);
+  const base=`CCS-${pName}-${dName}${isSpecial?'-SP':''}-${mon}.-${seq}`;
+  let no=`${base}(${yy})`;
+  if(isSpecial){ // Special หลายใบในเดือนเดียวกัน → ต่อท้าย /2, /3 …
+    const used=new Set(S.invoices.filter(i=>i.id!==_loadedSpId).map(i=>i.no));
+    for(let k=2;used.has(no);k++) no=`${base}/${k}(${yy})`;
+  }
+  return no;
 }
 
 function autoFillInvNo(){
