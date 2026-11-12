@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-12a | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-12b | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -288,7 +288,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12a</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12b</div>
 </header>
 
 <nav class="tabs">
@@ -529,7 +529,8 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     <div class="brow">
       <button class="btn bo" onclick="pullLatestInv()" title="ดึงค่าจากใบบันทึกเวลาและการตั้งค่าล่าสุดใหม่">🔄 ดึงค่าล่าสุด</button>
       <button class="btn ba" id="inv-save-btn" onclick="saveInv(false)">💾 บันทึกร่าง</button>
-      <button class="btn bs" onclick="saveInv(true)">✅ บันทึกและยืนยัน</button>
+      <button class="btn bs" id="inv-confirm-btn" onclick="saveInv(true)">✅ บันทึกและยืนยัน</button>
+      <span id="inv-save-state" style="font-size:12.5px;font-weight:600;align-self:center"></span>
       <button class="btn bs" onclick="showInvPreview()">👁️ Preview</button>
     </div>
   </div>
@@ -1451,9 +1452,40 @@ function tsSelChange(){
       dEl.value=_curDept;
       return;
     }
+    const prev={plant:_curPlant, ds:document.getElementById('tf-ds').value, de:document.getElementById('tf-de').value, hol:[...holidays]};
     if(plantChanged) onPlantChange(); else onDeptChange();
-    startNewEntry();
+    if(!plantChanged){ startNewEntry(); return; }   // แผนกอื่นในโรงงานเดิม: ช่วงวันที่และวันหยุดคงเดิม
+    askSamePeriod(prev);
   });
+}
+/* เลือกโรงงานใหม่ → ถามว่าจะใช้ช่วงวันที่และวันหยุดพิเศษเหมือนก่อนหน้าไหม */
+async function askSamePeriod(prev){
+  if(!prev.ds||!prev.de){ startNewEntry(); return; }
+  const hol=prev.hol.filter(h=>h>=prev.ds&&h<=prev.de).sort();
+  const holTxt=hol.length?hol.map(h=>fmtThShort(h).replace(/\s?\d{4}$/,'')).join(', '):'ไม่มี';
+  const v=await askChoice('📅 ใช้ช่วงวันที่เหมือนก่อนหน้านี้ไหม?',
+    `โรงงานก่อนหน้า (<strong>${esc(CFG[prev.plant]?.name||prev.plant)}</strong>) ใช้<br>
+     • ช่วงวันที่ <strong>${rangeText(prev.ds,prev.de)}</strong><br>
+     • วันหยุดพิเศษ <strong>${hol.length?hol.length+' วัน':'ไม่มี'}</strong>${hol.length?` (${holTxt})`:''}<br><br>
+     ต้องการใช้แบบเดียวกันกับ <strong>${esc(CFG[document.getElementById('tf-plant').value]?.name||'')}</strong> หรือไม่?`,
+    [{label:'เลือกช่วงใหม่เอง',value:'new',cls:'bo'},{label:'✅ ใช้ช่วงวันที่และวันหยุดเดิม',value:'same',cls:'bp'}]);
+  if(v==='same') useSamePeriod(prev.ds,prev.de,hol);
+  else { holidays=[]; startNewEntry(true); rememberHolidays(); }
+}
+function useSamePeriod(ds,de,hol){
+  const plant=document.getElementById('tf-plant').value, dept=document.getElementById('tf-dept').value;
+  const info=document.getElementById('ts-info'); if(info) info.innerHTML='';
+  document.getElementById('tf-ds').value=ds; document.getElementById('tf-de').value=de;
+  const saved=S.timesheets.find(t=>t.plant===plant&&t.dept===dept&&t.ds===ds);
+  if(saved){   // แผนกนี้บันทึกงวดนี้ไว้แล้ว → เปิดงวดนั้น (วันหยุดเติมจากที่เลือกไว้ถ้างวดนั้นยังไม่มี)
+    useTS(saved.id,true);
+    if(!(saved.holidays||[]).length&&hol.length){ holidays=[...hol]; renderHolidays(); buildGridKeepData(); }
+    if(info) info.innerHTML=`<div class="draft-box">ℹ️ <span>แผนกนี้บันทึกงวด <strong>${rangeText(saved.ds,saved.de)}</strong> ไว้แล้ว จึงเปิดงวดนั้นให้แก้ไขต่อ</span></div>`;
+    return;
+  }
+  holidays=[...hol]; rememberHolidays(); renderHolidays();
+  _lastDS=''; buildGrid(); _lastDS=ds; _lastDE=de;
+  markTsClean(true);
 }
 
 /* ---------- เลือกโรงงาน/แผนก = เริ่มบันทึกใหม่ ----------
@@ -1462,12 +1494,12 @@ function tsSelChange(){
 function rememberHolidays(){ try{localStorage.setItem('ts_holidays',JSON.stringify(holidays));}catch(e){} }
 function addMonthsISO(iso,n){ const d=new Date(iso+'T00:00:00Z'); const day=d.getUTCDate(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth()+n);
   const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate(); d.setUTCDate(Math.min(day,last)); return d.toISOString().slice(0,10); }
-function keepHolidaysInRange(ds,de){
+function keepHolidaysInRange(ds,de,noMemory){
   const before=holidays.length;
   holidays=holidays.filter(h=>h>=ds&&h<=de);
   if(!holidays.length){
     // ยังไม่มีวันหยุด → ใช้วันหยุดที่เคยกำหนดไว้ (ในเครื่อง หรือในงวดอื่นของโรงงานเดียวกัน) ที่อยู่ในช่วงนี้
-    let mem=[]; try{mem=JSON.parse(localStorage.getItem('ts_holidays')||'[]');}catch(e){}
+    let mem=[]; if(!noMemory){ try{mem=JSON.parse(localStorage.getItem('ts_holidays')||'[]');}catch(e){} }
     const plant=document.getElementById('tf-plant').value;
     S.timesheets.filter(t=>t.plant===plant&&t.ds<=de&&t.de>=ds).forEach(t=>mem.push(...(t.holidays||[])));
     holidays=[...new Set(mem)].filter(h=>h>=ds&&h<=de).sort();
@@ -1475,7 +1507,7 @@ function keepHolidaysInRange(ds,de){
   renderHolidays();
   return before;
 }
-function startNewEntry(){
+function startNewEntry(noMemory){
   const plant=document.getElementById('tf-plant').value, dept=document.getElementById('tf-dept').value;
   const dsEl=document.getElementById('tf-ds'), deEl=document.getElementById('tf-de');
   const info=document.getElementById('ts-info');
@@ -1492,7 +1524,7 @@ function startNewEntry(){
     if(info) info.innerHTML=`<div class="draft-box">ℹ️ <span>งวด <strong>${rangeText(latest.ds,latest.de)}</strong> บันทึกไว้แล้ว จึงตั้งเป็น<strong>งวดใหม่ ${rangeText(nds,nde)}</strong> พร้อมรายชื่อจากงวดล่าสุด</span>
       <button class="btn bo bsm" onclick="useTS(${latest.id})">📂 เปิดงวด ${rangeText(latest.ds,latest.de)} แทน</button></div>`;
   }
-  keepHolidaysInRange(dsEl.value,deEl.value);
+  keepHolidaysInRange(dsEl.value,deEl.value,noMemory);
   _lastDS=''; buildGrid(); _lastDS=dsEl.value; _lastDE=deEl.value;
   markTsClean(true);
 }
@@ -2585,12 +2617,50 @@ function calcInv(){
       ${row('Grand Total (฿)',d.grand,'g')}
     </table>`;
   }
+  updateInvSaveButtons();
   // Preview ที่เปิดอยู่ อัปเดตตามทันที
   const pv=document.getElementById('inv-preview');
   if(pv&&pv.style.display!=='none'&&!_invPreviewBusy){_invPreviewBusy=true;try{showInvPreview();}finally{_invPreviewBusy=false;}}
   return d;
 }
 var _invPreviewBusy=false;
+
+/* ค่าในฟอร์ม Invoice เทียบกับใบที่บันทึกไว้ → ไม่มีอะไรเปลี่ยน = ปิดปุ่มบันทึก (กันบันทึกซ้ำ) */
+const INV_FIELDS=[['no','inv-no','s'],['service','inv-svc','s'],['cnt','i-cnt'],['rate','i-rate'],['abs','i-abs'],['oth','i-oth'],
+  ['otp','i-otp'],['otr','i-otr'],['hp','i-hp'],['hd','i-hd'],['hr','i-hr'],['hot','i-hot']];
+function invFormRecord(){
+  const plant=document.getElementById('inv-plant')?.value, dept=document.getElementById('inv-dept')?.value, dt=document.getElementById('inv-dt')?.value||'';
+  if(_editInvId) return S.invoices.find(i=>i.id===_editInvId)||null;
+  return S.invoices.find(i=>i.type!=='special'&&i.key===`${plant}__${dept}__${dt.slice(0,7)}`)||null;
+}
+function invFormSame(rec){
+  if(!rec) return false;
+  if((document.getElementById('inv-dt')?.value||'')!==(rec.dt||'')) return false;
+  return INV_FIELDS.every(([k,id,t])=>{
+    const v=document.getElementById(id)?.value??'';
+    if(t==='s') return String(v).trim()===String(rec[k]??'').trim();
+    return Math.abs((parseFloat(v)||0)-(parseFloat(rec[k])||0))<0.0001;
+  });
+}
+function updateInvSaveButtons(){
+  const sb=document.getElementById('inv-save-btn'), cb=document.getElementById('inv-confirm-btn'), st=document.getElementById('inv-save-state');
+  if(!sb||!cb) return;
+  const rec=invFormRecord();
+  const locked=rec&&taxRecOfInv(rec.id);
+  const same=invFormSame(rec);
+  const conf=rec&&invStatus(rec)==='confirmed';
+  sb.disabled=!!(locked||same);
+  cb.disabled=!!(locked||(same&&conf));
+  [sb,cb].forEach(b=>{b.style.opacity=b.disabled?'.45':'';b.style.cursor=b.disabled?'not-allowed':'';});
+  if(st){
+    st.style.color=locked?'var(--navy)':'#16723c';
+    st.textContent=locked?`🔒 อยู่ในใบกำกับภาษี ${locked.no} — แก้ไขไม่ได้`
+      :same&&conf?'✅ ยืนยันแล้ว — ไม่มีการเปลี่ยนแปลง'
+      :same?'💾 บันทึกร่างแล้ว — กด “บันทึกและยืนยัน” เพื่อล็อกยอด'
+      :rec?'✏️ มีการเปลี่ยนแปลงจากที่บันทึกไว้':'';
+    if(!same&&rec) st.style.color='#8a5a00';
+  }
+}
 
 /* คำนวณยอดจากค่าตั้งต้น (ใช้ทั้งฟอร์มและการคำนวณ Invoice ร่างใหม่ตามอัตราล่าสุด) */
 function calcFromInputs(o){
@@ -2724,6 +2794,7 @@ function saveInv(confirmIt){
   persistLocal();
   if(editing) _editInvId=rec.id;
   renderInvEditBanner();
+  updateInvSaveButtons();
   renderInvList();
   refreshMonthSelects();
   buildSum();
@@ -2778,6 +2849,7 @@ function setInvStatus(list,status){
   list.forEach(i=>{i.status=status;i.confirmedAt=status==='confirmed'?now:null;dbSaveInv(i,true);});
   persistLocal();
   renderInvList();renderSpSaved();buildSum();renderInvEditBanner();
+  updateInvSaveButtons();
 }
 function confirmInv(id){
   const i=S.invoices.find(x=>x.id===id); if(!i) return;
