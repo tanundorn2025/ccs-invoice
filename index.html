@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-12b | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-12c | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -195,6 +195,10 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .inv-edit.conf{background:#e8f6ee;border:1px solid #a9dcbc;border-left:4px solid #1d8a4a;color:#14532d}
 .inv-edit.draft{background:var(--goldbg);border:1px solid #e9c77a;border-left:4px solid var(--gold);color:#6b4a00}
 
+.att input.dc.dc-bad{background:#ffe1e1!important;border:2px solid #c8060a!important;color:#c8060a!important;font-weight:800}
+#ts-remark{display:block;width:100%;min-height:3.6em;resize:vertical;border:none;border-bottom:1px solid #aaa;background:transparent;font-family:Sarabun,sans-serif;font-size:15px;line-height:1.75;padding:2px 6px;
+  background-image:linear-gradient(transparent calc(1.75em - 1px),#c9c9c9 calc(1.75em - 1px));background-size:100% 1.75em;background-attachment:local}
+
 /* DATA TABLE */
 .dt{width:100%;border-collapse:collapse;font-size:13px}
 .dt th{background:var(--surf2);padding:8px 10px;text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--bord)}
@@ -250,7 +254,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
   .att td.wknd-cell{background:#eef3ff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .att td.hday-cell{background:#fff3e0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .cell-ot{font-size:6pt}
-  #ts-remark{border:none!important;border-bottom:1px solid #999!important;background:transparent!important;font-size:7pt;width:calc(100% - 60pt)}
+  #ts-remark{border:none!important;background:transparent!important;font-size:10pt;line-height:1.6;min-height:3.2em;width:100%;resize:none}
 
   .inv-page{border:none;padding:0}
   #inv-preview{display:block!important}
@@ -288,7 +292,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12b</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12c</div>
 </header>
 
 <nav class="tabs">
@@ -1336,8 +1340,81 @@ function fmtDay(d){return d.getDate()}
 function fmt(n){return (+n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}
 
 /* parse "D.HMM" → minutes; display helper */
+/* ---------- ตรวจรูปแบบตัวเลขในช่องใบบันทึกเวลา ----------
+   W (วันทำงาน): ว่าง | ตัวอักษร 1 ตัว | 1 | 0.HMM (H=ชั่วโมง 0–7, MM=นาที 00–59) — ห้ามเกิน 1 วัน เช่น 11, 22
+   OT (ชม.): ตัวเลขไม่เกิน 24 ชม. ทศนิยมได้ 2 ตำแหน่ง — ห้าม 0.5. / 0..5                                       */
+function dayCellError(v){
+  v=String(v??'').trim();
+  if(v===''||/^[A-Za-z]$/.test(v)) return '';
+  if(/^\.\d{1,3}$/.test(v)) v='0'+v;
+  const m=v.match(/^(\d+)(?:\.(\d{1,3}))?$/);
+  if(!m) return 'รูปแบบไม่ถูกต้อง (ตัวอย่าง: 1, 0.5, 0.430)';
+  const d=parseInt(m[1],10), dec=m[2]||'';
+  if(d>1) return 'เกิน 1 วัน — ใส่ได้ไม่เกิน 1';
+  if(d===1&&/[1-9]/.test(dec)) return 'เกิน 1 วัน — ใส่ได้ไม่เกิน 1';
+  if(dec){ const h=parseInt(dec[0],10), mm=dec.length>1?parseInt(dec.slice(1).padEnd(2,'0'),10):0;
+    if(h>7) return 'ชั่วโมงเกิน 7 (8 ชม. = 1 วัน)'; if(mm>59) return 'นาทีเกิน 59'; }
+  return '';
+}
+function otCellError(v){
+  v=String(v??'').trim();
+  if(v==='') return '';
+  if(!/^(\d{1,2}(\.\d{1,2})?|\.\d{1,2})$/.test(v)) return 'รูปแบบชั่วโมง OT ไม่ถูกต้อง (ตัวอย่าง: 2, 1.5)';
+  if(parseFloat(v)>24) return 'OT เกิน 24 ชม.';
+  return '';
+}
+function markCell(el){
+  const err=el.classList.contains('dc-ot-in')?otCellError(el.value):dayCellError(el.value);
+  el.classList.toggle('dc-bad',!!err);
+  el.title=err||(el.classList.contains('dc-ot-in')?'OT (ชม.)':'');
+  return err;
+}
+function countBadCells(){
+  let n=0;
+  [...regRows,...subRows].forEach(r=>{
+    Object.values(r.days||{}).forEach(v=>{if(dayCellError(v)) n++;});
+    Object.values(r.otDays||{}).forEach(v=>{if(otCellError(v)) n++;});
+  });
+  return n;
+}
+
+/* ---------- การมาทำงาน (ใช้ทั้งเครื่องหมาย * และ Invoice) ----------
+   แผนกที่พนักงานสลับไปทำหลายโรงงาน: นับวันรวมกัน โดยจับคู่ชื่อพนักงาน              */
+const LINKED_DEPTS=[ [['SLR','GRD'],['GMO','GRD']] ];   // GRD (Garden) ของ HOYA OPTICS SLR + GMO
+function normName(n){ return String(n||'').replace(/\s+/g,'').toLowerCase(); }
+function linkedPartners(plant,dept){
+  const g=LINKED_DEPTS.find(grp=>grp.some(([p,d])=>p===plant&&d===dept));
+  return g?g.filter(([p,d])=>!(p===plant&&d===dept)):[];
+}
+/* ctx = {plant,dept,ds,de,holidays,id} ของใบที่กำลังดู ; row = แถวพนักงาน */
+function attendance(row,ctx){
+  const dates=getDates(ctx.ds,ctx.de), hol=new Set(ctx.holidays||[]);
+  const normal=dates.filter(d=>!isSunday(d)&&!hol.has(dkey(d))).map(dkey);
+  const has=(r,k)=>String(r?.days?.[k]||'').trim()!=='';
+  const own=normal.filter(k=>has(row,k)).length;
+  const res={normalDays:normal.length, worked:own, own, absent:normal.length-own, linked:false, parts:[]};
+  const nm=normName(row.name);
+  if(!nm) return res;
+  const others=[];
+  linkedPartners(ctx.plant,ctx.dept).forEach(([p,d])=>{
+    const t=S.timesheets.filter(x=>x.plant===p&&x.dept===d&&x.id!==ctx.id&&x.ds<=ctx.de&&x.de>=ctx.ds)
+      .sort((a,b)=>(a.ds===ctx.ds?-1:0)-(b.ds===ctx.ds?-1:0))[0];
+    if(!t) return;
+    const r=[...(t.regRows||[]),...(t.subRows||[])].find(x=>normName(x.name)===nm);
+    if(r) others.push({plant:p,row:r});
+  });
+  if(!others.length) return res;
+  const comb=normal.filter(k=>has(row,k)||others.some(o=>has(o.row,k))).length;
+  res.linked=true; res.worked=comb; res.absent=normal.length-comb;
+  res.parts=[{plant:ctx.plant,days:own},...others.map(o=>({plant:o.plant,days:normal.filter(k=>has(o.row,k)).length}))];
+  return res;
+}
+function attNote(a){ return a.linked?`รวม ${a.parts.map(p=>(CFG[p.plant]?.name||p.plant)+' '+p.days).join(' + ')} = ${a.worked} วัน`:''; }
+function curTsCtx(){ return {plant:document.getElementById('tf-plant').value,dept:document.getElementById('tf-dept').value,
+  ds:document.getElementById('tf-ds').value,de:document.getElementById('tf-de').value,holidays:holidays,id:_loadedTsId}; }
+
 function parseWorkToMin(v){
-  if(!v||v.trim()===''||/^[A-Za-z]$/.test(v.trim())) return 0;
+  if(!v||v.trim()===''||/^[A-Za-z]$/.test(v.trim())||dayCellError(v)) return 0;
   const n=parseFloat(v);
   if(isNaN(n)||n<0) return 0;
   const intPart=Math.floor(n);
@@ -1618,6 +1695,7 @@ function buildGrid(){
     _lastDS=ds; _lastDE=de; _needRecalc=true;
   }
   const dates=getDates(ds,de);
+  refreshNameList();
   const _ovl=findOverlaps(plant,dept,ds,de,t=>t.id===_loadedTsId&&t.ds===ds);
   const ovlSet=new Set(_ovl.flatMap(o=>o.keys));
   renderOverlapBanner(_ovl,ds,de);
@@ -1695,7 +1773,8 @@ function buildGrid(){
         });
         return {absent, worked};
       }
-      const {absent, worked: workedDays}=isReg?getAbsent(row,dates):{absent:0,workedDays:0};
+      const _att=isReg?attendance(row,curTsCtx()):null;
+      const {absent, worked: workedDays}=isReg?{absent:_att.absent,worked:_att.worked}:{absent:0,worked:0};
       // ★ ต้องมีข้อมูล (workedDays>0) และ ขาดไม่เกิน 3 วัน
       const canStar=isReg && workedDays>0 && absent<=3;
       if(isReg&&!canStar) row.starOn=false;
@@ -1706,11 +1785,11 @@ function buildGrid(){
       const arrName=isReg?'regRows':'subRows';
       let html=`<tr>
         <td class="no-col" style="font-weight:700;font-size:11px;cursor:${isReg?'pointer':'default'}"
-          title="${isReg?`คลิกเพื่อเพิ่ม/ลบ * (★=คิดเต็ม, ขาด≤3วัน | ไม่มี*=คิดรายวัน, ขาด>3วัน)  ขาด: ${getAbsent?.(row,dates)??'?'} วัน`:''}"  
+          title="${isReg?`${_att.linked?attNote(_att)+' | ':''}คลิกเพื่อเพิ่ม/ลบ * (★=คิดเต็ม, ขาด≤3วัน | ไม่มี*=คิดรายวัน, ขาด>3วัน)  ขาด: ${getAbsent?.(row,dates)??'?'} วัน`:''}"  
           onclick="${isReg?`toggleStar(${i})`:''}">
           ${isReg?label:subLabel}
         </td>
-        <td class="nm"><input class="nm-in" type="text" placeholder="${isReg?'ชื่อ-นามสกุล '+(i+1):row.letter}" value="${esc(row.name)}"
+        <td class="nm"><input class="nm-in" type="text" placeholder="${isReg?'ชื่อ-นามสกุล '+(i+1):row.letter}" value="${esc(row.name)}" list="ts-name-list" autocomplete="off"
           oninput="${arrName}[${i}].name=this.value"></td>
         <td style="width:22px;min-width:22px;background:#1a1a2a;text-align:center;vertical-align:middle;padding:1px">
           <span style="color:#ff9090;font-weight:700;font-size:8px;display:block;line-height:1.5">OT</span>
@@ -1724,14 +1803,14 @@ function buildGrid(){
         html+=`<td class="${tc}" data-key="${key}" style="padding:1px 0">
           <div class="cell-wrap">
             <div class="cell-ot" style="display:flex;align-items:center;justify-content:flex-end;padding-right:1px">
-              <input class="dc dc-ot-in" type="text" maxlength="5" title="OT (ชม.)" value="${otVal}"
+              <input class="dc dc-ot-in${otCellError(otVal)?' dc-bad':''}" type="text" maxlength="5" title="${otCellError(otVal)||'OT (ชม.)'}" value="${esc(otVal)}"
                 style="width:34px;font-size:9px;color:#c8060a;border-color:#ffcccc;text-align:right"
-                onblur="if(this.value.startsWith('.')){this.value='0'+this.value;setOtDay(${arrName},${i},'${key}',this.value)}" oninput="setOtDay(${arrName},${i},'${key}',this.value);recalcRow(${arrName},${i},this)">
+                onblur="if(this.value.startsWith('.')){this.value='0'+this.value;setOtDay(${arrName},${i},'${key}',this.value)}" oninput="setOtDay(${arrName},${i},'${key}',this.value);markCell(this);recalcRow(${arrName},${i},this)">
             </div>
             <div class="cell-day" style="display:flex;align-items:center;justify-content:center">
-              <input class="dc" type="text" maxlength="6" value="${val}"
+              <input class="dc${dayCellError(val)?' dc-bad':''}" type="text" maxlength="6" title="${dayCellError(val)}" value="${esc(val)}"
                 style="width:34px;text-align:center"
-                onblur="if(this.value.startsWith('.')){this.value='0'+this.value;setDay(${arrName},${i},'${key}',this.value)}" oninput="setDay(${arrName},${i},'${key}',this.value);recalcRow(${arrName},${i},this)">
+                onblur="if(this.value.startsWith('.')){this.value='0'+this.value;setDay(${arrName},${i},'${key}',this.value)}" oninput="setDay(${arrName},${i},'${key}',this.value);markCell(this);recalcRow(${arrName},${i},this)">
             </div>
           </div>
         </td>`;
@@ -1758,7 +1837,7 @@ function buildGrid(){
     html+=`<td id="tot-ot-${grpId}">${fmtOT(tOT)}</td>`;
     html+=`<td id="tot-h-${grpId}">${tH>0?tH:'-'}</td>`;
     html+=`<td id="tot-oth-${grpId}">${fmtOT(tOTH)}</td>`;
-    html+=`<td id="tot-total-${grpId}" style="font-weight:800;font-size:11.5px">${tTot}</td></tr>`;
+    html+=`<td id="tot-total-${grpId}">${tTot||'-'}</td></tr>`;
     return html;
   }
 
@@ -1783,7 +1862,7 @@ function buildGrid(){
       ${subHdr('ชื่อ - นามสกุล (พนักงานแทน, สำรอง)')}
       ${buildDataRows(subRows,false)}
       ${totRow(subRows,"sub")}
-      <tr class="remark-row"><td colspan="${dates.length+6}" style="padding:4px 7px"><span style="font-weight:600">หมายเหตุ :</span> <input type="text" id="ts-remark" value="${esc(tsRemark)}" oninput="tsRemark=this.value" style="border:none;border-bottom:1px solid #aaa;width:calc(100% - 80px);background:transparent;font-family:Sarabun,sans-serif;font-size:11px;padding:1px 4px" placeholder="..........................................................................................................................."></td></tr>
+      <tr class="remark-row"><td colspan="${dates.length+6}" style="padding:4px 7px"><div style="display:flex;gap:8px;align-items:flex-start"><span style="font-weight:700;font-size:15px;line-height:1.75;white-space:nowrap">หมายเหตุ :</span><textarea id="ts-remark" rows="2" oninput="tsRemark=this.value">${esc(tsRemark)}</textarea></div></td></tr>
     </tbody>
   </table>
   </div>
@@ -2034,6 +2113,7 @@ function recalcRow(arr,idx,el){
   /* OT = เฉพาะ OT วันทำงานปกติ (ไม่ใช่วันหยุด) */
   let otNormal=0;
   Object.entries(row.otDays||{}).forEach(([k,v])=>{
+    if(otCellError(v)) return;
     const n=parseFloat(v)||0;
     if(n<=0) return;
     const d=new Date(k);
@@ -2047,7 +2127,7 @@ function recalcRow(arr,idx,el){
   let hCount=0;
   Object.entries(row.days).forEach(([k,v])=>{
     if(!v||v.trim()==='') return;
-    if(/^[A-Za-z]$/.test(v.trim())) return;
+    if(/^[A-Za-z]$/.test(v.trim())||dayCellError(v)) return;
     const n=parseFloat(v);
     if(isNaN(n)||n<=0) return;          // ต้องมีค่าจริง > 0
     const d=new Date(k);
@@ -2060,6 +2140,7 @@ function recalcRow(arr,idx,el){
   /* OT.H = OT on holiday days */
   let othTotal=0;
   Object.entries(row.otDays||{}).forEach(([k,v])=>{
+    if(otCellError(v)) return;
     const n=parseFloat(v)||0;
     if(n<=0) return;
     const d=new Date(k);
@@ -2096,7 +2177,7 @@ function updateGroupTotal(grp){
   const sumMin=rows.reduce((s,r)=>s+(r.totalMin||0),0);
   const tTot=minToDisplay(sumMin);
   const elT=document.getElementById(`tot-total-${grp}`);
-  if(elT) elT.textContent=tTot;
+  if(elT) elT.textContent=tTot||'-';
   const tOT=rows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0);
   const elOT=document.getElementById(`tot-ot-${grp}`);
   if(elOT) elOT.textContent=fmtOT(tOT);
@@ -2187,6 +2268,7 @@ function autoSaveBlock(){
   const ds=document.getElementById('tf-ds').value, de=document.getElementById('tf-de').value;
   if(!ds||!de||ds>de) return 'ช่วงวันที่ไม่ถูกต้อง';
   if(!hasTsContent()) return 'empty';
+  { const bad=countBadCells(); if(bad) return `มีช่องกรอกผิดรูปแบบ ${bad} ช่อง`; }
   const ovl=findOverlaps(plant,dept,ds,de,t=>t.id===_loadedTsId&&t.ds===ds);
   if(ovl.some(o=>o.sameKey)) return 'มีงวดที่เริ่มวันเดียวกันบันทึกไว้แล้ว';
   if(ovl.length){
@@ -2347,6 +2429,14 @@ function saveTS(opts){
   const de=document.getElementById('tf-de').value;
   if(!ds||!de){alert('กรุณาเลือกช่วงวันที่');return false;}
   if(ds>de){alert('วันที่เริ่มต้องไม่เกินวันที่สิ้นสุด');return false;}
+  const bad=countBadCells();
+  if(bad){
+    if(!silent){
+      alert(`มีช่องที่กรอกผิดรูปแบบ ${bad} ช่อง (กรอบสีแดง)\nกรุณาแก้ไขก่อนบันทึก — ชี้เมาส์ที่ช่องเพื่อดูสาเหตุ`);
+      document.querySelector('#ts-out input.dc-bad')?.focus();
+    }
+    return false;
+  }
   const key=tsKey(plant,dept,ds);
 
   // ตรวจวันซ้ำกับงวดที่บันทึกไว้แล้ว
@@ -2393,13 +2483,14 @@ function saveTS(opts){
 }
 
 function renderSavedTS(){
+  refreshNameList();
   const el=document.getElementById('saved-ts');
   if(!el) return;
   if(!S.timesheets.length){el.innerHTML='<p style="color:var(--light);font-size:13px;text-align:center;padding:.75rem">ยังไม่มีข้อมูล</p>';return;}
   const list=[...S.timesheets].sort((a,b)=>(a.plant+a.dept).localeCompare(b.plant+b.dept)||b.ds.localeCompare(a.ds));
   el.innerHTML=`<table class="dt"><thead><tr>
     <th>โรงงาน</th><th>แผนก</th><th>ช่วงวันที่</th>
-    <th class="num">OT รวม</th><th class="num">H รวม</th><th class="num">OT.H รวม</th><th>บันทึกเมื่อ</th><th></th>
+    <th class="num">OT รวม</th><th class="num">H รวม</th><th class="num">OT.H รวม</th><th class="num">Total</th><th>บันทึกเมื่อ</th><th></th>
   </tr></thead><tbody>`+
   list.map(t=>{
     const ov=findOverlaps(t.plant,t.dept,t.ds,t.de,x=>x.id===t.id);
@@ -2413,6 +2504,7 @@ function renderSavedTS(){
     <td class="num">${t.totalOT||0}</td>
     <td class="num">${t.totalH||0}</td>
     <td class="num">${t.totalOTH||0}</td>
+    <td class="num" style="font-weight:700">${tsTotalText(t)}</td>
     <td style="font-size:11.5px;color:var(--muted)">${esc(t.savedAt||'')}</td>
     <td style="white-space:nowrap"><button class="btn ba bsm" onclick="useTS(${t.id})">เปิด →</button>
       <button class="btn bd bsm" onclick="delTS(${t.id})">ลบ</button></td>
@@ -2431,6 +2523,28 @@ function delTS(id){
   buildGrid();
 }
 
+/* Total ของงวด = วันทำงานปกติรวม (พนักงานประจำ + แทน) ในรูปแบบ วัน.ชม.นาที เหมือนในใบบันทึก */
+function tsTotalText(t){
+  const hol=new Set(t.holidays||[]);
+  let min=0;
+  [...(t.regRows||[]),...(t.subRows||[])].forEach(r=>Object.entries(r.days||{}).forEach(([k,v])=>{
+    const d=new Date(k); if(isSunday(d)||hol.has(k)) return; min+=parseWorkToMin(String(v||''));
+  }));
+  return minToDisplay(min)||'-';
+}
+/* ชื่อที่เคยพิมพ์ → ตัวช่วยเลือก (แผนกเดียวกันขึ้นก่อน) */
+function refreshNameList(){
+  let dl=document.getElementById('ts-name-list');
+  if(!dl){dl=document.createElement('datalist');dl.id='ts-name-list';document.body.appendChild(dl);}
+  const plant=document.getElementById('tf-plant')?.value, dept=document.getElementById('tf-dept')?.value;
+  const score=new Map();
+  S.timesheets.forEach(t=>[...(t.regRows||[]),...(t.subRows||[])].forEach(r=>{
+    const n=String(r.name||'').trim(); if(!n) return;
+    const w=(t.plant===plant&&t.dept===dept)?3:(t.plant===plant?2:1);
+    score.set(n,Math.max(score.get(n)||0,w));
+  }));
+  dl.innerHTML=[...score.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'th')).map(([n])=>`<option value="${esc(n)}"></option>`).join('');
+}
 function hasGridData(){
   return [...regRows,...subRows].some(r=>Object.values(r.days||{}).some(v=>String(v).trim()!=='')||Object.values(r.otDays||{}).some(v=>String(v).trim()!==''));
 }
@@ -2489,10 +2603,12 @@ function getStaffSummary(ts){
   const countWorked=r=>dates.filter(d=>!off(d)&&String(r.days?.[dkey(d)]||'').trim()!=='').length;
   (ts.regRows||[]).forEach((r,i)=>{
     if(!r.name) return;
-    const worked=countWorked(r);
-    const absent=normalDays-worked;
-    if(absent<=3) result.full.push({...r,idx:i,absent,worked});
-    else result.partial.push({...r,idx:i,absent,worked});
+    const a=attendance(r,ts);              // GRD SLR+GMO: นับวันรวมทั้งสองโรง
+    const worked=countWorked(r);           // วันที่ทำในโรงนี้ (ใช้คิดรายวันถ้าไม่เต็ม)
+    const absent=a.absent;
+    const note=attNote(a);
+    if(a.worked>0&&absent<=3) result.full.push({...r,idx:i,absent,worked,note});
+    else result.partial.push({...r,idx:i,absent,worked,note});
   });
   (ts.subRows||[]).forEach((r,i)=>{
     if(!r.name) return;
@@ -2584,10 +2700,11 @@ function loadTStoInv(force){
     txt+=`<div style="color:var(--red);font-weight:600">⚠️ งวดนี้มีวันซ้ำกับงวด ${ov.map(o=>rangeText(o.ts.ds,o.ts.de)).join(', ')} รวม ${n} วัน — ตรวจสอบว่าไม่ได้คิดเงินซ้ำ</div>`;
   }
   txt+=`⭐ พนักงานคิดเต็ม (★): <strong>${fullCnt} คน</strong><br>`;
+  summary.full.filter(r=>r.note).forEach(r=>{txt+=`&nbsp;&nbsp;• ${esc(r.name)}: ${esc(r.note)} → ขาดรวม ${r.absent} วัน คิดเต็มเดือน<br>`;});
   if(partCnt>0){
     txt+=`📅 พนักงานคิดรายวัน (ขาด>3วัน): <strong>${partCnt} คน</strong><br>`;
     summary.partial.forEach(r=>{
-      txt+=`&nbsp;&nbsp;• ${esc(r.name)}: ทำ <strong>${r.worked}</strong>/${summary.normalDays} วัน (ขาด ${r.absent} วัน, หัก ≈ ${(dr*r.absent).toFixed(2)} ฿)<br>`;
+      txt+=`&nbsp;&nbsp;• ${esc(r.name)}: ทำ <strong>${r.worked}</strong>/${summary.normalDays} วัน${r.note?` (${esc(r.note)}, ขาดรวม ${r.absent} วัน) — คิดรายวันเฉพาะวันที่ทำในโรงนี้`:` (ขาด ${r.absent} วัน, หัก ≈ ${(dr*(summary.normalDays-r.worked)).toFixed(2)} ฿)`}<br>`;
     });
   }
   if(subCnt>0){
@@ -3941,8 +4058,8 @@ async function exportTSExcel(){
   };
   header('ชื่อ - นามสกุล');
   regRows.forEach((x,i)=>{
-    let w=0,ab=0; dates.forEach(d=>{if(isSunday(d)||isHoliday(d))return; String(x.days?.[dkey(d)]||'').trim()===''?ab++:w++;});
-    person(x,(i+1)+(w>0&&ab<=3?'*':''));
+    const a=attendance(x,curTsCtx());
+    person(x,(i+1)+(a.worked>0&&a.absent<=3?'*':''));
   });
   total(regRows);
   header('ชื่อ - นามสกุล (พนักงานแทน, สำรอง)');
@@ -3950,8 +4067,9 @@ async function exportTSExcel(){
   total(subRows);
   ws.mergeCells(r,1,r,L); const rm=ws.getCell(r,1);
   rm.value={richText:[{text:'หมายเหตุ : ',font:f(9,{bold:true})},{text:tsRemark||'',font:f(9)}]};
-  rm.fill=XL.fill('FFFFFBE0'); rm.alignment={vertical:'middle'}; xlStyleRange(ws,r,1,r,L,c=>c.border=XL.box('FFCCCCCC'));
-  ws.getRow(r).height=18; r+=2;
+  rm.value={richText:[{text:'หมายเหตุ : ',font:f(11,{bold:true})},{text:tsRemark||'',font:f(11)}]};
+  rm.fill=XL.fill('FFFFFBE0'); rm.alignment={vertical:'top',wrapText:true}; xlStyleRange(ws,r,1,r,L,c=>c.border=XL.box('FFCCCCCC'));
+  ws.getRow(r).height=36; r+=2;
   ws.getCell(r,2).value='■ วันอาทิตย์'; ws.getCell(r,2).font=f(8,{color:{argb:'FF8A8A8A'}});
   ws.mergeCells(r,C0,r,Math.min(C0+8,L)); ws.getCell(r,C0).value='■ วันหยุดพิเศษที่กำหนด'; ws.getCell(r,C0).font=f(8,{color:{argb:'FFB09A5C'}});
   xlPage(ws,'landscape',`${firstHdr}:${firstHdr+1}`);
@@ -4369,7 +4487,7 @@ function tsPrintDoc(){
   const dName=CFG[plant]?.depts?.[dept]?.name||dept;
   const dates=getDates(ds,de);
   const fmtD =d=>new Date(d).toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
-  const remarkVal=esc(tsRemark||'');
+  const remarkVal=esc(tsRemark||'').replace(/\n/g,'<br>');
 
   // helper: แปลง OT เฉพาะ key ที่เป็นวันทำงาน/วันหยุดตามที่ต้องการ
   function renderRow(row,label,isReg){
@@ -4485,13 +4603,8 @@ function tsPrintDoc(){
 
   // star label: เช็คเงื่อนไขก่อน — worked>0 AND absent<=3
   const regRowsHtml = regRows.map((r,i)=>{
-    let w=0,ab=0;
-    dates.forEach(d=>{
-      if(isSunday(d)||isHoliday(d)) return;
-      const v=(r.days?.[d.toISOString().slice(0,10)]||'').trim();
-      if(v==='') ab++; else w++;
-    });
-    const star=w>0&&ab<=3;
+    const a=attendance(r,curTsCtx());
+    const star=a.worked>0&&a.absent<=3;
     return renderRow(r,(i+1)+(star?'*':''),true);
   }).join('');
   const subRowsHtml = subRows.map(r=>renderRow(r,r.letter,false)).join('');
@@ -4525,7 +4638,7 @@ ${resolve(`<table style="${tableStyle}">
     ${subRowsHtml}
     ${renderSubTotRow()}
     <tr class="remark-row">
-      <td colspan="${dates.length+7}" style="padding:5px 6px;border:0.5px solid #ccc;background:#fffbe0;text-align:left;font-size:8pt">
+      <td colspan="${dates.length+7}" style="padding:5px 8px;border:0.5px solid #ccc;background:#fffbe0;text-align:left;font-size:10.5pt;line-height:1.7;height:3.6em;vertical-align:top">
         <strong>หมายเหตุ :</strong> ${remarkVal}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       </td>
     </tr>
