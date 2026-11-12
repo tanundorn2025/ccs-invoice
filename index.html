@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-12i | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-12j | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -292,7 +292,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12i</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12j</div>
 </header>
 
 <nav class="tabs">
@@ -2759,7 +2759,7 @@ function calcInv(){
       ${row(`ค่าจ้างตามสัญญา (${d.cnt} คน × ${fmt(d.rate)})`,d.contract)}
       ${d.part_amt?row(`พนักงานคิดรายวัน (${d.abs} วัน × ${fmt(d.dr)})`,d.part_amt):''}
       ${row(`OT (${d.oth} ชม. × ${fmt(d.otr)})`,d.ot_amt)}
-      ${(d.hol_amt||d.hol_ot)?row(`วันหยุด (${d.hd} วัน × ${fmt(d.hr)}${d.hot?` + OT ${d.hot} ชม.`:''})`,d.hol_amt+d.hol_ot):''}
+      ${(d.hol_amt||d.hol_ot)?row(`วันหยุด (${d.hd} วัน × ${fmt(d.hr)}${d.hot?` + OT วันหยุด ${d.hot} ชม. × ${fmt(d.hotr)} (3 เท่า)`:''})`,d.hol_amt+d.hol_ot):''}
       ${row('Up Total',d.up,'s')}
       ${row('VAT 7%',d.vat)}
       ${row('Grand Total (฿)',d.grand,'g')}
@@ -2813,14 +2813,17 @@ function updateInvSaveButtons(){
 }
 
 /* คำนวณยอดจากค่าตั้งต้น (ใช้ทั้งฟอร์มและการคำนวณ Invoice ร่างใหม่ตามอัตราล่าสุด) */
+/* OT วันหยุด = 3 เท่าของค่าจ้างต่อชั่วโมง = อัตรา OT ปกติ (1.5 เท่า) × 2 — เช่น 78.37 × 2 = 156.74 */
+function holOtRate(otr){ return Math.round((+otr||0)*2*100)/100; }
 function calcFromInputs(o){
   const cnt=+o.cnt||0, rate=+o.rate||0, abs=+o.abs||0;
   const dr=parseFloat((rate/30).toFixed(4));
   const oth=+o.oth||0, otp=+o.otp||1, otr=+o.otr||0;
   const hp=+o.hp||0, hd=+o.hd||0, hr=+o.hr||0, hot=+o.hot||0;
-  const contract=rate*cnt, part_amt=dr*abs, ot_amt=otr*oth, hol_amt=hr*hd, hol_ot=(hr/8)*hot;
+  const hotr=holOtRate(otr);
+  const contract=rate*cnt, part_amt=dr*abs, ot_amt=otr*oth, hol_amt=hr*hd, hol_ot=hotr*hot;
   const up=contract+part_amt+ot_amt+hol_amt+hol_ot, vat=up*0.07, grand=up+vat;
-  return {cnt,rate,abs,dr,contract,part_amt,oth,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hol_ot,up,vat,grand};
+  return {cnt,rate,abs,dr,contract,part_amt,oth,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hotr,hol_ot,up,vat,grand};
 }
 function getCalc(){
   const cnt=parseInt(document.getElementById('i-cnt').value)||0;
@@ -2840,11 +2843,12 @@ function getCalc(){
   const part_amt  =partAmt;
   const ot_amt    =otr*oth;  // OT รวม (ชม.) × rate — ไม่คูณคน เพราะ OT คือยอดรวมแล้ว
   const hol_amt   =hr*hd;    // Holiday วันรวม × rate/วัน — ไม่คูณคน
-  const hol_ot    =(hr/8)*hot;
+  const hotr      =holOtRate(otr);
+  const hol_ot    =hotr*hot;
   const up=contract+part_amt+ot_amt+hol_amt+hol_ot;
   const vat=up*0.07;
   const grand=up+vat;
-  return {cnt,rate,abs,dr,contract,part_amt,oth,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hol_ot,up,vat,grand};
+  return {cnt,rate,abs,dr,contract,part_amt,oth,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hotr,hol_ot,up,vat,grand};
 }
 
 function showInvPreview(){
@@ -2878,7 +2882,7 @@ function showInvPreview(){
       ${d.part_amt>0?(window._lastSummary&&window._lastSummary.partial.length&&window._lastSummary.partial.reduce((s,r)=>s+(+r.worked||0),0)===d.abs?window._lastSummary.partial.map(r=>{const dr2=(parseFloat(document.getElementById('i-rate').value)||11900)/30;return `<tr><td>Daily Rate — ${esc(r.name)} (${r.worked} วัน × ${fmt(dr2)}/วัน)</td><td class="num">${r.worked}</td><td class="num">${fmt(dr2)}/วัน</td><td class="num">${fmt(dr2*r.worked)}</td></tr>`;}).join(''):(`<tr><td>Daily Rate (${d.abs} วัน × ${fmt(d.dr)}/วัน)</td><td class="num">${d.abs}</td><td class="num">${fmt(d.dr)}/วัน</td><td class="num">${fmt(d.part_amt)}</td></tr>`)):''}
       ${d.ot_amt>0?`<tr><td>Over Time Fee (${d.oth} hrs)</td><td class="num">${d.oth} ชม.</td><td class="num">${fmt(d.otr)}/ชม.</td><td class="num">${fmt(d.ot_amt)}</td></tr>`:''}
       ${d.hol_amt>0?`<tr><td>Holiday Work (ทำงานวันหยุด × 2) — ${d.hd} วัน</td><td class="num">${d.hd} วัน</td><td class="num">${fmt(d.hr)}/วัน</td><td class="num">${fmt(d.hol_amt)}</td></tr>`:''}
-      ${d.hol_ot>0?`<tr><td>Over Time Holiday — ${d.hot} ชม.</td><td class="num">${d.hot} ชม.</td><td class="num">${fmt(d.hr/8)}/ชม.</td><td class="num">${fmt(d.hol_ot)}</td></tr>`:''}
+      ${d.hol_ot>0?`<tr><td>Over Time Holiday — ${d.hot} ชม.</td><td class="num">${d.hot} ชม.</td><td class="num">${fmt(d.hotr)}/ชม.</td><td class="num">${fmt(d.hol_ot)}</td></tr>`:''}
     </tbody>
   </table>
   <div class="totals">
