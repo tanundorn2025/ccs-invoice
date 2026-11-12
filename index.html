@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-11n | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-12a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -288,7 +288,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-11n</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12a</div>
 </header>
 
 <nav class="tabs">
@@ -344,6 +344,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     </div>
 
     <div id="ts-draft"></div>
+<div id="ts-info"></div>
 <div id="ts-overlap"></div>
 
     <!-- วันหยุดพิเศษ -->
@@ -1451,7 +1452,49 @@ function tsSelChange(){
       return;
     }
     if(plantChanged) onPlantChange(); else onDeptChange();
+    startNewEntry();
   });
+}
+
+/* ---------- เลือกโรงงาน/แผนก = เริ่มบันทึกใหม่ ----------
+   - ช่วงวันที่ปัจจุบันบันทึกไว้แล้ว → ตั้งเป็นงวดถัดไปต่อจากงวดล่าสุด (ไม่ขึ้นลายแดง) และดึงรายชื่อจากงวดล่าสุดมาให้
+   - วันหยุดพิเศษที่ยังอยู่ในช่วงวันที่ → คงไว้ ไม่ต้องเลือกใหม่ */
+function rememberHolidays(){ try{localStorage.setItem('ts_holidays',JSON.stringify(holidays));}catch(e){} }
+function addMonthsISO(iso,n){ const d=new Date(iso+'T00:00:00Z'); const day=d.getUTCDate(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth()+n);
+  const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate(); d.setUTCDate(Math.min(day,last)); return d.toISOString().slice(0,10); }
+function keepHolidaysInRange(ds,de){
+  const before=holidays.length;
+  holidays=holidays.filter(h=>h>=ds&&h<=de);
+  if(!holidays.length){
+    // ยังไม่มีวันหยุด → ใช้วันหยุดที่เคยกำหนดไว้ (ในเครื่อง หรือในงวดอื่นของโรงงานเดียวกัน) ที่อยู่ในช่วงนี้
+    let mem=[]; try{mem=JSON.parse(localStorage.getItem('ts_holidays')||'[]');}catch(e){}
+    const plant=document.getElementById('tf-plant').value;
+    S.timesheets.filter(t=>t.plant===plant&&t.ds<=de&&t.de>=ds).forEach(t=>mem.push(...(t.holidays||[])));
+    holidays=[...new Set(mem)].filter(h=>h>=ds&&h<=de).sort();
+  }
+  renderHolidays();
+  return before;
+}
+function startNewEntry(){
+  const plant=document.getElementById('tf-plant').value, dept=document.getElementById('tf-dept').value;
+  const dsEl=document.getElementById('tf-ds'), deEl=document.getElementById('tf-de');
+  const info=document.getElementById('ts-info');
+  if(info) info.innerHTML='';
+  const list=S.timesheets.filter(t=>t.plant===plant&&t.dept===dept);
+  const ovl=findOverlaps(plant,dept,dsEl.value,deEl.value);
+  if(list.length&&ovl.length){
+    const latest=list.reduce((a,b)=>a.de>b.de?a:b);
+    const nds=addDays(latest.de,1), nde=addDays(addMonthsISO(nds,1),-1);
+    dsEl.value=nds; deEl.value=nde;
+    // รายชื่อจากงวดล่าสุด (เฉพาะชื่อ)
+    const copyNames=(src,dst)=>src.forEach((r,i)=>{ if(dst[i]) dst[i].name=r.name||''; else dst.push({...r,days:{},otDays:{},ot:'',h:'',oth:'',total:'',totalMin:0}); });
+    copyNames(latest.regRows||[],regRows); copyNames(latest.subRows||[],subRows);
+    if(info) info.innerHTML=`<div class="draft-box">ℹ️ <span>งวด <strong>${rangeText(latest.ds,latest.de)}</strong> บันทึกไว้แล้ว จึงตั้งเป็น<strong>งวดใหม่ ${rangeText(nds,nde)}</strong> พร้อมรายชื่อจากงวดล่าสุด</span>
+      <button class="btn bo bsm" onclick="useTS(${latest.id})">📂 เปิดงวด ${rangeText(latest.ds,latest.de)} แทน</button></div>`;
+  }
+  keepHolidaysInRange(dsEl.value,deEl.value);
+  _lastDS=''; buildGrid(); _lastDS=dsEl.value; _lastDE=deEl.value;
+  markTsClean(true);
 }
 function onInvPlantChange(){
   const plant=document.getElementById('inv-plant').value;
@@ -1467,12 +1510,14 @@ function addHoliday(){
   if(!d) return;
   if(!holidays.includes(d)) holidays.push(d);
   document.getElementById('hday-input').value='';
+  rememberHolidays();
   renderHolidays();
   buildGridKeepData();
   markTsDirty();
 }
 function removeHoliday(d){
   holidays=holidays.filter(x=>x!==d);
+  rememberHolidays();
   renderHolidays();
   buildGridKeepData();
   markTsDirty();
@@ -2189,6 +2234,7 @@ async function onRangeChange(){
   try{ await _onRangeChange(); } finally{ _rangeBusy=false; }
 }
 async function _onRangeChange(){
+  const _inf=document.getElementById('ts-info'); if(_inf) _inf.innerHTML='';
   const dsEl=document.getElementById('tf-ds'), deEl=document.getElementById('tf-de');
   const loaded=_loadedTsId?S.timesheets.find(t=>t.id===_loadedTsId):null;
   if(loaded&&dsEl.value&&dsEl.value!==_lastDS){
@@ -2371,6 +2417,7 @@ function useTS(id,force){
   holidays=[...(t.holidays||[])];
   tsRemark=t.remark||'';
   _loadedTsId=t.id; _ovlAckSig=''; _lastDS=t.ds; _lastDE=t.de;
+  { const _inf=document.getElementById('ts-info'); if(_inf) _inf.innerHTML=''; }
   _curPlant=t.plant; _curDept=t.dept;
   renderHolidays();
   buildGrid();
@@ -4292,15 +4339,17 @@ function tsPrintDoc(){
     const tH=rows.reduce((s,r)=>s+(parseInt(r.h)||0),0);
     const tOTH=rows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0);
     const sumMin=rows.reduce((s,r)=>s+(r.totalMin||0),0);
-    const cols=dates.map(()=>`<td style="border:0.5px solid #aaa"></td>`).join('');
-    return `<tr style="border-top:2px solid #333">
-      <td style="border:0.5px solid #aaa;font-weight:800;text-align:center;padding:4px 2px;background:#f5f5f5">รวม</td>
-      <td style="border:0.5px solid #aaa"></td><td style="border:0.5px solid #aaa;background:#222"></td>
+    // เส้นหนาก่อนแถวรวม: กำหนดที่ทุกช่อง (เส้นของ <tr> ไม่ถูกวาดใน PDF)
+    const B='border:0.5px solid #aaa;border-top:2px solid #333';
+    const cols=dates.map(()=>`<td style="${B}"></td>`).join('');
+    return `<tr>
+      <td style="${B};font-weight:800;text-align:center;padding:4px 2px;background:#f5f5f5">รวม</td>
+      <td style="${B}"></td><td style="${B};background:#222"></td>
       ${cols}
-      <td style="border:0.5px solid #aaa;text-align:center;font-weight:800;background:#eef5e8">${fmtOT(tOT)||'-'}</td>
-      <td style="border:0.5px solid #aaa;text-align:center;font-weight:800;background:#e8f5ee">${tH>0?tH:'-'}</td>
-      <td style="border:0.5px solid #aaa;text-align:center;font-weight:800;background:#f5e8f2">${fmtOT(tOTH)||'-'}</td>
-      <td style="border:0.5px solid #aaa;text-align:center;font-weight:800;background:#e8eef5">${(()=>{const v=minToDisplay?minToDisplay(sumMin):'';return v||'-';})()}</td>
+      <td style="${B};text-align:center;font-weight:800;background:#eef5e8">${fmtOT(tOT)||'-'}</td>
+      <td style="${B};text-align:center;font-weight:800;background:#e8f5ee">${tH>0?tH:'-'}</td>
+      <td style="${B};text-align:center;font-weight:800;background:#f5e8f2">${fmtOT(tOTH)||'-'}</td>
+      <td style="${B};text-align:center;font-weight:800;background:#e8eef5">${(()=>{const v=minToDisplay?minToDisplay(sumMin):'';return v||'-';})()}</td>
     </tr>`;
   }
   function renderTotRow(){ return makeTotRow(regRows); }
@@ -5266,7 +5315,7 @@ refreshAllSelects();
 setDefaultPeriod();
 onPlantChange();
 renderCfg();
-renderHolidays();
+keepHolidaysInRange(document.getElementById('tf-ds').value,document.getElementById('tf-de').value);
 renderSavedTS();
 renderInvList();
 fillCompanyInputs();
