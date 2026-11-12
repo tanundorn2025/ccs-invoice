@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-12f | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-12g | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -292,7 +292,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12f</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12g</div>
 </header>
 
 <nav class="tabs">
@@ -1445,9 +1445,9 @@ function minToDisplay(m){
   return d+'.'+decPart;
 }
 /* format OT hours — trim trailing zeros after decimal */
-/* ---------- OT: เก็บ/รวมเป็นนาที แสดงผลเป็น ชั่วโมง.นาที ----------
+/* ---------- OT: เก็บ/รวมเป็นนาที แสดงผลเป็นชั่วโมงทศนิยม ----------
    ช่อง OT: 2 = 2 ชม. | 1.5 = 1 ชม. 30 นาที (ทศนิยม 1 หลัก = ส่วนของชั่วโมง) | 0.45 = 45 นาที (2 หลัก = นาที)
-   ผลรวมแสดงแบบ ชม.นาที เช่น 28.45 = 28 ชม. 45 นาที, 11.30 = 11 ชม. 30 นาที                                   */
+   ผลรวมแสดงเป็นชั่วโมงทศนิยม 2 ตำแหน่ง เช่น 11 ชม. 30 นาที = 11.50, 28 ชม. 45 นาที = 28.75 (บวกกันได้ตรง และตรงกับ Invoice) */
 function otToMin(v){
   v=String(v??'').trim();
   if(!v||otCellError(v)) return 0;
@@ -1455,11 +1455,10 @@ function otToMin(v){
   const h=parseInt(m[1]||'0',10), d=m[2]||'';
   return h*60+(d.length===1?Math.round(parseInt(d,10)*6):d.length===2?parseInt(d,10):0);
 }
-function fmtOT(min){                 // นาที → "ชม.นาที"
+function fmtOT(min){                 // นาที → ชั่วโมงทศนิยม "11.50"
   min=Math.round(min||0);
   if(min<=0) return '-';
-  const h=Math.floor(min/60), m=min%60;
-  return m?`${h}.${String(m).padStart(2,'0')}`:String(h);
+  return (min/60).toFixed(2);
 }
 function otHoursDec(min){ return Math.round((min||0)/60*100)/100; }   // นาที → ชั่วโมงทศนิยม (ใช้คิดเงิน)
 /* OT ของแถว แยกวันปกติ/วันหยุด — holSet ไม่ส่ง = ใช้วันหยุดของหน้าจอปัจจุบัน */
@@ -2762,7 +2761,7 @@ function calcInv(){
     </table>`;
   }
   // แสดง ชม.นาที คู่กับชั่วโมงทศนิยม (เช่น 86.25 ชม. = 86 ชม. 15 นาที)
-  [['i-oth-hm',d.oth],['i-hot-hm',d.hot]].forEach(([id,h])=>{const el=document.getElementById(id); if(el){const m=Math.round((+h||0)*60); el.textContent=m?`= ${Math.floor(m/60)} ชม. ${m%60} นาที (ในใบบันทึกเวลา ${fmtOT(m)})`:'';}});
+  [['i-oth-hm',d.oth],['i-hot-hm',d.hot]].forEach(([id,h])=>{const el=document.getElementById(id); if(el){const m=Math.round((+h||0)*60); el.textContent=m?`= ${Math.floor(m/60)} ชม. ${m%60} นาที`:'';}});
   updateInvSaveButtons();
   // Preview ที่เปิดอยู่ อัปเดตตามทันที
   const pv=document.getElementById('inv-preview');
