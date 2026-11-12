@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-12e | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-12f | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -292,7 +292,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12e</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12f</div>
 </header>
 
 <nav class="tabs">
@@ -513,7 +513,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
     <div class="st">⏰ OT (คำนวณจากใบบันทึกเวลาอัตโนมัติ)</div>
     <div class="g4">
-      <div class="fg"><label>OT รวม (ชม. ทศนิยม)</label><input type="number" id="i-oth" value="0" step="0.01" oninput="calcInv()"></div>
+      <div class="fg"><label>OT รวม (ชม. ทศนิยม)</label><input type="number" id="i-oth" value="0" step="0.01" oninput="calcInv()"><div id="i-oth-hm" style="font-size:11.5px;color:var(--muted);margin-top:3px"></div></div>
       <div class="fg"><label>จำนวนคน OT</label><input type="number" id="i-otp" value="5" oninput="calcInv()"></div>
       <div class="fg"><label>อัตรา OT/ชม. (฿)</label><input type="number" id="i-otr" value="74.38" step="0.01" oninput="calcInv()"></div>
       <div class="fg"><label>รวมค่า OT (฿) auto</label><input type="number" id="i-otamt" readonly></div>
@@ -524,7 +524,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
       <div class="fg"><label>จำนวนคน</label><input type="number" id="i-hp" value="0" oninput="calcInv()"></div>
       <div class="fg"><label>จำนวนวัน</label><input type="number" id="i-hd" value="0" oninput="calcInv()"></div>
       <div class="fg"><label>อัตรา/คน/วัน (฿)</label><input type="number" id="i-hr" value="793.34" step="0.01" oninput="calcInv()"></div>
-      <div class="fg"><label>OT วันหยุด (ชม.)</label><input type="number" id="i-hot" value="0" step="0.01" oninput="calcInv()"></div>
+      <div class="fg"><label>OT วันหยุด (ชม. ทศนิยม)</label><input type="number" id="i-hot" value="0" step="0.01" oninput="calcInv()"><div id="i-hot-hm" style="font-size:11.5px;color:var(--muted);margin-top:3px"></div></div>
       <div class="fg"><label>รวมค่าวันหยุด (฿) auto</label><input type="number" id="i-holamt" readonly></div>
     </div>
 
@@ -1364,6 +1364,8 @@ function otCellError(v){
   v=String(v??'').trim();
   if(v==='') return '';
   if(!/^(\d{1,2}(\.\d{1,2})?|\.\d{1,2})$/.test(v)) return 'รูปแบบชั่วโมง OT ไม่ถูกต้อง (ตัวอย่าง: 2, 1.5)';
+  const dec=(v.split('.')[1]||'');
+  if(dec.length===2&&parseInt(dec,10)>59) return 'นาทีเกิน 59 (เช่น 0.45 = 45 นาที, 1.5 = 1 ชม. 30 นาที)';
   if(parseFloat(v)>24) return 'OT เกิน 24 ชม.';
   return '';
 }
@@ -1375,7 +1377,7 @@ function markCell(el){
   fitCell(el);
   const err=el.classList.contains('dc-ot-in')?otCellError(el.value):dayCellError(el.value);
   el.classList.toggle('dc-bad',!!err);
-  el.title=err||(el.classList.contains('dc-ot-in')?'OT (ชม.)':'');
+  el.title=err||(el.classList.contains('dc-ot-in')?'OT: 1.5 = 1 ชม. 30 นาที, 0.45 = 45 นาที':'');
   return err;
 }
 function countBadCells(){
@@ -1443,11 +1445,38 @@ function minToDisplay(m){
   return d+'.'+decPart;
 }
 /* format OT hours — trim trailing zeros after decimal */
-function fmtOT(n){
-  if(!n||n<=0) return '-';
-  // remove trailing zeros: 4.50 → 4.5, 4.00 → 4
-  const s=n.toFixed(2).replace(/\.?0+$/,'');
-  return s||'0';
+/* ---------- OT: เก็บ/รวมเป็นนาที แสดงผลเป็น ชั่วโมง.นาที ----------
+   ช่อง OT: 2 = 2 ชม. | 1.5 = 1 ชม. 30 นาที (ทศนิยม 1 หลัก = ส่วนของชั่วโมง) | 0.45 = 45 นาที (2 หลัก = นาที)
+   ผลรวมแสดงแบบ ชม.นาที เช่น 28.45 = 28 ชม. 45 นาที, 11.30 = 11 ชม. 30 นาที                                   */
+function otToMin(v){
+  v=String(v??'').trim();
+  if(!v||otCellError(v)) return 0;
+  const m=v.match(/^(\d*)(?:\.(\d{1,2}))?$/); if(!m) return 0;
+  const h=parseInt(m[1]||'0',10), d=m[2]||'';
+  return h*60+(d.length===1?Math.round(parseInt(d,10)*6):d.length===2?parseInt(d,10):0);
+}
+function fmtOT(min){                 // นาที → "ชม.นาที"
+  min=Math.round(min||0);
+  if(min<=0) return '-';
+  const h=Math.floor(min/60), m=min%60;
+  return m?`${h}.${String(m).padStart(2,'0')}`:String(h);
+}
+function otHoursDec(min){ return Math.round((min||0)/60*100)/100; }   // นาที → ชั่วโมงทศนิยม (ใช้คิดเงิน)
+/* OT ของแถว แยกวันปกติ/วันหยุด — holSet ไม่ส่ง = ใช้วันหยุดของหน้าจอปัจจุบัน */
+function rowOtMin(r,holSet){
+  let ot=0,oth=0;
+  Object.entries(r.otDays||{}).forEach(([k,v])=>{
+    const n=otToMin(v); if(!n) return;
+    const d=new Date(k);
+    const off=isSunday(d)||(holSet?holSet.has(k):isHoliday(d));
+    off?oth+=n:ot+=n;
+  });
+  return {ot,oth};
+}
+function tsOtMin(t){
+  const hol=new Set(t.holidays||[]); let ot=0,oth=0;
+  [...(t.regRows||[]),...(t.subRows||[])].forEach(r=>{const x=rowOtMin(r,hol);ot+=x.ot;oth+=x.oth;});
+  return {ot,oth};
 }
 function parseWorkVal(v){
   const m=parseWorkToMin(v);
@@ -1838,9 +1867,9 @@ function buildGrid(){
   function totRow(rows,grpId){
     const sumMin=rows.reduce((s,r)=>s+(r.totalMin||0),0);
     const tTot=minToDisplay(sumMin);
-    const tOT=rows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0);
+    const tOT=rows.reduce((s,r)=>s+rowOtMin(r).ot,0);
     const tH=rows.reduce((s,r)=>s+(parseInt(r.h)||0),0);
-    const tOTH=rows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0);
+    const tOTH=rows.reduce((s,r)=>s+rowOtMin(r).oth,0);
     let html=`<tr class="tot-row"><td></td><td class="nm" style="text-align:center;font-weight:800;font-size:14px">รวม</td><td></td>`;
     dates.forEach(()=>html+=`<td></td>`);
     html+=`<td id="tot-ot-${grpId}">${fmtOT(tOT)}</td>`;
@@ -2120,14 +2149,8 @@ function recalcRow(arr,idx,el){
   const pfx=isReg?'r':'s';
 
   /* OT = เฉพาะ OT วันทำงานปกติ (ไม่ใช่วันหยุด) */
-  let otNormal=0;
-  Object.entries(row.otDays||{}).forEach(([k,v])=>{
-    if(otCellError(v)) return;
-    const n=parseFloat(v)||0;
-    if(n<=0) return;
-    const d=new Date(k);
-    if(!isSunday(d)&&!isHoliday(d)) otNormal+=n;
-  });
+  const _otm=rowOtMin(row);
+  const otNormal=_otm.ot;
   row.ot=otNormal>0?fmtOT(otNormal):'';
   const elOT=document.getElementById(`ot-${pfx}-${idx}`);
   if(elOT) elOT.textContent=row.ot||'-';
@@ -2147,14 +2170,7 @@ function recalcRow(arr,idx,el){
   if(elH) elH.textContent=row.h||'-';
 
   /* OT.H = OT on holiday days */
-  let othTotal=0;
-  Object.entries(row.otDays||{}).forEach(([k,v])=>{
-    if(otCellError(v)) return;
-    const n=parseFloat(v)||0;
-    if(n<=0) return;
-    const d=new Date(k);
-    if(isSunday(d)||isHoliday(d)) othTotal+=n;
-  });
+  const othTotal=_otm.oth;
   row.oth=othTotal>0?fmtOT(othTotal):'';
   const elOTH=document.getElementById(`oth-${pfx}-${idx}`);
   if(elOTH) elOTH.textContent=row.oth||'-';
@@ -2187,13 +2203,13 @@ function updateGroupTotal(grp){
   const tTot=minToDisplay(sumMin);
   const elT=document.getElementById(`tot-total-${grp}`);
   if(elT) elT.textContent=tTot||'-';
-  const tOT=rows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0);
+  const tOT=rows.reduce((s,r)=>s+rowOtMin(r).ot,0);
   const elOT=document.getElementById(`tot-ot-${grp}`);
   if(elOT) elOT.textContent=fmtOT(tOT);
   const tH=rows.reduce((s,r)=>s+(parseFloat(r.h)||0),0);
   const elH=document.getElementById(`tot-h-${grp}`);
   if(elH) elH.textContent=tH>0?tH:'-';
-  const tOTH=rows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0);
+  const tOTH=rows.reduce((s,r)=>s+rowOtMin(r).oth,0);
   const elOTH=document.getElementById(`tot-oth-${grp}`);
   if(elOTH) elOTH.textContent=fmtOT(tOTH);
 }
@@ -2457,9 +2473,9 @@ function saveTS(opts){
     if(!confirm(`⚠️ ช่วงวันที่นี้ทับกับงวดที่บันทึกไว้แล้ว:\n${lines}\n\nวันที่ซ้ำจะถูกนับในทั้งสองงวด และอาจถูกคิดเงินซ้ำใน Invoice\n\nกด OK = บันทึกต่อ (ตั้งใจให้ซ้ำ)\nกด Cancel = กลับไปแก้ช่วงวันที่`)) return false;
   }
 
-  const tOT=regRows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0)+subRows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0);
+  const tOT=regRows.reduce((s,r)=>s+rowOtMin(r).ot,0)+subRows.reduce((s,r)=>s+rowOtMin(r).ot,0);
   const tH=regRows.reduce((s,r)=>s+(parseInt(r.h)||0),0)+subRows.reduce((s,r)=>s+(parseInt(r.h)||0),0);
-  const tOTH=regRows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0)+subRows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0);
+  const tOTH=regRows.reduce((s,r)=>s+rowOtMin(r).oth,0)+subRows.reduce((s,r)=>s+rowOtMin(r).oth,0);
 
   const prev=S.timesheets.filter(t=>t.key===key);
   // งวดที่เปิดแก้ไขอยู่แต่ถูกย้ายช่วงวันที่ → แทนที่งวดเดิม (ไม่สร้างงวดซ้ำ)
@@ -2470,7 +2486,7 @@ function saveTS(opts){
     subRows:JSON.parse(JSON.stringify(subRows)),
     holidays:[...holidays],
     remark:tsRemark||'',
-    totalOT:+tOT.toFixed(2), totalH:tH, totalOTH:+tOTH.toFixed(2),
+    totalOT:fmtOT(tOT), totalH:tH, totalOTH:fmtOT(tOTH), totalOTMin:tOT, totalOTHMin:tOTH,
     savedAt:new Date().toLocaleString('th-TH')
   };
   // ข้อมูลเก่าที่ key ซ้ำ (จากเวอร์ชันก่อน) ลบออกจาก DB ด้วย
@@ -2510,9 +2526,9 @@ function renderSavedTS(){
     <td><span class="badge bg-navy">${esc(CFG[t.plant]?.name||t.plant)}</span></td>
     <td><span class="badge bg-gold">${esc(CFG[t.plant]?.depts?.[t.dept]?.name||t.dept)}</span></td>
     <td style="font-size:12px;white-space:nowrap">${rangeText(t.ds,t.de)}${ovBadge}${cur}</td>
-    <td class="num">${t.totalOT||0}</td>
+    <td class="num">${fmtOT(tsOtMin(t).ot)}</td>
     <td class="num">${t.totalH||0}</td>
-    <td class="num">${t.totalOTH||0}</td>
+    <td class="num">${fmtOT(tsOtMin(t).oth)}</td>
     <td class="num" style="font-weight:700">${tsTotalText(t)}</td>
     <td style="font-size:11.5px;color:var(--muted)">${esc(t.savedAt||'')}</td>
     <td style="white-space:nowrap"><button class="btn ba bsm" onclick="useTS(${t.id})">เปิด →</button>
@@ -2668,8 +2684,10 @@ function loadTStoInv(force){
     return;
   }
 
-  document.getElementById('i-oth').value=ts.totalOT||0;
-  document.getElementById('i-hot').value=ts.totalOTH||0;
+  { const om=tsOtMin(ts);    // OT ชม.นาที → ชั่วโมงทศนิยม (28 ชม. 45 นาที = 28.75)
+    document.getElementById('i-oth').value=otHoursDec(om.ot);
+    document.getElementById('i-hot').value=otHoursDec(om.oth);
+    window._lastOtMin=om; }
   document.getElementById('i-otp').value=(ts.regRows||[]).length;
   // วันหยุดที่มีคนทำงาน (ใช้วันหยุดของงวดนั้นเอง)
   {
@@ -2743,6 +2761,8 @@ function calcInv(){
       ${row('Grand Total (฿)',d.grand,'g')}
     </table>`;
   }
+  // แสดง ชม.นาที คู่กับชั่วโมงทศนิยม (เช่น 86.25 ชม. = 86 ชม. 15 นาที)
+  [['i-oth-hm',d.oth],['i-hot-hm',d.hot]].forEach(([id,h])=>{const el=document.getElementById(id); if(el){const m=Math.round((+h||0)*60); el.textContent=m?`= ${Math.floor(m/60)} ชม. ${m%60} นาที (ในใบบันทึกเวลา ${fmtOT(m)})`:'';}});
   updateInvSaveButtons();
   // Preview ที่เปิดอยู่ อัปเดตตามทันที
   const pv=document.getElementById('inv-preview');
@@ -4038,7 +4058,7 @@ async function exportTSExcel(){
     ws.mergeCells(r1,2,r2,2); ws.getCell(r1,2).value=row.name||'';
     ws.getCell(r1,3).value='OT'; ws.getCell(r2,3).value='W';
     dates.forEach((d,i)=>{const k=dkey(d); ws.getCell(r1,C0+i).value=xlNum(row.otDays?.[k]); ws.getCell(r2,C0+i).value=xlNum(row.days?.[k]);});
-    [[cOT,row.ot],[cH,row.h],[cOTH,row.oth],[cTot,row.total]].forEach(([c,v])=>{ws.mergeCells(r1,c,r2,c);ws.getCell(r1,c).value=xlNum(v)??'-';});
+    [[cOT,row.ot,1],[cH,row.h],[cOTH,row.oth,1],[cTot,row.total]].forEach(([c,v,txt])=>{ws.mergeCells(r1,c,r2,c);ws.getCell(r1,c).value=txt?(String(v||'').trim()||'-'):(xlNum(v)??'-');});
     xlStyleRange(ws,r1,1,r2,L,(c,ri,ci)=>{
       const d=ci>=C0&&ci<cOT?dates[ci-C0]:null;
       c.alignment={horizontal:ci===2?'left':'center',vertical:'middle',indent:ci===2?1:0,shrinkToFit:ci===2};
@@ -4053,11 +4073,11 @@ async function exportTSExcel(){
     ws.getRow(r1).height=12; ws.getRow(r2).height=14; r+=2;
   };
   const total=rows=>{
-    const tOT=rows.reduce((s,x)=>s+(parseFloat(x.ot)||0),0), tH=rows.reduce((s,x)=>s+(parseInt(x.h)||0),0);
-    const tOTH=rows.reduce((s,x)=>s+(parseFloat(x.oth)||0),0), min=rows.reduce((s,x)=>s+(x.totalMin||0),0);
+    const tOT=rows.reduce((s,x)=>s+rowOtMin(x).ot,0), tH=rows.reduce((s,x)=>s+(parseInt(x.h)||0),0);
+    const tOTH=rows.reduce((s,x)=>s+rowOtMin(x).oth,0), min=rows.reduce((s,x)=>s+(x.totalMin||0),0);
     ws.getCell(r,1).value='รวม';
-    ws.getCell(r,cOT).value=tOT?xlNum(fmtOT(tOT)):'-'; ws.getCell(r,cH).value=tH>0?tH:'-';
-    ws.getCell(r,cOTH).value=tOTH?xlNum(fmtOT(tOTH)):'-'; ws.getCell(r,cTot).value=xlNum(minToDisplay(min))||'-';
+    ws.getCell(r,cOT).value=fmtOT(tOT); ws.getCell(r,cH).value=tH>0?tH:'-';
+    ws.getCell(r,cOTH).value=fmtOT(tOTH); ws.getCell(r,cTot).value=xlNum(minToDisplay(min))||'-';
     xlStyleRange(ws,r,1,r,L,(c,_,ci)=>{
       c.font=f(9,{bold:true}); c.alignment={horizontal:'center',vertical:'middle'};
       c.border={top:{style:'medium',color:{argb:'FF333333'}},bottom:XL.thin('FFAAAAAA'),left:XL.thin('FFAAAAAA'),right:XL.thin('FFAAAAAA')};
@@ -4534,9 +4554,9 @@ function tsPrintDoc(){
 
   // totRow summary
   function makeTotRow(rows){
-    const tOT=rows.reduce((s,r)=>s+(parseFloat(r.ot)||0),0);
+    const tOT=rows.reduce((s,r)=>s+rowOtMin(r).ot,0);
     const tH=rows.reduce((s,r)=>s+(parseInt(r.h)||0),0);
-    const tOTH=rows.reduce((s,r)=>s+(parseFloat(r.oth)||0),0);
+    const tOTH=rows.reduce((s,r)=>s+rowOtMin(r).oth,0);
     const sumMin=rows.reduce((s,r)=>s+(r.totalMin||0),0);
     // เส้นหนาก่อนแถวรวม: กำหนดที่ทุกช่อง (เส้นของ <tr> ไม่ถูกวาดใน PDF)
     const B='border:0.5px solid #aaa;border-top:2px solid #333';
