@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-12h | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-12i | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -292,7 +292,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12h</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12i</div>
 </header>
 
 <nav class="tabs">
@@ -1448,7 +1448,7 @@ function minToDisplay(m){
 /* ---------- OT: เก็บ/รวมเป็นนาที ----------
    ช่อง OT: 2 = 2 ชม. | 0.5 / 1.5 = ครึ่งชั่วโมง (30 นาที) | 0.45 = 45 นาที (ทศนิยม 2 หลัก = นาที)
    ผลรวมแสดงเป็น ชั่วโมง.นาที โดยครึ่งชั่วโมงแสดงเป็น .50
-     28 ชม. 45 นาที = 28.45 | 11 ชม. 30 นาที = 11.50 | 23 ชม. = 23.00
+     28 ชม. 45 นาที = 28.45 | 11 ชม. 30 นาที = 11.50 | 23 ชม. = 23 (ชั่วโมงเต็มไม่แสดง .00)
    Invoice ใช้ชั่วโมงทศนิยมจริงในการคิดเงิน (28 ชม. 45 นาที = 28.75 ชม.)                                 */
 function otToMin(v){
   v=String(v??'').trim();
@@ -1461,6 +1461,7 @@ function fmtOT(min){                 // นาที → "ชม.นาที" (
   min=Math.round(min||0);
   if(min<=0) return '-';
   const h=Math.floor(min/60), m=min%60;
+  if(!m) return String(h);            // ชั่วโมงเต็ม → ไม่แสดง .00
   return `${h}.${m===30?'50':String(m).padStart(2,'0')}`;
 }
 function otExact(min){ min=Math.round(min||0); return min>0?`${Math.floor(min/60)} ชม. ${min%60} นาที`:''; }
