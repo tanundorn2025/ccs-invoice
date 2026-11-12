@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-12d | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-12e | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -292,7 +292,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12d</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12e</div>
 </header>
 
 <nav class="tabs">
@@ -732,6 +732,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     </div>
     <div class="brow">
       <button class="btn bp bsm" onclick="initFirebase()">🔥 เชื่อมต่อ Firebase</button>
+      <button class="btn bo bsm" onclick="copyFBLink()" title="เปิดลิงก์นี้ในเบราว์เซอร์/เครื่องอื่น จะเชื่อม Database เดียวกันให้อัตโนมัติ">🔗 ลิงก์สำหรับเบราว์เซอร์อื่น</button>
       <button class="btn bs bsm" onclick="dbLoad()" title="รวมข้อมูลในเครื่องกับ Database ให้ตรงกันทั้งสองฝั่ง">🔄 ซิงก์กับ DB</button>
       <button class="btn bo bsm" onclick="dbBackupAll()">📦 Backup ข้อมูลปัจจุบัน → DB</button>
     </div>
@@ -4867,6 +4868,18 @@ function updateAuthStatus(u){
     ?`🟢 เข้าสู่ระบบเป็น <strong>${esc(u.email||'')}</strong>`
     :'⚪ ยังไม่ได้เข้าสู่ระบบ (ไม่จำเป็น ถ้า Rules เปิดให้อ่าน/เขียนได้)';
 }
+/* ลิงก์ที่พาค่าเชื่อมต่อ Firebase ไปด้วย — เปิดในเบราว์เซอร์อื่นแล้วต่อ Database เดียวกันได้ทันที */
+function copyFBLink(){
+  const k=localStorage.getItem('fb_apikey')||document.getElementById('fb-apikey')?.value.trim();
+  const p=localStorage.getItem('fb_projectid')||document.getElementById('fb-projectid')?.value.trim();
+  const a=localStorage.getItem('fb_appid')||document.getElementById('fb-appid')?.value.trim()||'';
+  if(!k||!p){ alert('กรุณากรอก API Key และ Project ID แล้วกดเชื่อมต่อก่อน'); return; }
+  const enc=encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify({k,p,a})))));
+  const url=location.href.split('#')[0]+'#fb='+enc;
+  const done=()=>showToast('📋 คัดลอกลิงก์แล้ว — นำไปวางในเบราว์เซอร์อื่น');
+  if(navigator.clipboard&&window.isSecureContext!==false){ navigator.clipboard.writeText(url).then(done,()=>prompt('คัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์อื่น:',url)); }
+  else prompt('คัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์อื่น:',url);
+}
 async function fbLogin(){
   if(!_db&&!initFirebase()) return;
   if(!firebase.auth){alert('โหลดโมดูล Firebase Auth ไม่สำเร็จ');return;}
@@ -5585,6 +5598,20 @@ checkDraftOnStart();
 
 
 /* โหลด Firebase config จาก localStorage (ถ้ามี) */
+/* ลิงก์จากเครื่อง/เบราว์เซอร์อื่น (#fb=...) → รับค่าเชื่อมต่อ Firebase อัตโนมัติ */
+(function(){
+  const m=(location.hash||'').match(/[#&]fb=([^&]+)/);
+  if(!m) return;
+  try{
+    const c=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));
+    if(c.k&&c.p){
+      localStorage.setItem('fb_apikey',c.k); localStorage.setItem('fb_projectid',c.p);
+      if(c.a) localStorage.setItem('fb_appid',c.a);
+      setTimeout(()=>showToast('🔗 รับค่าเชื่อมต่อ Firebase จากลิงก์แล้ว — กำลังดึงข้อมูลจาก Database'),300);
+    }
+  }catch(e){ console.warn('fb link',e); }
+  try{ history.replaceState(null,'',location.href.split('#')[0]); }catch(e){}
+})();
 (function(){
   const k=localStorage.getItem('fb_apikey');
   const p=localStorage.getItem('fb_projectid');
