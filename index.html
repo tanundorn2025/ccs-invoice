@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-12c | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-12d | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -292,7 +292,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12c</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12d</div>
 </header>
 
 <nav class="tabs">
@@ -732,10 +732,12 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     </div>
     <div class="brow">
       <button class="btn bp bsm" onclick="initFirebase()">🔥 เชื่อมต่อ Firebase</button>
-      <button class="btn bs bsm" onclick="dbLoad()">🔄 โหลดข้อมูลจาก DB</button>
+      <button class="btn bs bsm" onclick="dbLoad()" title="รวมข้อมูลในเครื่องกับ Database ให้ตรงกันทั้งสองฝั่ง">🔄 ซิงก์กับ DB</button>
       <button class="btn bo bsm" onclick="dbBackupAll()">📦 Backup ข้อมูลปัจจุบัน → DB</button>
     </div>
-    <div class="st">🔐 เข้าสู่ระบบ (Firebase Authentication)</div>
+    <div id="db-sync-info" style="font-size:12.5px;margin-top:6px"></div>
+    <div class="st">🔐 เข้าสู่ระบบ (Firebase Authentication) — ไม่บังคับ</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">ถ้า Rules ใน Firebase เปิดให้อ่าน/เขียนได้ ใช้งานได้โดยไม่ต้องเข้าสู่ระบบ · ถ้าตั้ง Rules แบบปลอดภัย (ด้านล่าง) ให้เข้าสู่ระบบครั้งเดียว เบราว์เซอร์จะจำไว้</div>
     <div class="g3" style="gap:.75rem;align-items:end">
       <div class="fg"><label>อีเมล</label><input type="text" id="fb-email" placeholder="you@example.com" autocomplete="username"></div>
       <div class="fg"><label>รหัสผ่าน</label><input type="password" id="fb-pass" autocomplete="current-password"></div>
@@ -1157,7 +1159,8 @@ function sumInvoices(plant,monKey){
 }
 
 /* ---- settings: CFG, CO, CUSTOMERS, PLANT_GROUP ---- */
-function settingsPayload(){return {CFG,CO,CUSTOMERS,PLANT_GROUP,taxPrefix:TAX_INV_PREFIX,updatedAt:new Date().toISOString()};}
+let _settingsAt='';   // เวลาที่แก้การตั้งค่าล่าสุด (ใช้ตัดสินตอนซิงก์ว่าเครื่องไหนใหม่กว่า)
+function settingsPayload(){return {CFG,CO,CUSTOMERS,PLANT_GROUP,taxPrefix:TAX_INV_PREFIX,updatedAt:_settingsAt||new Date(0).toISOString()};}
 function saveSettingsLocal(){
   try{
     localStorage.setItem('ccs_settings',JSON.stringify(settingsPayload()));
@@ -1166,7 +1169,7 @@ function saveSettingsLocal(){
     localStorage.setItem('tax_inv_prefix',TAX_INV_PREFIX);
   }catch(e){console.warn('saveSettingsLocal',e);showToast('⚠️ เก็บการตั้งค่าในเบราว์เซอร์ไม่สำเร็จ (โลโก้อาจใหญ่เกินไป)');}
 }
-function persistSettings(){saveSettingsLocal();dbSaveSettings();}
+function persistSettings(){_settingsAt=new Date().toISOString();saveSettingsLocal();dbSaveSettings();}
 function initAutoRatesFlags(){
   Object.values(CFG).forEach(p=>Object.values(p.depts||{}).forEach(d=>{
     if(d.autoRates===undefined) d.autoRates=Math.abs(d.ot_rate-otFromRate(d.rate))<0.005&&Math.abs(d.hol_rate-holFromRate(d.rate))<0.005;
@@ -1198,7 +1201,7 @@ function applySettings(st,render=true){
     const pf=document.getElementById('tax-prefix');if(pf) pf.value=TAX_INV_PREFIX;
   }
 }
-function loadLocalSettings(){try{const st=JSON.parse(localStorage.getItem('ccs_settings')||'null');if(st) applySettings(st,false);}catch(e){console.warn(e);}}
+function loadLocalSettings(){try{const st=JSON.parse(localStorage.getItem('ccs_settings')||'null');if(st){ applySettings(st,false); _settingsAt=st.updatedAt||''; }}catch(e){console.warn(e);}}
 function fillCompanyInputs(){
   const m={'co-name-th':'nameTh','co-name-en':'nameEn','co-addr':'addr','co-tel':'tel','co-email':'email','co-tax':'tax','co-contact':'contact'};
   Object.entries(m).forEach(([id,k])=>{const el=document.getElementById(id);if(el) el.value=CO[k]||'';});
@@ -1363,7 +1366,12 @@ function otCellError(v){
   if(parseFloat(v)>24) return 'OT เกิน 24 ชม.';
   return '';
 }
+/* ช่อง W กว้าง ~34px: ค่ายาว (0.715) ย่อขนาดตัวอักษรให้เห็นครบ */
+function dcFontCss(v){ const n=String(v||'').length; return n<=3?'':n===4?'font-size:12.5px;letter-spacing:-.3px':n===5?'font-size:10.5px;letter-spacing:-.4px':'font-size:9px;letter-spacing:-.5px'; }
+function fitCell(el){ if(el.classList.contains('dc-ot-in')) return; const css=dcFontCss(el.value); el.style.fontSize=''; el.style.letterSpacing='';
+  if(css) css.split(';').forEach(p=>{const [k,v]=p.split(':'); if(k==='font-size') el.style.fontSize=v; if(k==='letter-spacing') el.style.letterSpacing=v;}); }
 function markCell(el){
+  fitCell(el);
   const err=el.classList.contains('dc-ot-in')?otCellError(el.value):dayCellError(el.value);
   el.classList.toggle('dc-bad',!!err);
   el.title=err||(el.classList.contains('dc-ot-in')?'OT (ชม.)':'');
@@ -1809,7 +1817,7 @@ function buildGrid(){
             </div>
             <div class="cell-day" style="display:flex;align-items:center;justify-content:center">
               <input class="dc${dayCellError(val)?' dc-bad':''}" type="text" maxlength="6" title="${dayCellError(val)}" value="${esc(val)}"
-                style="width:34px;text-align:center"
+                style="width:34px;text-align:center;${dcFontCss(val)}"
                 onblur="if(this.value.startsWith('.')){this.value='0'+this.value;setDay(${arrName},${i},'${key}',this.value)}" oninput="setDay(${arrName},${i},'${key}',this.value);markCell(this);recalcRow(${arrName},${i},this)">
             </div>
           </div>
@@ -4347,8 +4355,8 @@ function migrateCodes(match,apply,label){
   const ts=S.timesheets.filter(match), inv=S.invoices.filter(match);
   const locked=inv.filter(i=>taxRecOfInv(i.id)).length;
   if(!confirm(`${label}\n\nข้อมูลที่จะย้ายไปใช้รหัสใหม่:\n- ใบบันทึกเวลา ${ts.length} งวด\n- Invoice ${inv.length} ใบ${locked?` (ในนี้ ${locked} ใบอยู่ในใบกำกับภาษีที่ออกแล้ว — เปลี่ยนเฉพาะรหัสอ้างอิง ยอดเงินและเลขที่เอกสารคงเดิม)`:''}\n\nเลขที่ Invoice ที่ออกไปแล้วจะไม่ถูกเปลี่ยน ต้องการดำเนินการต่อ?`)) return null;
-  ts.forEach(t=>{apply(t);normTS(t);});
-  inv.forEach(i=>{apply(i);normInv(i);});
+  ts.forEach(t=>{apply(t);normTS(t);t.updatedAt=Date.now();});
+  inv.forEach(i=>{apply(i);normInv(i);i.updatedAt=Date.now();});
   // ร่างใบบันทึกเวลาที่ค้างอยู่
   try{
     const d=JSON.parse(localStorage.getItem('ts_draft')||'null');
@@ -4803,7 +4811,7 @@ function initFirebase(){
     }, appName);
     _db = firebase.firestore(_fbApp);
     initAuthWatch();
-    setDBStatus('connected');
+    setDBStatus('checking');
     localStorage.setItem('fb_apikey',apiKey);
     localStorage.setItem('fb_projectid',projectId);
     if(appId) localStorage.setItem('fb_appid',appId);
@@ -4822,6 +4830,8 @@ function setDBStatus(s){
   if(!el) return;
   const map={
     connected:{bg:'#dcf0e5',color:'#1a6b3c',text:'🟢 เชื่อมต่อแล้ว'},
+    checking: {bg:'#e0eaf7',color:'#1a3a5c',text:'🔵 กำลังตรวจสอบ...'},
+    denied:   {bg:'#fee2e2',color:'#9b1c1c',text:'🔴 ไม่มีสิทธิ์เข้าถึง Database'},
     error:    {bg:'#fee2e2',color:'#9b1c1c',text:'🔴 เชื่อมต่อไม่ได้'},
     loading:  {bg:'#e0eaf7',color:'#1a3a5c',text:'🔵 กำลังโหลด...'},
     saving:   {bg:'#fef3dc',color:'#7a5200',text:'🟡 กำลังบันทึก...'},
@@ -4855,7 +4865,7 @@ function updateAuthStatus(u){
   if(!el) return;
   el.innerHTML=u
     ?`🟢 เข้าสู่ระบบเป็น <strong>${esc(u.email||'')}</strong>`
-    :'⚪ ยังไม่ได้เข้าสู่ระบบ — ถ้าตั้ง Rules แบบปลอดภัยแล้ว ต้องเข้าสู่ระบบก่อนจึงจะอ่าน/เขียนข้อมูลได้';
+    :'⚪ ยังไม่ได้เข้าสู่ระบบ (ไม่จำเป็น ถ้า Rules เปิดให้อ่าน/เขียนได้)';
 }
 async function fbLogin(){
   if(!_db&&!initFirebase()) return;
@@ -4877,7 +4887,13 @@ async function fbLogout(){
   }
 }
 
+/* เวลาแก้ไขล่าสุดของแต่ละรายการ + รายการที่ลบไปแล้ว — ใช้รวมข้อมูลเครื่องนี้กับ Database */
+let _persistT=null;
+function touch(rec){ rec.updatedAt=Date.now(); clearTimeout(_persistT); _persistT=setTimeout(persistLocal,300); }
+function getTombs(){ try{return JSON.parse(localStorage.getItem('ccs_deleted')||'{}');}catch(e){return {};} }
+function addTomb(col,id){ const t=getTombs(); t[col]=[...new Set([...(t[col]||[]),String(id)])]; try{localStorage.setItem('ccs_deleted',JSON.stringify(t));}catch(e){} }
 async function dbSaveTS(ts,quiet){
+  touch(ts);
   if(!ensureDB()) return;
   setDBStatus('saving');
   try{
@@ -4888,6 +4904,7 @@ async function dbSaveTS(ts,quiet){
 }
 
 async function dbSaveInv(inv,quiet){
+  touch(inv);
   if(!ensureDB()) return;
   setDBStatus('saving');
   try{
@@ -4898,6 +4915,7 @@ async function dbSaveInv(inv,quiet){
 }
 
 async function dbDeleteInv(id){
+  addTomb('invoices',id);
   if(!ensureDB()) return;
   try{
     await _db.collection('invoices').doc(String(id)).delete();
@@ -4905,6 +4923,7 @@ async function dbDeleteInv(id){
 }
 
 async function dbDeleteTS(id){
+  addTomb('timesheets',id);
   if(!ensureDB()) return;
   try{
     await _db.collection('timesheets').doc(String(id)).delete();
@@ -4912,6 +4931,7 @@ async function dbDeleteTS(id){
 }
 
 async function dbSaveTax(rec){
+  touch(rec);
   if(!ensureDB()) return;
   try{ await _db.collection('tax_invoices').doc(String(rec.id)).set(JSON.parse(JSON.stringify(rec))); }
   catch(e){ console.error('dbSaveTax:',e); showToast('⚠️ บันทึกใบกำกับภาษีขึ้น Firebase ไม่สำเร็จ ('+(e.code||e.message)+')'); }
@@ -4928,44 +4948,87 @@ async function dbSaveSettings(){
   catch(e){ console.error('dbSaveSettings:',e); showToast('⚠️ บันทึกการตั้งค่าขึ้น Firebase ไม่สำเร็จ ('+(e.code||e.message)+')'); }
 }
 
+/* ซิงก์: รวมข้อมูลในเครื่องกับ Database (ไม่ทับกัน)
+   - รายการที่มีแค่ฝั่งเดียว → เก็บไว้ และส่งขึ้น/ลงให้ครบทั้งสองฝั่ง
+   - มีทั้งสองฝั่ง → ใช้ฉบับที่แก้ไขล่าสุด (updatedAt)
+   - รายการที่ถูกลบ (เครื่องไหนก็ได้) → ลบทั้งสองฝั่ง                                       */
 async function dbLoad(quiet){
   if(!_db&&!initFirebase()) return;
   setDBStatus('loading');
+  const info=document.getElementById('db-sync-info');
   try{
-    const [tsSnap,invSnap,taxSnap,cfgSnap,ctrSnap]=await Promise.all([
+    const [tsSnap,invSnap,taxSnap,cfgSnap,ctrSnap,delSnap]=await Promise.all([
       _db.collection('timesheets').get(),
       _db.collection('invoices').get(),
       _db.collection('tax_invoices').get(),
       _db.collection('settings').doc('config').get(),
-      _db.collection('settings').doc('tax_counter').get()
+      _db.collection('settings').doc('tax_counter').get(),
+      _db.collection('settings').doc('deleted').get()
     ]);
-    S.timesheets=tsSnap.docs.map(d=>d.data()).filter(Boolean).map(normTS);
-    S.invoices=invSnap.docs.map(d=>d.data()).filter(Boolean).map(normInv);
-    S.taxInvoices=taxSnap.docs.map(d=>d.data()).filter(Boolean);
-    if(cfgSnap.exists){ applySettings(cfgSnap.data()); initAutoRatesFlags(); syncAutoRates(); renderCfg(); saveSettingsLocal(); }
-    if(ctrSnap.exists){
-      const n=parseInt(ctrSnap.data().next);
-      if(n){ TAX_INV_COUNTER=n; localStorage.setItem('tax_inv_counter',n); }
-    }
+    // รายการที่ถูกลบ: รวมทั้งสองฝั่ง
+    const lt=getTombs(), dt=delSnap.exists?delSnap.data():{};
+    const tombs={timesheets:[...new Set([...(lt.timesheets||[]),...(dt.timesheets||[])])],invoices:[...new Set([...(lt.invoices||[]),...(dt.invoices||[])])]};
+    try{localStorage.setItem('ccs_deleted',JSON.stringify(tombs));}catch(e){}
+    const up={timesheets:[],invoices:[],tax_invoices:[]}, dels={timesheets:[],invoices:[]};
+    const merge=(local,remote,col,norm)=>{
+      const dead=new Set(tombs[col]||[]);
+      const map=new Map();
+      remote.forEach(r=>{ if(dead.has(String(r.id))){dels[col]?.push(r.id);return;} map.set(String(r.id),r); });
+      local.forEach(l=>{
+        if(dead.has(String(l.id))) return;
+        const r=map.get(String(l.id));
+        if(!r){ map.set(String(l.id),l); up[col].push(l); }                       // มีแค่ในเครื่อง → ส่งขึ้น
+        else if((l.updatedAt||0)>(r.updatedAt||0)){ map.set(String(l.id),l); up[col].push(l); } // ในเครื่องใหม่กว่า
+      });
+      return [...map.values()].map(x=>norm?norm(x):x);
+    };
+    const nLocal={ts:S.timesheets.length,inv:S.invoices.length,tax:S.taxInvoices.length};
+    S.timesheets=merge(S.timesheets,tsSnap.docs.map(d=>d.data()).filter(Boolean),'timesheets',normTS);
+    S.invoices=merge(S.invoices,invSnap.docs.map(d=>d.data()).filter(Boolean),'invoices',normInv);
+    S.taxInvoices=merge(S.taxInvoices,taxSnap.docs.map(d=>d.data()).filter(Boolean),'tax_invoices');
+    // การตั้งค่า: ใช้ฝั่งที่แก้ล่าสุด
+    let cfgUp=false;
+    if(cfgSnap.exists&&(cfgSnap.data().updatedAt||'')>(_settingsAt||'')){
+      applySettings(cfgSnap.data()); _settingsAt=cfgSnap.data().updatedAt||''; initAutoRatesFlags(); syncAutoRates(); renderCfg(); saveSettingsLocal();
+    } else if(!cfgSnap.exists||(_settingsAt||'')>(cfgSnap.data().updatedAt||'')) cfgUp=true;
+    // เลขที่ใบกำกับภาษี: ใช้ค่าที่มากกว่า (กันเลขซ้ำ)
+    const dbNext=ctrSnap.exists?(parseInt(ctrSnap.data().next)||0):0;
+    if(dbNext>TAX_INV_COUNTER){ TAX_INV_COUNTER=dbNext; localStorage.setItem('tax_inv_counter',dbNext); }
     persistLocal();
     refreshUIAfterData();
+    // ส่งส่วนที่ขาด/ใหม่กว่าขึ้น Database
+    const nUp=up.timesheets.length+up.invoices.length+up.tax_invoices.length;
+    const clean=o=>JSON.parse(JSON.stringify(o));
+    const writes=[];
+    Object.entries(up).forEach(([col,list])=>list.forEach(x=>writes.push(['set',col,x])));
+    Object.entries(dels).forEach(([col,ids])=>ids.forEach(id=>writes.push(['del',col,id])));
+    for(let i=0;i<writes.length;i+=400){
+      const b=_db.batch();
+      writes.slice(i,i+400).forEach(([op,col,x])=>{ const ref=_db.collection(col).doc(String(op==='set'?x.id:x)); op==='set'?b.set(ref,clean(x)):b.delete(ref); });
+      await b.commit();
+    }
+    if(tombs.timesheets.length||tombs.invoices.length) await _db.collection('settings').doc('deleted').set(tombs);
+    if(dbNext<TAX_INV_COUNTER) await _db.collection('settings').doc('tax_counter').set({next:TAX_INV_COUNTER,prefix:TAX_INV_PREFIX},{merge:true});
+    if(cfgUp) await dbSaveSettings();
     setDBStatus('connected');
-    showToast(`✅ โหลดแล้ว: ${S.timesheets.length} ใบบันทึกเวลา, ${S.invoices.length} Invoice, ${S.taxInvoices.length} ใบกำกับภาษี`);
+    const at=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+    if(info) info.innerHTML=`<span style="color:#16723c">☁️ ซิงก์กับ Database แล้ว ${at} — ใน Database ตอนนี้มี ใบบันทึกเวลา <strong>${S.timesheets.length}</strong> งวด, Invoice <strong>${S.invoices.length}</strong> ใบ, ใบกำกับภาษี <strong>${S.taxInvoices.length}</strong> ใบ${nUp?` (ส่งข้อมูลจากเครื่องนี้ขึ้นไป ${nUp} รายการ)`:''}</span>`;
+    showToast(`☁️ ซิงก์แล้ว: ${S.timesheets.length} ใบบันทึกเวลา, ${S.invoices.length} Invoice`+(nUp?` · ส่งขึ้น ${nUp} รายการ`:''));
   }catch(e){
-    setDBStatus('error');
     console.error('dbLoad:',e);
-    if(e.code==='permission-denied'){
-      const msg='ไม่มีสิทธิ์อ่านข้อมูลจาก Firebase — กรุณาเข้าสู่ระบบในแท็บ ⚙️ ตั้งค่า (ตอนนี้ใช้ข้อมูลที่เก็บในเครื่อง)';
-      quiet?showToast(msg):alert(msg);
-    }else if(!quiet){
-      alert('โหลดข้อมูลไม่ได้: '+e.message+'\n\nตรวจสอบ:\n1. API Key และ Project ID ถูกต้อง\n2. เข้าสู่ระบบแล้ว และ Firestore Rules อนุญาต read/write');
-    }else showToast('⚠️ โหลดจาก Firebase ไม่สำเร็จ — ใช้ข้อมูลที่เก็บในเครื่อง');
+    const denied=e.code==='permission-denied';
+    setDBStatus(denied?'denied':'error');
+    const msg=denied
+      ?'Database ไม่อนุญาตให้อ่าน/เขียน — Rules ใน Firebase บังคับให้เข้าสู่ระบบ (หรือ Rules แบบทดสอบหมดอายุแล้ว) ข้อมูลยังเก็บในเครื่องนี้ครบ'
+      :'ติดต่อ Database ไม่ได้: '+(e.code||e.message)+' — ข้อมูลยังเก็บในเครื่องนี้ครบ';
+    if(info) info.innerHTML=`<span style="color:var(--red)">⚠️ ${msg}</span>`;
+    quiet?showToast('⚠️ '+msg):alert(msg);
   }
 }
 
 async function dbBackupAll(skipConfirm){
   if(!_db&&!initFirebase()) return;
-  if(!skipConfirm&&!confirm(`Backup ข้อมูลทั้งหมดขึ้น Firebase?\n- ${S.timesheets.length} ใบบันทึกเวลา\n- ${S.invoices.length} Invoice\n- ${S.taxInvoices.length} ใบกำกับภาษี\n- การตั้งค่าบริษัท/ลูกค้า/อัตราค่าจ้าง`)) return;
+  if(!skipConfirm&&!confirm(`Backup ข้อมูลทั้งหมดในเครื่องนี้ขึ้น Firebase (เขียนทับรายการเดียวกันใน Database)?\n- ${S.timesheets.length} ใบบันทึกเวลา\n- ${S.invoices.length} Invoice\n- ${S.taxInvoices.length} ใบกำกับภาษี\n- การตั้งค่าบริษัท/ลูกค้า/อัตราค่าจ้าง`)) return;
   setDBStatus('saving');
   const batch=_db.batch();
   const clean=o=>JSON.parse(JSON.stringify(o));
