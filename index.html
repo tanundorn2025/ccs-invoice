@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-12j | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-13a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -292,7 +292,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-12j</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13a</div>
 </header>
 
 <nav class="tabs">
@@ -4320,6 +4320,22 @@ function keepManualRates(pk,dk){
   persistSettings(); renderCfg();
   showToast(`📌 ${d.name}: ใช้ OT ${d.ot_rate} / Holiday ${d.hol_rate} ตามที่บันทึกไว้`);
 }
+/* แก้อัตรา/เดือนของแผนกที่ OT/Holiday ไม่ตรงสูตร → ถามว่าจะปรับตามไหม (ตอบครั้งเดียว ระบบจำไว้) */
+async function askRateFollow(pk,dk){
+  const d=CFG[pk].depts[dk];
+  const ot=otFromRate(d.rate), hol=holFromRate(d.rate);
+  const f=n=>Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const v=await askChoice(`💡 ${esc(CFG[pk].name)} / ${esc(d.name)}: ปรับ OT และ Holiday ตามอัตราใหม่ไหม?`,
+    `อัตรา/เดือนใหม่ <strong>${f(d.rate)}</strong> บาท<br><br>
+     <table style="font-size:13px;border-collapse:collapse"><tr><td></td><td style="padding:2px 10px"><b>ค่าเดิม</b></td><td style="padding:2px 10px"><b>ตามอัตราใหม่</b></td></tr>
+     <tr><td>OT/ชม.</td><td style="padding:2px 10px">${f(d.ot_rate)}</td><td style="padding:2px 10px;color:#16723c;font-weight:700">${f(ot)}</td></tr>
+     <tr><td>Holiday/วัน</td><td style="padding:2px 10px">${f(d.hol_rate)}</td><td style="padding:2px 10px;color:#16723c;font-weight:700">${f(hol)}</td></tr>
+     <tr><td>OT วันหยุด/ชม. (3 เท่า)</td><td style="padding:2px 10px">${f(holOtRate(d.ot_rate))}</td><td style="padding:2px 10px;color:#16723c;font-weight:700">${f(holOtRate(ot))}</td></tr></table>
+     <br><span style="font-size:12.5px;color:var(--muted)">ระบบจะจำคำตอบ — เปลี่ยนภายหลังได้ที่ช่องติ๊ก "คำนวณ OT/Holiday ตามอัตรา/เดือน" ของแผนกนี้</span>`,
+    [{label:'ไม่ปรับ — ยึดค่าเดิม (ตามสัญญา)',value:'keep',cls:'bo'},{label:'✅ ปรับตามอัตราใหม่ (และปรับให้อัตโนมัติต่อไป)',value:'follow',cls:'bp'}]);
+  if(v==='follow'){ d.autoRates=true; d.manualOk=false; d.ot_rate=ot; d.hol_rate=hol; }
+  else { d.autoRates=false; d.manualOk=true; }
+}
 function setAutoRates(pk,dk,on){
   const d=CFG[pk]?.depts?.[dk]; if(!d) return;
   if(on){
@@ -4345,10 +4361,20 @@ function setCfgVal(pk,dk,field,val){
   if(d[field]===n) return;
   d[field]=n;
   let extra='';
+  if(field==='rate'&&!d.autoRates&&!d.manualOk){
+    // แผนกที่ยังไม่ได้เลือกว่าจะให้ OT/Holiday ตามสูตรหรือยึดค่าเดิม → ถามก่อน
+    askRateFollow(pk,dk).then(()=>setCfgValDone(pk,dk,field,n));
+    return;
+  }
   if(field==='rate'&&d.autoRates){
     d.ot_rate=otFromRate(n); d.hol_rate=holFromRate(n);
     extra=` · OT ${d.ot_rate} / Holiday ${d.hol_rate}`;
   }
+  setCfgValDone(pk,dk,field,n,extra);
+}
+function setCfgValDone(pk,dk,field,n,extra){
+  const d=CFG[pk].depts[dk];
+  if(extra===undefined) extra=field==='rate'?` · OT ${d.ot_rate} / Holiday ${d.hol_rate}`:'';
   persistSettings();
   const rc=(field==='workers'||field==='seq')?{n:0,m:0}:recalcDraftInvoices(pk,dk);
   renderCfg();
@@ -4431,7 +4457,9 @@ function renameDeptCode(pk,dk){
   showToast(`✅ เปลี่ยนรหัสแผนกเป็น ${nk} แล้ว (ย้าย ${r.ts} งวด, ${r.inv} Invoice)`);
 }
 
-function saveCfg(){
+async function saveCfg(){
+  const oldRates={};
+  Object.entries(CFG).forEach(([pk,pv])=>Object.entries(pv.depts||{}).forEach(([dk,dv])=>{oldRates[pk+'|'+dk]=dv.rate;}));
   Object.entries(CFG).forEach(([pk,pv])=>{
     const pn=(document.getElementById(`cfg-${pk}-name`)?.value||'').trim();
     if(pn) pv.name=pn;
@@ -4444,8 +4472,11 @@ function saveCfg(){
       dv.ot_rate=parseFloat(v('o'))||dv.ot_rate||74.38;
       dv.hol_rate=parseFloat(v('h'))||dv.hol_rate||793.34;
       if(dv.autoRates){ dv.ot_rate=otFromRate(dv.rate); dv.hol_rate=holFromRate(dv.rate); }
+      else if(!dv.manualOk&&oldRates[pk+'|'+dk]!==dv.rate) (saveCfg._ask=saveCfg._ask||[]).push([pk,dk]);
     });
   });
+  const ask=saveCfg._ask||[]; saveCfg._ask=null;
+  for(const [pk,dk] of ask) await askRateFollow(pk,dk);
   persistSettings();
   refreshAllSelects();
   renderSavedTS();renderInvList();renderSpSaved();buildSum();
