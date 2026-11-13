@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-13e | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-13f | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -199,6 +199,8 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 #ts-remark{display:block;width:100%;min-height:3.6em;resize:vertical;border:none;border-bottom:1px solid #aaa;background:transparent;font-family:Sarabun,sans-serif;font-size:15px;line-height:1.75;padding:2px 6px;
   background-image:linear-gradient(transparent calc(1.75em - 1px),#c9c9c9 calc(1.75em - 1px));background-size:100% 1.75em;background-attachment:local}
 
+#i-oth.inv-bad,#i-hot.inv-bad,#i-oth.inv-bad:focus,#i-hot.inv-bad:focus{border-color:#c8060a!important;box-shadow:0 0 0 2px #c8060a!important;background:#fff4f4!important;color:#c8060a}
+
 /* DATA TABLE */
 .dt{width:100%;border-collapse:collapse;font-size:13px}
 .dt th{background:var(--surf2);padding:8px 10px;text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--bord)}
@@ -292,7 +294,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13e</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13f</div>
 </header>
 
 <nav class="tabs">
@@ -514,7 +516,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
     <div class="st">⏰ OT (คำนวณจากใบบันทึกเวลาอัตโนมัติ)</div>
     <div class="g4">
-      <div class="fg"><label>OT รวม (ชม. ทศนิยม)</label><input type="number" id="i-oth" value="0" step="0.01" oninput="calcInv()"><div id="i-oth-hm" style="font-size:11.5px;color:var(--muted);margin-top:3px"></div></div>
+      <div class="fg"><label>OT รวม (ชม.นาที)</label><input type="text" inputmode="decimal" id="i-oth" value="0" placeholder="เช่น 86.15" oninput="this.dataset.min='';calcInv()"><div id="i-oth-hm" style="font-size:11.5px;color:var(--muted);margin-top:3px"></div></div>
       <div class="fg"><label>จำนวนคน OT</label><input type="number" id="i-otp" value="5" oninput="calcInv()"></div>
       <div class="fg"><label>อัตรา OT/ชม. (฿)</label><input type="number" id="i-otr" value="74.38" step="0.01" oninput="calcInv()"></div>
       <div class="fg"><label>รวมค่า OT (฿) auto</label><input type="number" id="i-otamt" readonly></div>
@@ -525,7 +527,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
       <div class="fg"><label>จำนวนคน</label><input type="number" id="i-hp" value="0" oninput="calcInv()"></div>
       <div class="fg"><label>จำนวนวัน</label><input type="number" id="i-hd" value="0" oninput="calcInv()"></div>
       <div class="fg"><label>อัตรา/คน/วัน (฿)</label><input type="number" id="i-hr" value="793.34" step="0.01" oninput="calcInv()"></div>
-      <div class="fg"><label>OT วันหยุด (ชม. ทศนิยม)</label><input type="number" id="i-hot" value="0" step="0.01" oninput="calcInv()"><div id="i-hot-hm" style="font-size:11.5px;color:var(--muted);margin-top:3px"></div></div>
+      <div class="fg"><label>OT วันหยุด (ชม.นาที)</label><input type="text" inputmode="decimal" id="i-hot" value="0" placeholder="เช่น 1.30" oninput="this.dataset.min='';calcInv()"><div id="i-hot-hm" style="font-size:11.5px;color:var(--muted);margin-top:3px"></div></div>
       <div class="fg"><label>รวมค่าวันหยุด (฿) auto</label><input type="number" id="i-holamt" readonly></div>
     </div>
 
@@ -2722,8 +2724,8 @@ function loadTStoInv(force){
   }
 
   { const om=tsOtMin(ts);    // OT ชม.นาที → ชั่วโมงทศนิยม (28 ชม. 45 นาที = 28.75)
-    document.getElementById('i-oth').value=otHoursDec(om.ot);
-    document.getElementById('i-hot').value=otHoursDec(om.oth);
+    setInvOt('i-oth',om.ot);
+    setInvOt('i-hot',om.oth);
     window._lastOtMin=om; }
   document.getElementById('i-otp').value=(ts.regRows||[]).length;
   // วันหยุดที่มีคนทำงาน (ใช้วันหยุดของงวดนั้นเอง)
@@ -2799,7 +2801,8 @@ function calcInv(){
     </table>`;
   }
   // แสดง ชม.นาที คู่กับชั่วโมงทศนิยม (เช่น 86.25 ชม. = 86 ชม. 15 นาที)
-  [['i-oth-hm',d.oth],['i-hot-hm',d.hot]].forEach(([id,h])=>{const el=document.getElementById(id); if(el){const m=Math.round((+h||0)*60); el.textContent=m?`= ${otExact(m)} (ในใบบันทึกเวลา ${fmtOT(m)})`:'';}});
+  [['i-oth-hm',d.othMin,d.otr,d.ot_amt],['i-hot-hm',d.hotMin,d.hotr,d.hol_ot]].forEach(([id,m,r,amt])=>{const el=document.getElementById(id); if(!el) return;
+    el.textContent=m?`= ${otExact(m)} → ${Math.floor(m/60)} × ${fmt(r)}${m%60?` + ${m%60} นาที × ${fmt(otMinRate(r))}`:''} = ${fmt(amt)}`:'';});
   updateInvSaveButtons();
   // Preview ที่เปิดอยู่ อัปเดตตามทันที
   const pv=document.getElementById('inv-preview');
@@ -2809,8 +2812,8 @@ function calcInv(){
 var _invPreviewBusy=false;
 
 /* ค่าในฟอร์ม Invoice เทียบกับใบที่บันทึกไว้ → ไม่มีอะไรเปลี่ยน = ปิดปุ่มบันทึก (กันบันทึกซ้ำ) */
-const INV_FIELDS=[['no','inv-no','s'],['service','inv-svc','s'],['cnt','i-cnt'],['rate','i-rate'],['abs','i-abs'],['oth','i-oth'],
-  ['otp','i-otp'],['otr','i-otr'],['hp','i-hp'],['hd','i-hd'],['hr','i-hr'],['hot','i-hot']];
+const INV_FIELDS=[['no','inv-no','s'],['service','inv-svc','s'],['cnt','i-cnt'],['rate','i-rate'],['abs','i-abs'],['oth','i-oth','m'],
+  ['otp','i-otp'],['otr','i-otr'],['hp','i-hp'],['hd','i-hd'],['hr','i-hr'],['hot','i-hot','m']];
 function invFormRecord(){
   const plant=document.getElementById('inv-plant')?.value, dept=document.getElementById('inv-dept')?.value, dt=document.getElementById('inv-dt')?.value||'';
   if(_editInvId) return S.invoices.find(i=>i.id===_editInvId)||null;
@@ -2822,6 +2825,7 @@ function invFormSame(rec){
   return INV_FIELDS.every(([k,id,t])=>{
     const v=document.getElementById(id)?.value??'';
     if(t==='s') return String(v).trim()===String(rec[k]??'').trim();
+    if(t==='m') return invOtMin(id)===recOtMin(rec,k);
     return Math.abs((parseFloat(v)||0)-(parseFloat(rec[k])||0))<0.0001;
   });
 }
@@ -2865,17 +2869,44 @@ function updateInvSaveButtons(){
 }
 
 /* คำนวณยอดจากค่าตั้งต้น (ใช้ทั้งฟอร์มและการคำนวณ Invoice ร่างใหม่ตามอัตราล่าสุด) */
+/* ---------- OT ใน Invoice ----------
+   จำนวนแสดงแบบเดียวกับใบบันทึกเวลา (86.15 = 86 ชม. 15 นาที, 11.50 = 11 ชม. 30 นาที)
+   ค่าเงิน = ชั่วโมงเต็ม × อัตรา/ชม. + เศษนาที × อัตรา/นาที (อัตรา/ชม. ÷ 60 ปัด 2 ตำแหน่ง)
+   เช่น 86 × 78.37 = 6,739.82 + 15 × 1.31 = 19.65 → 6,759.47                                      */
+function otMinRate(rate){ return Math.round((+rate||0)/60*100)/100; }
+function otAmount(min,rate){ min=Math.round(min||0); return Math.floor(min/60)*(+rate||0)+(min%60)*otMinRate(rate); }
+function fmtOT0(min){ const t=fmtOT(min); return t==='-'?'0':t; }
+/* ข้อความในช่อง OT ของ Invoice → นาที (ทศนิยม 1 หลัก = ส่วนของชั่วโมง, 2 หลัก = นาที, .50 = 30 นาที ตามรูปแบบใบบันทึกเวลา) */
+function invHmToMin(v){
+  v=String(v??'').trim(); if(!v) return 0;
+  const m=v.match(/^(\d*)(?:\.(\d{1,2}))?$/); if(!m) return NaN;
+  const h=parseInt(m[1]||'0',10), d=m[2]||'';
+  const mm=d.length===1?parseInt(d,10)*6:d.length===2?(d==='50'?30:parseInt(d,10)):0;
+  return mm>59?NaN:h*60+mm;
+}
+function invOtMin(id){
+  const el=document.getElementById(id); if(!el) return 0;
+  if(el.dataset.min!==undefined&&el.dataset.min!=='') return +el.dataset.min;   // ค่าที่ดึงจากใบบันทึกเวลา (นาทีจริง)
+  const n=invHmToMin(el.value);
+  el.classList.toggle('inv-bad',isNaN(n)); el.title=isNaN(n)?'รูปแบบไม่ถูกต้อง — ใช้ ชม.นาที เช่น 86.15 (นาทีไม่เกิน 59)':'';
+  return isNaN(n)?0:n;
+}
+function setInvOt(id,min){ const el=document.getElementById(id); if(!el) return; el.value=fmtOT0(min); el.dataset.min=String(Math.round(min||0)); el.classList.remove('inv-bad'); el.title=''; }
+/* นาทีของ OT ใน record (ข้อมูลเก่าเก็บเป็นชั่วโมงทศนิยม) */
+function recOtMin(o,k){ return o[k+'Min']!=null?+o[k+'Min']:Math.round((parseFloat(o[k])||0)*60); }
+
 /* OT วันหยุด = 3 เท่าของค่าจ้างต่อชั่วโมง = อัตรา OT ปกติ (1.5 เท่า) × 2 — เช่น 78.37 × 2 = 156.74 */
 function holOtRate(otr){ return Math.round((+otr||0)*2*100)/100; }
 function calcFromInputs(o){
   const cnt=+o.cnt||0, rate=+o.rate||0, abs=+o.abs||0;
   const dr=parseFloat((rate/30).toFixed(4));
-  const oth=+o.oth||0, otp=+o.otp||1, otr=+o.otr||0;
-  const hp=+o.hp||0, hd=+o.hd||0, hr=+o.hr||0, hot=+o.hot||0;
+  const othMin=recOtMin(o,'oth'), otp=+o.otp||1, otr=+o.otr||0;
+  const hp=+o.hp||0, hd=+o.hd||0, hr=+o.hr||0;
+  const hotMin=recOtMin(o,'hot'), oth=fmtOT0(othMin), hot=fmtOT0(hotMin);
   const hotr=holOtRate(otr);
-  const contract=rate*cnt, part_amt=dr*abs, ot_amt=otr*oth, hol_amt=hr*hd, hol_ot=hotr*hot;
+  const contract=rate*cnt, part_amt=dr*abs, ot_amt=otAmount(othMin,otr), hol_amt=hr*hd, hol_ot=otAmount(hotMin,hotr);
   const up=contract+part_amt+ot_amt+hol_amt+hol_ot, vat=up*0.07, grand=up+vat;
-  return {cnt,rate,abs,dr,contract,part_amt,oth,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hotr,hol_ot,up,vat,grand};
+  return {cnt,rate,abs,dr,contract,part_amt,oth,othMin,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hotMin,hotr,hol_ot,up,vat,grand};
 }
 function getCalc(){
   const cnt=parseInt(document.getElementById('i-cnt').value)||0;
@@ -2883,24 +2914,24 @@ function getCalc(){
   const abs=parseInt(document.getElementById('i-abs').value)||0;
   const dr=parseFloat((rate/30).toFixed(4));
   const partAmt=dr*abs;  // พนักงานคิดรายวัน: วันทำงานรวม × อัตรา/วัน (ตามอัตราปัจจุบัน)
-  const oth=parseFloat(document.getElementById('i-oth').value)||0;
+  const othMin=invOtMin('i-oth'), oth=fmtOT0(othMin);
   const otp=parseInt(document.getElementById('i-otp').value)||1;
   const otr=parseFloat(document.getElementById('i-otr').value)||0;
   const hp=parseInt(document.getElementById('i-hp').value)||0;
   const hd=parseInt(document.getElementById('i-hd').value)||0;
   const hr=parseFloat(document.getElementById('i-hr').value)||0;
-  const hot=parseFloat(document.getElementById('i-hot').value)||0;
+  const hotMin=invOtMin('i-hot'), hot=fmtOT0(hotMin);
 
   const contract  =rate*cnt;
   const part_amt  =partAmt;
-  const ot_amt    =otr*oth;  // OT รวม (ชม.) × rate — ไม่คูณคน เพราะ OT คือยอดรวมแล้ว
+  const ot_amt    =otAmount(othMin,otr);  // ชั่วโมงเต็ม × rate + เศษนาที × rate/นาที (ยอดรวมทุกคนแล้ว)
   const hol_amt   =hr*hd;    // Holiday วันรวม × rate/วัน — ไม่คูณคน
   const hotr      =holOtRate(otr);
-  const hol_ot    =hotr*hot;
+  const hol_ot    =otAmount(hotMin,hotr);
   const up=contract+part_amt+ot_amt+hol_amt+hol_ot;
   const vat=up*0.07;
   const grand=up+vat;
-  return {cnt,rate,abs,dr,contract,part_amt,oth,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hotr,hol_ot,up,vat,grand};
+  return {cnt,rate,abs,dr,contract,part_amt,oth,othMin,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hotMin,hotr,hol_ot,up,vat,grand};
 }
 
 function showInvPreview(){
@@ -2932,9 +2963,9 @@ function showInvPreview(){
     <tbody>
       <tr><td>Monthly Cleaning Charge On Contract (${d.cnt} persons)</td><td class="num">${d.cnt}</td><td class="num">${fmt(d.rate)}</td><td class="num">${fmt(d.contract)}</td></tr>
       ${d.part_amt>0?(window._lastSummary&&window._lastSummary.partial.length&&window._lastSummary.partial.reduce((s,r)=>s+(+r.worked||0),0)===d.abs?window._lastSummary.partial.map(r=>{const dr2=(parseFloat(document.getElementById('i-rate').value)||11900)/30;return `<tr><td>Daily Rate — ${esc(r.name)} (${r.worked} วัน × ${fmt(dr2)}/วัน)</td><td class="num">${r.worked}</td><td class="num">${fmt(dr2)}/วัน</td><td class="num">${fmt(dr2*r.worked)}</td></tr>`;}).join(''):(`<tr><td>Daily Rate (${d.abs} วัน × ${fmt(d.dr)}/วัน)</td><td class="num">${d.abs}</td><td class="num">${fmt(d.dr)}/วัน</td><td class="num">${fmt(d.part_amt)}</td></tr>`)):''}
-      ${d.ot_amt>0?`<tr><td>Over Time Fee (${d.oth} hrs)</td><td class="num">${d.oth} ชม.</td><td class="num">${fmt(d.otr)}/ชม.</td><td class="num">${fmt(d.ot_amt)}</td></tr>`:''}
+      ${d.ot_amt>0?`<tr><td>Over Time Fee (${d.oth} hrs${d.othMin%60?` = ${otExact(d.othMin)}`:''})</td><td class="num">${d.oth} ชม.</td><td class="num">${fmt(d.otr)}/ชม.</td><td class="num">${fmt(d.ot_amt)}</td></tr>`:''}
       ${d.hol_amt>0?`<tr><td>Holiday Work (ทำงานวันหยุด × 2) — ${d.hd} วัน</td><td class="num">${d.hd} วัน</td><td class="num">${fmt(d.hr)}/วัน</td><td class="num">${fmt(d.hol_amt)}</td></tr>`:''}
-      ${d.hol_ot>0?`<tr><td>Over Time Holiday — ${d.hot} ชม.</td><td class="num">${d.hot} ชม.</td><td class="num">${fmt(d.hotr)}/ชม.</td><td class="num">${fmt(d.hol_ot)}</td></tr>`:''}
+      ${d.hol_ot>0?`<tr><td>Over Time Holiday — ${d.hot} ชม.${d.hotMin%60?` (${otExact(d.hotMin)})`:''}</td><td class="num">${d.hot} ชม.</td><td class="num">${fmt(d.hotr)}/ชม.</td><td class="num">${fmt(d.hol_ot)}</td></tr>`:''}
     </tbody>
   </table>
   <div class="totals">
@@ -3098,8 +3129,8 @@ function editInv(id){
   document.getElementById('inv-no').dataset.manual='1';
   if(i.service) set('inv-svc',i.service);
   set('i-cnt',i.cnt); set('i-rate',i.rate); set('i-abs',i.abs);
-  set('i-oth',i.oth); set('i-otp',i.otp); set('i-otr',i.otr);
-  set('i-hp',i.hp); set('i-hd',i.hd); set('i-hr',i.hr); set('i-hot',i.hot);
+  setInvOt('i-oth',recOtMin(i,'oth')); set('i-otp',i.otp); set('i-otr',i.otr);
+  set('i-hp',i.hp); set('i-hd',i.hd); set('i-hr',i.hr); setInvOt('i-hot',recOtMin(i,'hot'));
   window._lastTS=S.timesheets.find(t=>t.id===i.tsId)||null;
   window._lastSummary={partial:i.partial||[]};
   const ss=document.getElementById('inv-staff-summary');
