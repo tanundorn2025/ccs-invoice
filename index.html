@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-13a | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-13e | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -292,7 +292,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13a</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13e</div>
 </header>
 
 <nav class="tabs">
@@ -416,7 +416,9 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     <!-- modal header -->
     <div style="background:#1a3a5c;color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between">
       <span style="font-size:15px;font-weight:700">👁️ Preview ใบบันทึกเวลา</span>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="printTSNow()" style="background:#fff;color:#1a3a5c;border:none;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Sarabun,sans-serif">🖨️ พิมพ์</button>
+        <button onclick="exportTSPdf()" style="background:#1a8a4a;color:#fff;border:none;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Sarabun,sans-serif">📄 Export PDF</button>
         <button onclick="doPrintTS()" style="background:#d4920e;color:#1a2035;border:none;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Sarabun,sans-serif">📥 บันทึกไฟล์ (.html)</button>
         <button onclick="document.getElementById('ts-preview-modal').style.display='none'" style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;font-family:Sarabun,sans-serif">✕ ปิด</button>
       </div>
@@ -472,10 +474,9 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
   <div class="card no-print">
     <div class="ch">
       <div class="ct"><div class="ci">📄</div>ข้อมูล Invoice</div>
-      <span style="display:flex;gap:6px"><button class="btn bs bsm" onclick="exportInvPdf()">📄 Export PDF</button>
-      <button class="btn bp bsm" onclick="printInv()">🖨️ พิมพ์ Invoice</button></span>
     </div>
     <div id="inv-edit-banner"></div>
+    <div id="inv-ts-issues"></div>
     <div class="g2">
       <div class="fg"><label style="display:flex;justify-content:space-between;align-items:center">เลขที่ Invoice <a href="#" onclick="resetInvNo();return false" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--navy2)" title="สร้างเลขที่ใหม่จากโรงงาน/แผนก/วันที่">↻ สร้างเลขอัตโนมัติ</a></label><input type="text" id="inv-no" autocomplete="off" placeholder="เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-NOV.-1(26)" oninput="this.dataset.manual=this.value.trim()?'1':'';invNoNote();calcInv()"></div>
       <div class="fg"><label>วันที่ออก</label><input type="date" id="inv-dt" onchange="_preferTsId=null;loadTStoInv();autoFillInvNo();calcInv()"></div>
@@ -535,7 +536,11 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
       <button class="btn ba" id="inv-save-btn" onclick="saveInv(false)">💾 บันทึกร่าง</button>
       <button class="btn bs" id="inv-confirm-btn" onclick="saveInv(true)">✅ บันทึกและยืนยัน</button>
       <span id="inv-save-state" style="font-size:12.5px;font-weight:600;align-self:center"></span>
-      <button class="btn bs" onclick="showInvPreview()">👁️ Preview</button>
+      <span style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;padding-left:10px;border-left:1px solid var(--bord)">
+        <button class="btn bs" onclick="showInvPreview()">👁️ Preview</button>
+        <button class="btn bs" onclick="exportInvPdf()">📄 Export PDF</button>
+        <button class="btn bp" onclick="printInv()">🖨️ พิมพ์ Invoice</button>
+      </span>
     </div>
   </div>
 
@@ -578,10 +583,10 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
           <option value="ALL">ทุกโรงงาน</option>
         </select>
         <button class="btn bp bsm" onclick="buildSum()">สร้าง Summary</button>
-        <button class="btn bp bsm" onclick="showSumPreview()">👁️ Preview / พิมพ์</button>
+        <button class="btn bp bsm" onclick="previewSum()">👁️ Preview / พิมพ์</button>
         <button class="btn bs bsm" onclick="exportXlsx()">📥 Export Excel</button>
         <button class="btn bs bsm" onclick="exportSumPdf()">📄 Export PDF</button>
-        <button class="btn bo bsm" onclick="printSum()">🖨️ พิมพ์</button>
+        <button class="btn bo bsm" onclick="printSumNow()">🖨️ พิมพ์</button>
       </div>
     </div>
   </div>
@@ -662,8 +667,9 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
     <div class="ch no-print">
       <div class="ct">👁️ Special Invoice Preview</div>
       <div style="display:flex;gap:6px">
-        <button class="btn bp bsm" onclick="downloadSpInv()">📥 บันทึกไฟล์ (.html)</button>
+        <button class="btn bp bsm" onclick="printSpNow()">🖨️ พิมพ์</button>
         <button class="btn bs bsm" onclick="exportSpPdf()">📄 Export PDF</button>
+        <button class="btn ba bsm" onclick="downloadSpInv()">📥 บันทึกไฟล์ (.html)</button>
         <button class="btn bo bsm" onclick="document.getElementById('sp-preview-card').style.display='none'">✕ ปิด</button>
       </div>
     </div>
@@ -1373,6 +1379,31 @@ function otCellError(v){
 function dcFontCss(v){ const n=String(v||'').length; return n<=3?'':n===4?'font-size:12.5px;letter-spacing:-.3px':n===5?'font-size:10.5px;letter-spacing:-.4px':'font-size:9px;letter-spacing:-.5px'; }
 function fitCell(el){ if(el.classList.contains('dc-ot-in')) return; const css=dcFontCss(el.value); el.style.fontSize=''; el.style.letterSpacing='';
   if(css) css.split(';').forEach(p=>{const [k,v]=p.split(':'); if(k==='font-size') el.style.fontSize=v; if(k==='letter-spacing') el.style.letterSpacing=v;}); }
+/* ปัญหาในใบบันทึกเวลา (ใช้เตือนก่อนออก Invoice): ช่องกรอกผิดรูปแบบ, มีข้อมูลแต่ไม่มีชื่อ */
+function tsIssues(t){
+  if(!t) return [];
+  const out=[];
+  const fmtD=k=>new Date(k+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short'});
+  [[t.regRows||[],true],[t.subRows||[],false]].forEach(([rows,isReg])=>rows.forEach((r,i)=>{
+    const who=(isReg?'แถว '+(i+1):'แถว '+(r.letter||''))+' '+(String(r.name||'').trim()||'(ไม่มีชื่อ)');
+    const inP=k=>k>=t.ds&&k<=t.de;
+    Object.entries(r.days||{}).forEach(([k,v])=>{ if(!inP(k)) return; const e=dayCellError(v); if(e) out.push({who,txt:`${fmtD(k)} ช่อง W = "${v}" — ${e}`}); });
+    Object.entries(r.otDays||{}).forEach(([k,v])=>{ if(!inP(k)) return; const e=otCellError(v); if(e) out.push({who,txt:`${fmtD(k)} ช่อง OT = "${v}" — ${e}`}); });
+    const has=[...Object.entries(r.days||{}),...Object.entries(r.otDays||{})].some(([k,v])=>inP(k)&&String(v||'').trim());
+    if(has&&!String(r.name||'').trim()) out.push({who,txt:'มีการลงเวลาแต่ไม่มีชื่อพนักงาน'});
+  }));
+  return out;
+}
+/* เปิดใบบันทึกเวลาที่มีปัญหา และพาไปที่ช่องแรกที่ผิด */
+function goFixTS(id){
+  const b=[...document.querySelectorAll('.tb')].find(x=>(x.getAttribute('onclick')||'').includes("'t1'"));
+  sw('t1',b,2);
+  useTS(id);
+  setTimeout(()=>{
+    const bad=document.querySelector('#ts-out input.dc-bad')||[...document.querySelectorAll('#ts-out input.nm-in')].find(x=>!x.value.trim());
+    if(bad){ bad.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(()=>bad.focus(),400); }
+  },350);
+}
 function markCell(el){
   fitCell(el);
   const err=el.classList.contains('dc-ot-in')?otCellError(el.value):dayCellError(el.value);
@@ -2524,12 +2555,14 @@ function renderSavedTS(){
   list.map(t=>{
     const ov=findOverlaps(t.plant,t.dept,t.ds,t.de,x=>x.id===t.id);
     const ovDays=new Set(ov.flatMap(o=>o.keys)).size;
+    const nIss=tsIssues(t).length;
+    const issBadge=nIss?` <span class="badge" style="background:#c8060a;color:#fff" title="${esc(tsIssues(t).slice(0,5).map(x=>x.who+': '+x.txt).join('\n'))}">⚠️ ผิด ${nIss} จุด</span>`:'';
     const ovBadge=ovDays?` <span class="badge" style="background:var(--redbg);color:var(--red)" title="ซ้ำกับงวด ${ov.map(o=>rangeText(o.ts.ds,o.ts.de)).join(', ')}">⚠️ ซ้ำ ${ovDays} วัน</span>`:'';
     const cur=t.id===_loadedTsId?' <span class="badge bg-green">กำลังแก้ไข</span>':'';
     return `<tr>
     <td><span class="badge bg-navy">${esc(CFG[t.plant]?.name||t.plant)}</span></td>
     <td><span class="badge bg-gold">${esc(CFG[t.plant]?.depts?.[t.dept]?.name||t.dept)}</span></td>
-    <td style="font-size:12px;white-space:nowrap">${rangeText(t.ds,t.de)}${ovBadge}${cur}</td>
+    <td style="font-size:12px;white-space:nowrap">${rangeText(t.ds,t.de)}${issBadge}${ovBadge}${cur}</td>
     <td class="num">${fmtOT(tsOtMin(t).ot)}</td>
     <td class="num">${t.totalH||0}</td>
     <td class="num">${fmtOT(tsOtMin(t).oth)}</td>
@@ -2792,23 +2825,42 @@ function invFormSame(rec){
     return Math.abs((parseFloat(v)||0)-(parseFloat(rec[k])||0))<0.0001;
   });
 }
+function invTsIssues(){
+  const t=window._lastTS?(S.timesheets.find(x=>x.id===window._lastTS.id)||window._lastTS):null;
+  return {t,list:tsIssues(t)};
+}
+function renderInvTsIssues(){
+  const el=document.getElementById('inv-ts-issues'); if(!el) return [];
+  const {t,list}=invTsIssues();
+  if(!list.length){ el.innerHTML=''; return list; }
+  const show=list.slice(0,6);
+  el.innerHTML=`<div class="ovl-box" style="margin:0 0 1rem">
+    <strong>⚠️ ใบบันทึกเวลาที่ใช้ทำ Invoice นี้ (${esc(CFG[t.plant]?.depts?.[t.dept]?.name||t.dept)} งวด ${rangeText(t.ds,t.de)}) มีข้อมูลผิด ${list.length} จุด — ต้องแก้ก่อนจึงจะบันทึก Invoice ได้</strong>
+    <ul>${show.map(x=>`<li><strong>${esc(x.who)}</strong>: ${esc(x.txt)}</li>`).join('')}${list.length>show.length?`<li>… และอีก ${list.length-show.length} จุด</li>`:''}</ul>
+    <div class="brow"><button class="btn bd bsm" onclick="goFixTS(${t.id})">📂 ไปแก้ในใบบันทึกเวลา</button></div>
+  </div>`;
+  return list;
+}
 function updateInvSaveButtons(){
   const sb=document.getElementById('inv-save-btn'), cb=document.getElementById('inv-confirm-btn'), st=document.getElementById('inv-save-state');
   if(!sb||!cb) return;
+  const issues=renderInvTsIssues();
   const rec=invFormRecord();
   const locked=rec&&taxRecOfInv(rec.id);
   const same=invFormSame(rec);
   const conf=rec&&invStatus(rec)==='confirmed';
-  sb.disabled=!!(locked||same);
-  cb.disabled=!!(locked||(same&&conf));
+  sb.disabled=!!(locked||same||issues.length);
+  cb.disabled=!!(locked||(same&&conf)||issues.length);
   [sb,cb].forEach(b=>{b.style.opacity=b.disabled?'.45':'';b.style.cursor=b.disabled?'not-allowed':'';});
   if(st){
     st.style.color=locked?'var(--navy)':'#16723c';
     st.textContent=locked?`🔒 อยู่ในใบกำกับภาษี ${locked.no} — แก้ไขไม่ได้`
+      :issues.length?`⚠️ แก้ใบบันทึกเวลาก่อน (${issues.length} จุด)`
       :same&&conf?'✅ ยืนยันแล้ว — ไม่มีการเปลี่ยนแปลง'
       :same?'💾 บันทึกร่างแล้ว — กด “บันทึกและยืนยัน” เพื่อล็อกยอด'
       :rec?'✏️ มีการเปลี่ยนแปลงจากที่บันทึกไว้':'';
     if(!same&&rec) st.style.color='#8a5a00';
+    if(issues.length&&!locked) st.style.color='var(--red)';
   }
 }
 
@@ -2906,6 +2958,7 @@ function showInvPreview(){
 }
 
 function saveInv(confirmIt){
+  { const {list}=invTsIssues(); if(list.length){ alert(`ใบบันทึกเวลาของ Invoice นี้มีข้อมูลผิด ${list.length} จุด\nกรุณากด "📂 ไปแก้ในใบบันทึกเวลา" แล้วแก้ให้เรียบร้อยก่อน`); return; } }
   const d=calcInv();
   const plant=document.getElementById('inv-plant').value;
   const dept=document.getElementById('inv-dept').value;
@@ -4726,6 +4779,62 @@ function doPrintTS(){
   const msg=document.getElementById('ts-print-msg');
   if(msg){msg.style.display='block';setTimeout(()=>{msg.style.display='none';},10000);}
 }
+/* พิมพ์เอกสารทันที (ไม่ต้องบันทึกไฟล์ก่อน) — แสดงใน iframe แยกแล้วเปิดหน้าต่างพิมพ์ของเบราว์เซอร์ */
+async function printDocNow(doc){
+  const ifr=document.createElement('iframe');
+  ifr.setAttribute('aria-hidden','true');
+  ifr.style.cssText='position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';
+  const html=doc.html.replace(/\sonload="[^"]*print\(\)[^"]*"/g,'');
+  await new Promise(res=>{ ifr.onload=res; ifr.srcdoc=html; document.body.appendChild(ifr); });
+  const w=ifr.contentWindow;
+  try{ await Promise.race([w.document.fonts.ready,new Promise(r=>setTimeout(r,3000))]); }catch(e){}
+  await Promise.all([...w.document.images].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;})));
+  const cleanup=()=>setTimeout(()=>ifr.remove(),500);
+  w.addEventListener('afterprint',cleanup);
+  setTimeout(()=>{ if(ifr.isConnected) ifr.remove(); },120000);
+  w.focus(); w.print();
+}
+/* หน้าต่าง Preview เอกสาร (แบบเดียวกับใบบันทึกเวลา): แสดงหน้าที่จะพิมพ์ + ปุ่ม พิมพ์ / PDF / บันทึกไฟล์ */
+let _pvDoc=null;
+function showDocPreview(doc,title){
+  _pvDoc=doc;
+  let m=document.getElementById('doc-preview-modal');
+  if(!m){
+    m=document.createElement('div'); m.id='doc-preview-modal'; m.className='no-print';
+    m.style.cssText='position:fixed;inset:0;background:rgba(10,25,50,.55);z-index:2500;display:flex;align-items:center;justify-content:center;padding:16px';
+    const B='border:none;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:Sarabun,sans-serif';
+    m.innerHTML=`<div style="background:#fff;border-radius:12px;width:min(1100px,100%);height:min(92vh,1000px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.3)">
+      <div style="background:#1a3a5c;color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span id="doc-pv-title" style="font-size:15px;font-weight:700"></span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="printDocNow(_pvDoc)" style="${B};background:#fff;color:#1a3a5c">🖨️ พิมพ์</button>
+          <button onclick="exportPDF(_pvDoc)" style="${B};background:#1a8a4a;color:#fff">📄 Export PDF</button>
+          <button onclick="downloadText(_pvDoc.html,_pvDoc.name+'.html','text/html')" style="${B};background:#d4920e;color:#1a2035">📥 บันทึกไฟล์ (.html)</button>
+          <button onclick="closeDocPreview()" style="${B};background:rgba(255,255,255,.2);color:#fff;font-weight:400">✕ ปิด</button>
+        </div>
+      </div>
+      <iframe id="doc-pv-frame" style="flex:1;border:0;background:#e9ecf1;width:100%"></iframe>
+    </div>`;
+    m.addEventListener('click',e=>{if(e.target===m) closeDocPreview();});
+    document.body.appendChild(m);
+  }
+  document.getElementById('doc-pv-title').textContent='👁️ '+title;
+  const html=doc.html.replace(/\sonload="[^"]*print\(\)[^"]*"/g,'')
+    .replace('</head>','<style>@media screen{html{background:#e9ecf1}body{background:#fff;max-width:210mm;margin:16px auto!important;padding:12mm!important;box-shadow:0 2px 12px rgba(0,0,0,.15)}}</style></head>');
+  document.getElementById('doc-pv-frame').srcdoc=html;
+  m.style.display='flex';
+}
+function closeDocPreview(){ const m=document.getElementById('doc-preview-modal'); if(m) m.style.display='none'; }
+async function previewSum(){
+  if(!(await sumReadyForOutput('พิมพ์'))) return;
+  const d=sumPrintDoc(); if(d) showDocPreview(d,'Preview Summary — '+(monthLabel(document.getElementById('sum-mon').value)||''));
+}
+async function printSumNow(){
+  if(!(await sumReadyForOutput('พิมพ์'))) return;
+  const d=sumPrintDoc(); if(d) printDocNow(d);
+}
+function printSpNow(){ const d=spPrintDoc(); if(d) printDocNow(d); }
+function printTSNow(){ const d=tsPrintDoc(); if(d) printDocNow(d); }
 function exportTSPdf(){ const d=tsPrintDoc(); if(d) exportPDF(d); }
 
 function printTS(){ showTSPreview(); }
