@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-13f | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-13g | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CCS Invoice System — HOYA OPTICS</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -25,7 +25,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--txt);font
 .hdr{background:var(--navy);color:#fff;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .hdr-logo{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700}
 .hdr-badge{background:var(--gold);color:var(--navy);font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px}
-.hdr-meta{font-size:12px;opacity:.65;font-family:'IBM Plex Mono',monospace}
+.hdr-meta{font-size:12px;opacity:.65;font-family:'Sarabun',sans-serif}
 
 .tabs{background:var(--surf);border-bottom:1px solid var(--bord);display:flex;padding:0 1.5rem;overflow-x:auto}
 .tb{padding:13px 18px;font-size:13.5px;font-weight:500;font-family:'Sarabun',sans-serif;cursor:pointer;background:none;border:none;border-bottom:3px solid transparent;color:var(--muted);transition:all .18s;white-space:nowrap;display:flex;align-items:center;gap:6px}
@@ -52,7 +52,7 @@ input[type=text],input[type=password],input[type=number],input[type=date],select
   font-family:'Sarabun',sans-serif;font-size:13.5px;color:var(--txt);background:var(--surf);
   transition:border-color .18s,box-shadow .18s;width:100%}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy2);box-shadow:0 0 0 3px rgba(37,99,168,.12)}
-input[type=number]{font-family:'IBM Plex Mono',monospace}
+input[type=number]{font-family:'Sarabun',sans-serif}
 input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 .st{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;
@@ -80,7 +80,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-bottom:1rem}
 .sc{background:var(--surf2);border:1px solid var(--bord);border-radius:var(--r);padding:.75rem}
 .sl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:2px}
-.sv{font-size:19px;font-weight:700;color:var(--navy);font-family:'IBM Plex Mono',monospace}
+.sv{font-size:19px;font-weight:700;color:var(--navy);font-family:'Sarabun',sans-serif}
 .sv.gold{color:var(--gold)}.sv.grn{color:var(--green)}
 
 /* ================================================
@@ -93,7 +93,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .ts-zoom-bar{display:flex;align-items:center;gap:8px;margin-top:6px;padding:4px 6px;background:var(--surf2);border-radius:var(--r);border:1px solid var(--bord)}
 .ts-zoom-bar label{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
 .ts-zoom-bar input[type=range]{flex:1;accent-color:var(--navy)}
-.ts-zoom-bar span{font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--navy);min-width:36px;text-align:center}
+.ts-zoom-bar span{font-size:12px;font-family:'Sarabun',sans-serif;color:var(--navy);min-width:36px;text-align:center}
 .ts-scale-wrap{transform-origin:top left;transition:transform .15s}
 .att{border-collapse:separate;border-spacing:0;font-size:11px;width:100%;min-width:900px}
 
@@ -122,24 +122,24 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .att input.dc{
   width:24px;padding:2px 1px;font-size:16px;
   border:1px solid #b8c4d8;border-radius:3px;text-align:center;
-  font-family:'IBM Plex Mono',monospace;background:#ffffff;color:#1a2035}
+  font-family:'Sarabun',sans-serif;background:#ffffff;color:#1a2035}
 .att input.dc:focus{border-color:var(--navy2);outline:none;background:#e8f0fc}
 
 /* เซลล์วันที่มี OT เลขล่าง = ชั่วโมง, เลขบน = OT */
 .cell-wrap{display:flex;flex-direction:column;align-items:stretch;gap:0px}
-.cell-ot{font-size:8px;color:#c8060a;font-weight:700;line-height:1;min-height:9px;font-family:'IBM Plex Mono',monospace}
+.cell-ot{font-size:8px;color:#c8060a;font-weight:700;line-height:1;min-height:9px;font-family:'Sarabun',sans-serif}
 .cell-day{display:flex;align-items:center;justify-content:center}
 
 .att input.nm-in{width:100%;padding:4px 5px;font-size:14px;border:1px solid #ccc;border-radius:3px;font-family:'Sarabun',sans-serif}
 .att input.nm-in:focus{border-color:var(--navy2);outline:none}
 
 /* OT / H / OT.H / Total summary columns */
-.att .ot-col{background:#e8f5d8;font-family:'IBM Plex Mono',monospace;font-size:13.5px;min-width:42px;color:#2d5016;font-weight:600}
-.att .h-col{background:#d8f0e4;font-family:'IBM Plex Mono',monospace;font-size:13.5px;min-width:42px;color:#1a4a2e;font-weight:600}
-.att .oth-col{background:#f0d8ec;font-family:'IBM Plex Mono',monospace;font-size:13.5px;min-width:42px;color:#4a1a40;font-weight:600}
-.att .ttl-col{background:#d8e4f8;font-weight:700;font-family:'IBM Plex Mono',monospace;font-size:13.5px;min-width:44px;color:#1a2a5c}
+.att .ot-col{background:#e8f5d8;font-family:'Sarabun',sans-serif;font-size:13.5px;min-width:42px;color:#2d5016;font-weight:600}
+.att .h-col{background:#d8f0e4;font-family:'Sarabun',sans-serif;font-size:13.5px;min-width:42px;color:#1a4a2e;font-weight:600}
+.att .oth-col{background:#f0d8ec;font-family:'Sarabun',sans-serif;font-size:13.5px;min-width:42px;color:#4a1a40;font-weight:600}
+.att .ttl-col{background:#d8e4f8;font-weight:700;font-family:'Sarabun',sans-serif;font-size:13.5px;min-width:44px;color:#1a2a5c}
 
-.att .tot-row td{background:#ffffff;color:#000000;font-weight:800;font-family:'IBM Plex Mono',monospace;font-size:13.5px;padding:12px 2px;border-top:2px solid #333}
+.att .tot-row td{background:#ffffff;color:#000000;font-weight:800;font-family:'Sarabun',sans-serif;font-size:13.5px;padding:12px 2px;border-top:2px solid #333}
 .att .tot-row td.nm{font-family:'Sarabun',sans-serif;background:#ffffff;color:#000000;font-size:14px}
 .att .sub-hdr td{background:#bfbfbf;color:#000000;font-weight:600;font-size:11px;padding:10px 2px;line-height:1.3}
 .att .sub-hdr td.nm{padding:10px 7px}
@@ -154,8 +154,8 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
   background:#fff5f5;border-color:#e89090;text-align:right}
 .att input.dc.dc-ot-in:focus{background:#fff0f0;border-color:#c8060a}
 
-.att .val-cell{font-family:'IBM Plex Mono',monospace;font-size:10.5px}
-.att .sum-row td{background:#f0eef8;font-weight:700;font-family:'IBM Plex Mono',monospace}
+.att .val-cell{font-family:'Sarabun',sans-serif;font-size:10.5px}
+.att .sum-row td{background:#f0eef8;font-weight:700;font-family:'Sarabun',sans-serif}
 .att .remark-row td{background:#fffbe0;font-size:11px;text-align:left;padding:4px 7px;color:var(--muted);font-style:italic}
 
 /* วันที่ซ้ำกับงวดที่บันทึกไว้แล้ว */
@@ -187,7 +187,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .inv-live{margin-top:1rem;border:1px solid var(--bord);border-radius:var(--r);overflow:hidden}
 .inv-live table{width:100%;border-collapse:collapse;font-size:13px}
 .inv-live td{padding:6px 12px;border-bottom:1px solid #eef0f4}
-.inv-live td.n{text-align:right;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+.inv-live td.n{text-align:right;font-family:'Sarabun',sans-serif;white-space:nowrap}
 .inv-live tr.g td{background:var(--navy);color:#fff;font-weight:800;font-size:14.5px;border-bottom:none}
 .inv-live tr.s td{background:#f4f6fa;font-weight:700}
 
@@ -201,13 +201,16 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 #i-oth.inv-bad,#i-hot.inv-bad,#i-oth.inv-bad:focus,#i-hot.inv-bad:focus{border-color:#c8060a!important;box-shadow:0 0 0 2px #c8060a!important;background:#fff4f4!important;color:#c8060a}
 
+/* ตัวเลขทุกจุดใช้ Sarabun (เลข 0 ไม่มีจุดกลาง) แบบความกว้างเท่ากัน เพื่อให้หลักตรงกันในตาราง */
+body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
+
 /* DATA TABLE */
 .dt{width:100%;border-collapse:collapse;font-size:13px}
 .dt th{background:var(--surf2);padding:8px 10px;text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--bord)}
 .dt td{padding:8px 10px;border-bottom:1px solid var(--bord);vertical-align:middle}
 .dt tr:last-child td{border-bottom:none}
 .dt tr:hover td{background:var(--surf2)}
-.dt .num{font-family:'IBM Plex Mono',monospace;text-align:right}
+.dt .num{font-family:'Sarabun',sans-serif;text-align:right}
 .dt .tr-tot td{background:var(--navy);color:#fff;font-weight:700}
 .dt .tr-sub td{background:var(--goldbg);font-weight:600;color:var(--navy)}
 
@@ -219,11 +222,11 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .inv-tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:.75rem 0}
 .inv-tbl th{background:var(--navy);color:#fff;padding:6px 10px;font-weight:600}
 .inv-tbl td{padding:5px 10px;border-bottom:1px solid #eee}
-.inv-tbl .num{text-align:right;font-family:'IBM Plex Mono',monospace}
+.inv-tbl .num{text-align:right;font-family:'Sarabun',sans-serif}
 .totals{margin-top:.75rem}
 .t-row{display:flex;justify-content:flex-end;gap:2rem;padding:4px 0;font-size:13px;border-top:1px solid var(--bord)}
 .t-row.grand{font-weight:700;font-size:14.5px;color:var(--navy);border-top:2px solid var(--navy);padding-top:7px}
-.t-lbl{color:var(--muted)}.t-val{font-family:'IBM Plex Mono',monospace;min-width:130px;text-align:right}
+.t-lbl{color:var(--muted)}.t-val{font-family:'Sarabun',sans-serif;min-width:130px;text-align:right}
 
 .fcrd{background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);overflow:hidden;margin-bottom:.75rem}
 .fhdr{background:var(--navy);color:#fff;padding:8px 13px;font-weight:600;font-size:13px;display:flex;justify-content:space-between;align-items:center}
@@ -294,7 +297,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13f</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13g</div>
 </header>
 
 <nav class="tabs">
@@ -402,7 +405,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
       oninput="applyZoom(this.value)"
       style="width:100px;accent-color:#1a3a5c;cursor:pointer">
     <button onclick="stepZoom(10)" style="border:none;background:none;font-size:16px;cursor:pointer;color:#555;padding:0 2px">+</button>
-    <span id="ts-zoom-val" style="font-size:12px;font-family:monospace;color:#1a3a5c;min-width:36px;text-align:center">100%</span>
+    <span id="ts-zoom-val" style="font-size:12px;font-family:Sarabun,sans-serif;color:#1a3a5c;min-width:36px;text-align:center">100%</span>
     <button onclick="applyZoom(100)" style="border:1px solid #dde1e9;background:#f8f9fb;border-radius:4px;font-size:11px;cursor:pointer;padding:2px 6px;color:#555">รีเซ็ต</button>
   </div>
 
@@ -3071,7 +3074,7 @@ function renderInvList(){
       ${conf?`<button class="btn bo bsm" onclick="unconfirmInv(${i.id})" title="กลับเป็นร่าง">↩ ร่าง</button>`:`<button class="btn bs bsm" onclick="confirmInv(${i.id})">✅ ยืนยัน</button>`}
       <button class="btn bd bsm" onclick="delInv(${i.id})">ลบ</button>`;
     return `<tr${i.id===_editInvId?' style="background:#eef4ff"':''}>
-    <td style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">${esc(i.no)}${i.type==='special'?' <span class="badge bg-gold">⭐ Special</span>':''}</td>
+    <td style="font-family:'Sarabun',sans-serif;font-size:11.5px">${esc(i.no)}${i.type==='special'?' <span class="badge bg-gold">⭐ Special</span>':''}</td>
     <td style="white-space:nowrap">${st}${ed}</td>
     <td><span class="badge bg-navy">${esc((CFG[i.plant]||{}).name||i.plant)}</span></td>
     <td><span class="badge bg-gold">${esc(CFG[i.plant]?.depts?.[i.dept]?.name||i.dept)}</span></td>
@@ -3251,7 +3254,7 @@ function buildSum(){
     invs.forEach(inv=>{
       tableRows+=`<tr>
         <td style="font-weight:700;color:var(--muted)">${rowNum++}</td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;word-break:break-word">${esc(inv.no)}</td>
+        <td style="font-family:'Sarabun',sans-serif;font-size:11.5px;word-break:break-word">${esc(inv.no)}</td>
         <td class="num">${fmt(inv.up)}</td><td class="num">${fmt(inv.vat)}</td>
         <td class="num" style="font-weight:700">${fmt(inv.grand)}</td>
       </tr>`;
@@ -3332,7 +3335,7 @@ function sumPrintDoc(){
     th{background:#bfbfbf!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;
        padding:6px 4px;text-align:center;border:1px solid #888;font-weight:700}
     td{border:1px solid #ccc;padding:5px 4px;font-size:9pt}
-    td.num{text-align:right;font-family:monospace}
+    td.num{text-align:right;font-family:Sarabun,sans-serif}
     .tr-tot td{background:#bfbfbf!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-weight:800}
     .tr-sub td{background:#e8e8e8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-weight:700}
     .sgrid{display:flex;gap:12px;margin-bottom:12px}
@@ -3346,7 +3349,7 @@ function sumPrintDoc(){
     .sum-letterhead img{max-height:50pt}
   `;
 
-  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Summary '+mon+'</title>'+'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">'
+  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Summary '+mon+'</title>'+'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">'
     +'<style>'+css+'</style>'
     +'</head><body onload="setTimeout(function(){window.print();},400)">'
     +clone.innerHTML
@@ -3451,7 +3454,7 @@ function genTaxInvoices(){
     c.className='card no-print';
     c.innerHTML=`<div class="ch"><div class="ct">🚫 ใบกำกับภาษีที่ยกเลิกแล้ว (${monthLabel(mon)})</div></div>
       <table class="dt"><thead><tr><th>เลขที่</th><th>กลุ่ม</th><th class="num">ยอด (฿)</th><th>ยกเลิกเมื่อ</th><th>เหตุผล</th></tr></thead><tbody>
-      ${cancelled.map(t=>`<tr><td style="font-family:'IBM Plex Mono',monospace">${esc(t.no)}</td><td>${t.group}</td><td class="num">${fmtNum(t.grand)}</td><td style="font-size:12px">${t.cancelledAt?new Date(t.cancelledAt).toLocaleString('th-TH'):''}</td><td style="font-size:12px">${esc(t.cancelReason||'')}</td></tr>`).join('')}
+      ${cancelled.map(t=>`<tr><td style="font-family:'Sarabun',sans-serif">${esc(t.no)}</td><td>${t.group}</td><td class="num">${fmtNum(t.grand)}</td><td style="font-size:12px">${t.cancelledAt?new Date(t.cancelledAt).toLocaleString('th-TH'):''}</td><td style="font-size:12px">${esc(t.cancelReason||'')}</td></tr>`).join('')}
       </tbody></table>`;
     container.appendChild(c);
   }
@@ -4596,7 +4599,7 @@ function showTSPreview(){
   clone.querySelectorAll('input.dc-ot-in').forEach(inp=>{
     const sp=document.createElement('span');
     sp.textContent=inp.value||'';
-    sp.style.cssText='color:#c8060a;font-weight:700;font-size:9px;display:block;text-align:center;font-family:monospace';
+    sp.style.cssText='color:#c8060a;font-weight:700;font-size:9px;display:block;text-align:center;font-family:Sarabun,sans-serif';
     inp.parentNode.replaceChild(sp,inp);
   });
   clone.querySelectorAll('input.nm-in').forEach(inp=>{
@@ -4608,7 +4611,7 @@ function showTSPreview(){
   clone.querySelectorAll('input.dc').forEach(inp=>{
     const sp=document.createElement('span');
     sp.textContent=inp.value||'';
-    sp.style.cssText='font-size:10px;display:block;text-align:center;font-family:monospace';
+    sp.style.cssText='font-size:10px;display:block;text-align:center;font-family:Sarabun,sans-serif';
     inp.parentNode.replaceChild(sp,inp);
   });
   clone.querySelectorAll('input').forEach(inp=>{
@@ -4766,7 +4769,7 @@ function tsPrintDoc(){
   const tableStyle='border-collapse:collapse;width:100%;table-layout:fixed;font-family:"Sarabun",sans-serif';
   const body=`<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>ใบบันทึกเวลา</title>
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 @page{size:A4 landscape;margin:6mm 5mm}
@@ -4880,7 +4883,7 @@ function invPrintDoc(){
   if(!el||!el.innerHTML.trim()){alert('ยังไม่มีข้อมูล Invoice');return null;}
   const styles=[...document.querySelectorAll('head style')].filter(x=>x.id!=='print-ps').map(x=>x.textContent).join('\n');
   const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoice</title>'
-    +'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">'
+    +'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">'
     +'<style>'+styles+'\nhtml,body{background:#fff!important;margin:0;padding:0}.inv-page{box-shadow:none!important;border:none!important;margin:0!important;max-width:none!important;background:#fff!important}</style>'
     +'</head><body>'+el.outerHTML+'</body></html>';
   const no=(document.getElementById('inv-no').value||'Invoice').trim();
@@ -4911,7 +4914,7 @@ async function confirmDraftsForSummary(action,allowView=true){
   btns.push({label:`✅ ยืนยันทั้ง ${drafts.length} ใบแล้ว${allowView?'ไปต่อ':action}`,value:'confirm',cls:'bp'});
   const v=await askChoice('✅ ยืนยัน Invoice ก่อน'+action,
     `${monthLabel(monKey)} มี Invoice ที่ยังเป็น <strong>ร่าง ${drafts.length} ใบ</strong> (รวม ${fmtNum(tot)} บาท):<br>
-     <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;margin:6px 0 2px;max-height:140px;overflow:auto">${drafts.map(i=>esc(i.no)).join('<br>')}</div>
+     <div style="font-family:'Sarabun',sans-serif;font-size:12px;margin:6px 0 2px;max-height:140px;overflow:auto">${drafts.map(i=>esc(i.no)).join('<br>')}</div>
      หลังยืนยัน ยอดจะคงที่ ไม่เปลี่ยนตามการแก้อัตราในตั้งค่า (แก้แบบ manual ได้ภายหลัง)`+(allowView?'':'<br><strong>ต้องยืนยันก่อนจึงจะ'+action+'ได้</strong>'),
     btns);
   if(v==='cancel') return false;
@@ -5532,7 +5535,7 @@ function renderSpItems(){
       <td style="padding:5px 8px"><input type="number" value="${item.price}" min="0" step="0.01"
         style="width:100%;padding:5px 7px;border:1px solid var(--bord);border-radius:6px;font-size:13px;text-align:right"
         oninput="SP_ITEMS[${i}].price=+this.value;SP_ITEMS[${i}].amt=SP_ITEMS[${i}].qty*SP_ITEMS[${i}].price;calcSp()"></td>
-      <td style="padding:5px 8px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600">
+      <td style="padding:5px 8px;text-align:right;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600">
         ${fmtNum(item.amt)}</td>
       <td style="padding:5px 8px;text-align:center">
         <button onclick="delSpItem(${i})" style="background:#fee2e2;color:#c00;border:none;border-radius:4px;padding:3px 7px;cursor:pointer;font-size:13px">✕</button>
@@ -5655,7 +5658,7 @@ function spPrintDoc(){
   table{width:100%;border-collapse:collapse}
   th{background:#1a3a5c!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:8px 10px}
   td{border-bottom:1px solid #eee;padding:7px 10px}`;
-  const body='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+esc(no)+'</title>'+'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">'
+  const body='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+esc(no)+'</title>'+'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">'
     +'<style>'+css+'</style></head>'
     +'<body onload="setTimeout(function(){window.print();},400)">'+getSpInvHTML(true)+'</body></html>';
   return {html:body, name:'Special-Invoice-'+no, orient:'portrait', margin:[15,12,15,12]};
