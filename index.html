@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-13g | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-13i | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -291,13 +291,22 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 /* status */
 
 
+.tax-badge{display:inline-block;min-width:18px;height:18px;line-height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:#c8060a;color:#fff;font-size:11px;font-weight:700;text-align:center;vertical-align:1px}
+.tx-sel{width:100%;border-collapse:collapse;font-size:13px;margin:.25rem 0 .75rem}
+.tx-sel th,.tx-sel td{padding:6px 8px;border-bottom:1px solid var(--bord);text-align:left}
+.tx-sel th{background:var(--surf2);font-size:12px;color:var(--muted)}
+.tx-sel td.num,.tx-sel th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tx-sel tr.off td{color:var(--light)}
+.tx-sel tfoot td{font-weight:700;border-top:2px solid var(--navy);border-bottom:0}
+.tx-chip{display:inline-flex;gap:4px;align-items:center;padding:4px 10px;margin:2px 4px 2px 0;border-radius:99px;border:1px solid var(--bord);background:#fff;font-size:12.5px;cursor:pointer}
+.tx-chip.due{border-color:#c8060a;color:#c8060a;font-weight:600}
 </style>
 </head>
 <body>
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13g</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13i</div>
 </header>
 
 <nav class="tabs">
@@ -305,7 +314,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
   <button class="tb" onclick="sw('t2',this)">📄 Invoice</button>
   <button class="tb" onclick="sw('t3',this)">📊 Summary</button>
   <button class="tb" onclick="sw('t5',this)">⭐ Special Invoice</button>
-  <button class="tb" onclick="sw('t6',this)">🧾 ใบกำกับภาษี</button>
+  <button class="tb" onclick="sw('t6',this)">🧾 ใบกำกับภาษี<span id="tax-badge" class="tax-badge" style="display:none"></span></button>
   <button class="tb" onclick="sw('t4',this)">⚙️ ตั้งค่า</button>
 </nav>
 
@@ -694,20 +703,23 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
     <div class="ch">
       <div class="ct"><div class="ci">🧾</div>ออกใบกำกับภาษี</div>
     </div>
-        <div class="alert ai" style="font-size:12.5px">
-      💡 ระบบจะดึง Invoice ทั้งหมดของเดือนที่เลือก (รวม Special Invoice) และจัดกลุ่มตามสาขาลูกค้าอัตโนมัติ<br>ใบที่สร้างครั้งแรกเป็น <strong>ร่าง</strong> — เลขที่ใบกำกับภาษีจะถูกใช้เมื่อกด “ออกใบกำกับภาษี” เท่านั้น และ Invoice ที่อยู่ในใบที่ออกแล้วจะถูกล็อกไม่ให้แก้/ลบ
+    <div class="alert ai" style="font-size:12.5px">
+      <div>💡 แยกใบกำกับภาษี <strong>ตามโรงงาน</strong> — ที่อยู่/เลขภาษี/สาขา ใช้ของแต่ละโรงงานในหน้า ⚙️ ตั้งค่า<br>
+      ยอด <strong>มูลค่าสินค้า / VAT / รวมทั้งสิ้น</strong> = ผลรวมของยอดใน Invoice แต่ละใบ (เหมือน Summary) ไม่คำนวณ VAT ใหม่ · เรียงตาม “ลำดับเลขที่” ของแผนก แล้วต่อด้วย Special Invoice<br>
+      เลือก Invoice ที่จะรวมในใบได้ (ติ๊กถูก) — เลขที่ใบกำกับภาษีถูกใช้เมื่อกด “ออกใบกำกับภาษี” เท่านั้น และ Invoice ในใบที่ออกแล้วจะถูกล็อก</div>
     </div>
+    <div id="tax-pending"></div>
     <div class="g2" style="gap:.75rem;align-items:flex-end">
       <div class="fg">
-        <label>เดือน/ปี</label>
-        <select id="tax-mon" style="padding:8px;border:1px solid var(--bord);border-radius:8px;font-size:13px;font-family:'Sarabun',sans-serif;width:100%"></select>
+        <label>เดือน/ปี (ตามวันที่ออก Invoice)</label>
+        <select id="tax-mon" onchange="onTaxMonChange()" style="padding:8px;border:1px solid var(--bord);border-radius:8px;font-size:13px;font-family:'Sarabun',sans-serif;width:100%"></select>
       </div>
       <div class="fg">
-        <label>วันที่ออก</label>
-        <input type="date" id="tax-date" style="padding:8px;border:1px solid var(--bord);border-radius:8px;font-size:13px;width:100%">
+        <label>วันที่ออกใบกำกับภาษี (ค่าเริ่มต้น วันที่ 25)</label>
+        <input type="date" id="tax-date" onchange="genTaxInvoices()" style="padding:8px;border:1px solid var(--bord);border-radius:8px;font-size:13px;width:100%">
       </div>
       <div>
-        <button class="btn bp" onclick="genTaxInvoices()">🧾 สร้างใบกำกับภาษี</button>
+        <button class="btn bp" onclick="genTaxInvoices()">🔄 แสดงรายการ</button>
       </div>
     </div>
   </div>
@@ -785,7 +797,7 @@ service cloud.firestore {
       <div class="ct"><div class="ci">🏭</div>ข้อมูลลูกค้า HOYA — แต่ละกลุ่ม/สาขา</div>
       <button class="btn bp bsm" onclick="saveCustomers()">💾 บันทึก</button>
     </div>
-    <div class="alert ai" style="font-size:12.5px">💡 กำหนดที่อยู่ลูกค้าแต่ละกลุ่ม — กลุ่มเดียวกัน = Summary เดียวกัน = ออกใบกำกับภาษีชุดเดียวกัน</div>
+    <div class="alert ai" style="font-size:12.5px"><div>💡 ข้อมูลลูกค้าสำหรับใบกำกับภาษี <strong>แยกตามโรงงาน</strong> — ใบกำกับภาษีของแต่ละโรงงานจะใช้ชื่อ/สาขา/ที่อยู่/เลขภาษีของโรงงานนั้น (ใบที่ออกไปแล้วเก็บที่อยู่ ณ วันที่ออกไว้ ไม่เปลี่ยนตาม)</div></div>
     <div style="margin-bottom:.75rem">
       <div class="g2" style="gap:.5rem;margin-bottom:.5rem;background:var(--surf2);padding:8px 10px;border-radius:var(--r)">
         <span style="font-size:12px;font-weight:600;color:var(--navy)">เลขที่เอกสารใบกำกับภาษี (CS XXXXXXX)</span>
@@ -797,11 +809,7 @@ service cloud.firestore {
         </div>
       </div>
       <div id="customers-wrap"></div>
-      <button class="btn ba bsm" onclick="addCustomerGroup()" style="margin-top:6px">+ เพิ่มกลุ่ม</button>
     </div>
-    <!-- Plant → Group mapping -->
-    <div class="st">🔗 Map โรงงาน → กลุ่มลูกค้า</div>
-    <div id="plant-group-wrap" style="font-size:13px"></div>
   </div>
 
   <!-- Company Info Card -->
@@ -1150,6 +1158,8 @@ function fitPt(text,maxPx,basePt,minPt){
     return w<=maxPx?basePt:Math.max(minPt||6,Math.floor(basePt*maxPx/w*10)/10);
   }catch(e){ return basePt; }
 }
+/* ปัดเป็น 2 ตำแหน่ง (สตางค์) — ยอดรวมทุกที่บวกจากตัวเลขที่แสดงในแต่ละรายการ */
+function r2(x){ return Math.round(((+x||0)+Number.EPSILON)*100)/100; }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function todayISO(){const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);}
 function dkey(d){return d.toISOString().slice(0,10);}
@@ -1183,6 +1193,7 @@ function saveSettingsLocal(){
 }
 function persistSettings(){_settingsAt=new Date().toISOString();saveSettingsLocal();dbSaveSettings();}
 function initAutoRatesFlags(){
+  initPlantBill();
   Object.values(CFG).forEach(p=>Object.values(p.depts||{}).forEach(d=>{
     if(d.autoRates===undefined) d.autoRates=Math.abs(d.ot_rate-otFromRate(d.rate))<0.005&&Math.abs(d.hol_rate-holFromRate(d.rate))<0.005;
   }));
@@ -1223,6 +1234,7 @@ function fillCompanyInputs(){
 
 /* ---- data: timesheets, invoices, tax invoices ---- */
 function persistLocal(){
+  try{setTimeout(refreshTaxBadge,0);}catch(e){}
   try{localStorage.setItem('ccs_data',JSON.stringify({timesheets:S.timesheets,invoices:S.invoices,taxInvoices:S.taxInvoices,savedAt:new Date().toISOString()}));}
   catch(e){console.warn('persistLocal',e);showToast('⚠️ พื้นที่เก็บข้อมูลในเบราว์เซอร์เต็ม — แนะนำ Export JSON เก็บไว้');}
 }
@@ -1566,7 +1578,7 @@ function sw(id,btn,force){
   btn.classList.add('on');
   if(id==='t2') loadTStoInv();
   if(id==='t3'){refreshMonthSelects();buildSum();}
-  if(id==='t6') initTaxMonDropdown();
+  if(id==='t6'){ initTaxMonDropdown(); genTaxInvoices(); }
   // ซ่อน/แสดง zoom slider ตาม tab
   const zf=document.getElementById('ts-zoom-fixed');
   if(zf) zf.style.display=(id==='t1'&&document.querySelector('#ts-out .att-outer'))?'flex':'none';
@@ -2900,6 +2912,13 @@ function recOtMin(o,k){ return o[k+'Min']!=null?+o[k+'Min']:Math.round((parseFlo
 
 /* OT วันหยุด = 3 เท่าของค่าจ้างต่อชั่วโมง = อัตรา OT ปกติ (1.5 เท่า) × 2 — เช่น 78.37 × 2 = 156.74 */
 function holOtRate(otr){ return Math.round((+otr||0)*2*100)/100; }
+/* ยอดรวม Invoice = ผลรวมของจำนวนเงินแต่ละบรรทัด (ปัด 2 ตำแหน่งต่อบรรทัด) ; VAT ปัดจาก UP TOTAL */
+function partAmtOf(dr,abs,partial){
+  const p=(partial||[]).filter(r=>+r.worked>0);
+  if(p.length&&p.reduce((s,r)=>s+(+r.worked||0),0)===abs) return r2(p.reduce((s,r)=>s+r2(dr*(+r.worked||0)),0));  // แสดงรายคนในเอกสาร
+  return r2(dr*abs);
+}
+function invTotals(lines){ const up=r2(lines.reduce((s,x)=>s+r2(x),0)); const vat=r2(up*0.07); return {up,vat,grand:r2(up+vat)}; }
 function calcFromInputs(o){
   const cnt=+o.cnt||0, rate=+o.rate||0, abs=+o.abs||0;
   const dr=parseFloat((rate/30).toFixed(4));
@@ -2907,8 +2926,8 @@ function calcFromInputs(o){
   const hp=+o.hp||0, hd=+o.hd||0, hr=+o.hr||0;
   const hotMin=recOtMin(o,'hot'), oth=fmtOT0(othMin), hot=fmtOT0(hotMin);
   const hotr=holOtRate(otr);
-  const contract=rate*cnt, part_amt=dr*abs, ot_amt=otAmount(othMin,otr), hol_amt=hr*hd, hol_ot=otAmount(hotMin,hotr);
-  const up=contract+part_amt+ot_amt+hol_amt+hol_ot, vat=up*0.07, grand=up+vat;
+  const contract=r2(rate*cnt), part_amt=partAmtOf(dr,abs,o.partial), ot_amt=r2(otAmount(othMin,otr)), hol_amt=r2(hr*hd), hol_ot=r2(otAmount(hotMin,hotr));
+  const {up,vat,grand}=invTotals([contract,part_amt,ot_amt,hol_amt,hol_ot]);
   return {cnt,rate,abs,dr,contract,part_amt,oth,othMin,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hotMin,hotr,hol_ot,up,vat,grand};
 }
 function getCalc(){
@@ -2916,7 +2935,7 @@ function getCalc(){
   const rate=parseFloat(document.getElementById('i-rate').value)||0;
   const abs=parseInt(document.getElementById('i-abs').value)||0;
   const dr=parseFloat((rate/30).toFixed(4));
-  const partAmt=dr*abs;  // พนักงานคิดรายวัน: วันทำงานรวม × อัตรา/วัน (ตามอัตราปัจจุบัน)
+  const partAmt=partAmtOf(dr,abs,window._lastSummary&&window._lastSummary.partial);  // พนักงานคิดรายวัน (ตามอัตราปัจจุบัน)
   const othMin=invOtMin('i-oth'), oth=fmtOT0(othMin);
   const otp=parseInt(document.getElementById('i-otp').value)||1;
   const otr=parseFloat(document.getElementById('i-otr').value)||0;
@@ -2925,15 +2944,13 @@ function getCalc(){
   const hr=parseFloat(document.getElementById('i-hr').value)||0;
   const hotMin=invOtMin('i-hot'), hot=fmtOT0(hotMin);
 
-  const contract  =rate*cnt;
+  const contract  =r2(rate*cnt);
   const part_amt  =partAmt;
-  const ot_amt    =otAmount(othMin,otr);  // ชั่วโมงเต็ม × rate + เศษนาที × rate/นาที (ยอดรวมทุกคนแล้ว)
-  const hol_amt   =hr*hd;    // Holiday วันรวม × rate/วัน — ไม่คูณคน
+  const ot_amt    =r2(otAmount(othMin,otr));  // ชั่วโมงเต็ม × rate + เศษนาที × rate/นาที (ยอดรวมทุกคนแล้ว)
+  const hol_amt   =r2(hr*hd);    // Holiday วันรวม × rate/วัน — ไม่คูณคน
   const hotr      =holOtRate(otr);
-  const hol_ot    =otAmount(hotMin,hotr);
-  const up=contract+part_amt+ot_amt+hol_amt+hol_ot;
-  const vat=up*0.07;
-  const grand=up+vat;
+  const hol_ot    =r2(otAmount(hotMin,hotr));
+  const {up,vat,grand}=invTotals([contract,part_amt,ot_amt,hol_amt,hol_ot]);
   return {cnt,rate,abs,dr,contract,part_amt,oth,othMin,otp,otr,ot_amt,hp,hd,hr,hol_amt,hot,hotMin,hotr,hol_ot,up,vat,grand};
 }
 
@@ -3233,9 +3250,9 @@ function buildSum(){
   if(!rel.length){el.innerHTML=`<div class="alert ai">⚠️ ยังไม่มี Invoice ของ ${mon||'เดือนนี้'} — บันทึก Invoice ในแท็บ Invoice ก่อน หรือเลือกเดือนอื่น</div>`;return;}
   const _drafts=rel.filter(i=>invStatus(i)!=='confirmed').length;
 
-  const tUp=rel.reduce((s,i)=>s+i.up,0);
-  const tVat=rel.reduce((s,i)=>s+i.vat,0);
-  const tG=rel.reduce((s,i)=>s+i.grand,0);
+  const tUp=rel.reduce((s,i)=>s+r2(i.up),0);
+  const tVat=rel.reduce((s,i)=>s+r2(i.vat),0);
+  const tG=rel.reduce((s,i)=>s+r2(i.grand),0);
 
   /* Group by plant */
   const byPlant={};
@@ -3248,9 +3265,9 @@ function buildSum(){
   let rowNum=1;
   Object.entries(byPlant).forEach(([p,invs])=>{
     const pName=(CFG[p]||{}).name||p;
-    const pUp=invs.reduce((s,i)=>s+i.up,0);
-    const pVat=invs.reduce((s,i)=>s+i.vat,0);
-    const pG=invs.reduce((s,i)=>s+i.grand,0);
+    const pUp=invs.reduce((s,i)=>s+r2(i.up),0);
+    const pVat=invs.reduce((s,i)=>s+r2(i.vat),0);
+    const pG=invs.reduce((s,i)=>s+r2(i.grand),0);
     invs.forEach(inv=>{
       tableRows+=`<tr>
         <td style="font-weight:700;color:var(--muted)">${rowNum++}</td>
@@ -3378,7 +3395,7 @@ function refreshMonthSelects(){
 function initTaxMonDropdown(){
   refreshMonthSelects();
   const tdEl=document.getElementById('tax-date');
-  if(tdEl&&!tdEl.value) tdEl.value=todayISO();
+  if(tdEl&&!tdEl.value) tdEl.value=taxDefaultDate(document.getElementById('tax-mon')?.value);
 }
 
 /* ── DS Layout ── */
@@ -3390,91 +3407,218 @@ function initTaxMonDropdown(){
 
 
 
-function taxGroupsFor(mon){
+/* ===== ใบกำกับภาษี: แยกตามโรงงาน ===== */
+function taxGroupsFor(mon){ // (เดิม) จัดกลุ่มตามกลุ่มลูกค้า — เก็บไว้ให้ใบเก่าที่ออกแบบกลุ่ม
   const groups={};
-  S.invoices.filter(i=>(i.dt||'').startsWith(mon)).forEach(inv=>{
-    const g=PLANT_GROUP[inv.plant]||1;
-    (groups[g]=groups[g]||[]).push(inv);
-  });
+  S.invoices.filter(i=>(i.dt||'').startsWith(mon)).forEach(inv=>{const g=PLANT_GROUP[inv.plant]||1;(groups[g]=groups[g]||[]).push(inv);});
   return groups;
 }
-function issuedTaxFor(mon,g){
-  return S.taxInvoices.find(t=>t.mon===mon&&String(t.group)===String(g)&&t.status==='issued')||null;
+/* ยอดของ Invoice 1 ใบ ตามที่บันทึกไว้ (ไม่คำนวณใหม่) */
+function invAmt(i){
+  const grand=r2(+i.grand||0);
+  let up=r2(+i.up||0);
+  if(!(up>0)&&grand>0) up=r2(grand-r2(grand*7/107));
+  const vat=(i.vat!==undefined&&i.vat!==null&&i.vat!=='')?r2(+i.vat):r2(grand-up);
+  return {up,vat,grand:grand||r2(up+vat)};
+}
+/* รวมยอด = ผลรวมของแต่ละใบ (เหมือน Summary) */
+function taxTotals(invs){
+  let up=0,vat=0,grand=0;
+  invs.forEach(i=>{const a=invAmt(i);up+=a.up;vat+=a.vat;grand+=a.grand;});
+  return {up:r2(up),vat:r2(vat),grand:r2(grand)};
+}
+/* เรียง: Invoice ปกติตาม "ลำดับเลขที่" ของแผนก → Special Invoice ต่อท้าย */
+function taxSort(invs){
+  return invs.slice().sort((a,b)=>{
+    const sa=a.type==='special'?1:0, sb=b.type==='special'?1:0;
+    if(sa!==sb) return sa-sb;
+    if(!sa){const d=deptSeq(a.plant,a.dept)-deptSeq(b.plant,b.dept); if(d) return d;}
+    return String(a.no||'').localeCompare(String(b.no||''),'en',{numeric:true})||(a.dt||'').localeCompare(b.dt||'');
+  });
+}
+function taxPending(mon,pk){
+  return S.invoices.filter(i=>(!mon||(i.dt||'').startsWith(mon))&&(!pk||i.plant===pk)&&!taxRecOfInv(i.id));
+}
+function taxPlantKeys(mon){
+  const ks=Object.keys(CFG);
+  S.invoices.filter(i=>(i.dt||'').startsWith(mon)).forEach(i=>{if(i.plant&&!ks.includes(i.plant)) ks.push(i.plant);});
+  S.taxInvoices.filter(t=>t.mon===mon&&t.plant&&!ks.includes(t.plant)).forEach(t=>ks.push(t.plant));
+  return ks;
+}
+const _taxSel={}, _taxSeen={}; // `${mon}|${pk}` → [invoice id] ที่ติ๊กไว้ / สถานะที่เห็นล่าสุด
+function taxSelIds(mon,pk){
+  const key=mon+'|'+pk, pend=taxPending(mon,pk);
+  const sel=_taxSel[key]=_taxSel[key]||[], seen=_taxSeen[key]=_taxSeen[key]||{};
+  pend.forEach(i=>{ // Invoice ที่เพิ่งเห็นครั้งแรก → ติ๊กให้อัตโนมัติ (ผู้ใช้เอาออกเองได้)
+    if(!seen[i.id]&&!sel.includes(i.id)) sel.push(i.id);
+    seen[i.id]=1;});
+  const ok=new Set(pend.map(i=>i.id));
+  _taxSel[key]=_taxSel[key].filter(id=>ok.has(id));
+  return _taxSel[key];
+}
+function toggleTaxSel(mon,pk,id,on){
+  const arr=taxSelIds(mon,pk).filter(x=>x!==id);
+  if(on) arr.push(id);
+  _taxSel[mon+'|'+pk]=arr;
+  rerenderTax();
+}
+function toggleTaxAll(mon,pk,on){ _taxSel[mon+'|'+pk]=on?taxPending(mon,pk).map(i=>i.id):[]; rerenderTax(); }
+function rerenderTax(){ const y=window.scrollY; genTaxInvoices(); window.scrollTo(0,y); }
+function taxDefaultDate(mon){ return mon?mon+'-25':todayISO(); }
+function onTaxMonChange(){
+  const mon=document.getElementById('tax-mon')?.value, d=document.getElementById('tax-date');
+  if(d&&mon) d.value=taxDefaultDate(mon);
+  genTaxInvoices();
+}
+function gotoTaxMon(mon){
+  const sel=document.getElementById('tax-mon'); if(!sel) return;
+  if(![...sel.options].some(o=>o.value===mon)) sel.innerHTML+=`<option value="${mon}">${monthLabel(mon)}</option>`;
+  sel.value=mon; onTaxMonChange();
+}
+/* Invoice ที่ยังไม่อยู่ในใบกำกับภาษี — แยกตามเดือน/โรงงาน */
+function taxPendingSummary(){
+  const m={};
+  taxPending().forEach(i=>{const mon=(i.dt||'').slice(0,7); if(!mon) return; (m[mon]=m[mon]||{}); (m[mon][i.plant]=m[mon][i.plant]||[]).push(i);});
+  return m;
+}
+function refreshTaxBadge(){
+  const el=document.getElementById('tax-badge'); if(!el) return;
+  const n=taxPending().length;
+  el.textContent=n; el.style.display=n?'':'none';
+  el.title=n?`มี Invoice ${n} ใบที่ยังไม่ได้ออกใบกำกับภาษี`:'';
+}
+function renderTaxPending(){
+  const el=document.getElementById('tax-pending'); if(!el) return;
+  const m=taxPendingSummary(), mons=Object.keys(m).sort();
+  if(!mons.length){el.innerHTML='<div class="alert" style="background:var(--greenbg,#e8f6ee);color:var(--green,#1a7f43);font-size:12.5px">✅ Invoice ทุกใบออกใบกำกับภาษีแล้ว</div>';return;}
+  const today=todayISO();
+  el.innerHTML=`<div style="font-size:12.5px;margin-bottom:.6rem"><strong>📌 รอออกใบกำกับภาษี</strong> <span style="color:var(--muted)">(กำหนดออกประมาณวันที่ 25 ของเดือน — กดเพื่อเปิดเดือนนั้น)</span><div style="margin-top:4px">`+
+    mons.map(mon=>{
+      const due=today>=taxDefaultDate(mon);
+      return Object.entries(m[mon]).map(([pk,l])=>{const dr=l.filter(i=>invStatus(i)!=='confirmed').length;
+        return `<span class="tx-chip${due?' due':''}" onclick="gotoTaxMon('${mon}')" title="${due?'ถึงกำหนดออกแล้ว':'ยังไม่ถึงวันที่ 25'}">${due?'⏰':'🗓️'} ${monthLabel(mon)} · ${esc(CFG[pk]?.name||pk)} <strong>${l.length} ใบ</strong>${l.some(i=>i.type==='special')?` <span style="color:var(--muted)">(Special ${l.filter(i=>i.type==='special').length})</span>`:''}${dr?` <span style="color:#8a5a00">ร่าง ${dr}</span>`:''}</span>`;}).join('');
+    }).join('')+`</div></div>`;
+}
+function taxDocHTML(divId,rec,no,date,bill,invs,t,mon,draft){
+  return `<div id="${divId}" style="position:relative;overflow-x:auto">${buildDCTaxHTML(no,date,0,bill,invs,t.up,t.vat,t.grand,mon)}${draft?'<div style="position:absolute;top:110mm;left:0;right:0;text-align:center;font-size:84px;font-weight:800;color:rgba(200,6,10,.13);transform:rotate(-18deg);pointer-events:none">ร่าง / DRAFT</div>':''}</div>`;
+}
+function taxFileName(rec){ return 'ใบกำกับภาษี-'+String(rec.no||'').replace(/\s+/g,'')+'-'+(rec.plant?(CFG[rec.plant]?.name||rec.plant):'กลุ่ม'+rec.group); }
+function issuedCardHTML(rec){
+  const invs=(rec.invIds||[]).map(id=>S.invoices.find(i=>i.id===id)).filter(Boolean);
+  let t, bill;
+  if(rec.plant){ bill=rec.bill||plantBill(rec.plant); t=(rec.up!=null)?{up:rec.up,vat:rec.vat,grand:rec.grand}:taxTotals(invs); }
+  else { // ใบรูปแบบเดิม (ออกตามกลุ่ม) — แสดงตามที่ออกไว้
+    bill=CUSTOMERS[rec.group]||CUSTOMERS[1]||{};
+    const g=r2(rec.grand!=null?rec.grand:invs.reduce((s,i)=>s+r2(i.grand||0),0)), v=r2(g*7/107); t={up:r2(g-v),vat:v,grand:g};
+  }
+  const did='tax-doc-'+String(rec.id).replace(/[^A-Za-z0-9_-]/g,'_');
+  let warn='';
+  if(invs.length!==(rec.invIds||[]).length) warn+=`<div class="alert" style="background:var(--redbg);color:var(--red);border-left:4px solid var(--red)">⚠️ Invoice บางใบในใบกำกับภาษีนี้ไม่พบในระบบแล้ว (${rec.invIds.length-invs.length} ใบ) ยอดที่ออกไว้ ${fmtNum(rec.grand)} บาท</div>`;
+  const fn=esc(taxFileName(rec)).replace(/'/g,'');
+  return `<div style="border:1px solid var(--bord);border-radius:var(--r);padding:.6rem;margin-bottom:.75rem">
+    <div class="ch no-print" style="margin-bottom:.4rem">
+      <div class="ct" style="font-size:13.5px"><span class="badge bg-green">ออกแล้ว ${esc(rec.no)}</span>
+        <span style="font-size:12px;color:var(--muted);font-weight:400">วันที่ ${esc(rec.date||'')} · ${invs.length} ใบ · รวม ${fmtNum(t.grand)} ฿${rec.plant?'':' · (รูปแบบเดิม: กลุ่ม '+esc(rec.group)+')'}</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn bo bsm" onclick="printTaxDoc('${did}','${fn}')">🖨️ พิมพ์</button>
+        <button class="btn bp bsm" onclick="downloadTaxInv('${did}','${fn}')">📥 บันทึกไฟล์</button>
+        <button class="btn bs bsm" onclick="exportTaxPdf('${did}','${fn}')">📄 Export PDF</button>
+        <button class="btn bd bsm" onclick="cancelTax('${esc(rec.id)}')">ยกเลิกใบนี้</button>
+      </div>
+    </div>${warn}
+    ${taxDocHTML(did,rec,rec.no,rec.date,bill,invs,t,rec.mon,false)}</div>`;
 }
 
 function genTaxInvoices(){
+  renderTaxPending(); refreshTaxBadge();
   const mon=document.getElementById('tax-mon')?.value;
-  const taxDate=document.getElementById('tax-date')?.value||todayISO();
+  const dEl=document.getElementById('tax-date');
+  if(dEl&&!dEl.value&&mon) dEl.value=taxDefaultDate(mon);
+  const taxDate=dEl?.value||taxDefaultDate(mon);
   const container=document.getElementById('tax-inv-list');
   if(!container) return;
-  if(!mon){alert('กรุณาเลือกเดือน');return;}
-  const groups=taxGroupsFor(mon);
-  S.taxInvoices.filter(t=>t.mon===mon&&t.status==='issued').forEach(t=>{if(!groups[t.group]) groups[t.group]=[];});
+  if(!mon){container.innerHTML='<div class="card"><div class="alert ai">กรุณาเลือกเดือน</div></div>';return;}
+  const issuedMon=S.taxInvoices.filter(t=>t.mon===mon&&t.status==='issued');
   container.innerHTML='';
-  const keys=Object.keys(groups).sort();
-  if(!keys.length){container.innerHTML='<div class="card"><div class="alert ai">ไม่มี Invoice ในเดือนนี้</div></div>';return;}
-
-  keys.forEach(g=>{
-    const cust=CUSTOMERS[g]||CUSTOMERS[1];
-    const rec=issuedTaxFor(mon,g);
-    let invs=groups[g], no, date=taxDate, head, actions, warn='';
-    if(rec){
-      invs=rec.invIds.map(id=>S.invoices.find(i=>i.id===id)).filter(Boolean);
-      const extra=groups[g].filter(i=>!rec.invIds.includes(i.id));
-      no=rec.no; date=rec.date;
-      head=`<span class="badge bg-green">ออกแล้ว ${esc(rec.no)}</span>`;
-      actions=`<button class="btn bp bsm" onclick="downloadTaxInv('tax-inv-${g}-${mon}','${g}','${mon}')">📥 บันทึกไฟล์</button>
-        <button class="btn bs bsm" onclick="exportTaxPdf('tax-inv-${g}-${mon}','${g}','${mon}')">📄 Export PDF</button>
-        <button class="btn bd bsm" onclick="cancelTax('${rec.id}')">ยกเลิกใบนี้</button>`;
-      if(extra.length) warn+=`<div class="alert" style="background:var(--redbg);color:var(--red);border-left:4px solid var(--red)">⚠️ มี Invoice ใหม่ ${extra.length} ใบในกลุ่มนี้ที่ยังไม่อยู่ในใบกำกับภาษีนี้: ${extra.map(i=>esc(i.no)).join(', ')} — ถ้าต้องการรวม ให้ยกเลิกใบนี้แล้วออกใหม่</div>`;
-      if(invs.length!==rec.invIds.length) warn+=`<div class="alert" style="background:var(--redbg);color:var(--red);border-left:4px solid var(--red)">⚠️ Invoice บางใบในใบกำกับภาษีนี้ไม่พบในระบบแล้ว (${rec.invIds.length-invs.length} ใบ) ยอดที่ออกไว้ ${fmtNum(rec.grand)} บาท</div>`;
-    } else {
-      no='(ร่าง — ยังไม่ออกเลข)';
-      head='<span class="badge bg-gold">ร่าง</span>';
-      actions=`<button class="btn bs bsm" onclick="issueTax('${mon}','${g}')">✅ ออกใบกำกับภาษี (ใช้เลขที่จริง)</button>`;
-    }
-    const total=invs.reduce((s,i)=>s+(i.grand||i.up||0),0);
-    const vat=total*7/107;
-    const beforeVat=total-vat;
+  let any=false;
+  taxPlantKeys(mon).forEach(pk=>{
+    const issued=issuedMon.filter(t=>t.plant===pk);
+    const pend=taxSort(taxPending(mon,pk));
+    if(!issued.length&&!pend.length) return;
+    any=true;
+    const bill=plantBill(pk), pname=CFG[pk]?.name||pk;
+    const sel=new Set(taxSelIds(mon,pk));
+    const chosen=pend.filter(i=>sel.has(i.id));
+    const t=taxTotals(chosen);
     const card=document.createElement('div');
-    card.className='card';
-    card.style.marginBottom='1rem';
-    card.innerHTML=`
-      <div class="ch no-print">
-        <div class="ct">🧾 ใบกำกับภาษี — กลุ่ม ${g}: ${esc(cust.branch)} ${head}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">${actions}</div>
-      </div>${warn}
-      <div id="tax-inv-${g}-${mon}" style="position:relative;overflow-x:auto">${buildDCTaxHTML(no,date,g,cust,invs,beforeVat,vat,total,mon)}${rec?'':'<div style="position:absolute;top:110mm;left:0;right:0;text-align:center;font-size:84px;font-weight:800;color:rgba(200,6,10,.13);transform:rotate(-18deg);pointer-events:none">ร่าง / DRAFT</div>'}</div>`;
+    card.className='card'; card.style.marginBottom='1rem';
+    let h=`<div class="ch no-print"><div class="ct">🏭 ${esc(pname)} <span style="font-size:12px;color:var(--muted);font-weight:400">— ${esc(bill.name)} (${esc(bill.branch||'')})</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${issued.length?`<span class="badge bg-green">ออกแล้ว ${issued.length} ใบ</span>`:''}${pend.length?`<span class="badge bg-gold">รอออก ${pend.length} Invoice</span>`:'<span class="badge bg-green">ครบแล้ว</span>'}</div></div>`;
+    h+=issued.map(issuedCardHTML).join('');
+    if(pend.length){
+      const allOn=chosen.length===pend.length;
+      h+=`<div class="no-print" style="margin-top:.25rem">
+        <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px">📝 เลือก Invoice ที่จะรวมในใบกำกับภาษีใบใหม่ (${monthLabel(mon)})</div>
+        <table class="tx-sel"><thead><tr><th style="width:34px"><input type="checkbox" ${allOn?'checked':''} onchange="toggleTaxAll('${mon}','${pk}',this.checked)" title="เลือกทั้งหมด"></th><th style="width:34px">#</th><th>เลขที่ Invoice</th><th>แผนก</th><th>วันที่</th><th>สถานะ</th><th class="num">มูลค่า</th><th class="num">VAT</th><th class="num">รวม</th></tr></thead><tbody>
+        ${(()=>{let k=0;return pend.map(i=>{const on=sel.has(i.id), a=invAmt(i); if(on) k++;
+          return `<tr class="${on?'':'off'}"><td><input type="checkbox" ${on?'checked':''} onchange="toggleTaxSel('${mon}','${pk}',${i.id},this.checked)"></td><td>${on?k:''}</td>
+            <td>${esc(i.no)}${i.type==='special'?' <span class="badge bg-navy" style="font-size:10px">Special</span>':''}</td>
+            <td>${esc(CFG[pk]?.depts?.[i.dept]?.name||i.dept||'')}${i.type==='special'?'':` <span style="color:var(--muted);font-size:11px">ลำดับ ${deptSeq(pk,i.dept)}</span>`}</td>
+            <td style="font-size:12px">${esc(i.dt||'')}</td>
+            <td>${invStatus(i)==='confirmed'?'<span class="badge bg-green">ยืนยันแล้ว</span>':'<span class="badge bg-gold" title="ถ้าติ๊กรวม จะถูกยืนยันอัตโนมัติเมื่อออกใบกำกับภาษี">ร่าง</span>'}</td>
+            <td class="num">${fmtNum(a.up)}</td><td class="num">${fmtNum(a.vat)}</td><td class="num">${fmtNum(a.grand)}</td></tr>`;}).join('');})()}
+        </tbody><tfoot><tr><td></td><td colspan="5">รวมที่เลือก ${chosen.length} ใบ</td><td class="num">${fmtNum(t.up)}</td><td class="num">${fmtNum(t.vat)}</td><td class="num">${fmtNum(t.grand)}</td></tr></tfoot></table>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.6rem">
+          <button class="btn bs" ${chosen.length?'':'disabled'} onclick="issueTax('${mon}','${pk}')">✅ ออกใบกำกับภาษี (ใช้เลขที่จริง)</button>
+          <span style="font-size:12px;color:var(--muted)">วันที่ในใบ: ${esc(taxDate)}${taxDate.slice(0,7)!==mon?' <span style="color:#c8060a">(คนละเดือนกับ Invoice)</span>':''}</span>
+        </div></div>`;
+      h+=chosen.length?taxDocHTML('tax-draft-'+pk+'-'+mon,null,'(ร่าง — ยังไม่ออกเลข)',taxDate,bill,chosen,t,mon,true)
+        :'<div class="alert ai no-print">ยังไม่ได้เลือก Invoice — ติ๊กรายการด้านบนเพื่อดูตัวอย่างใบกำกับภาษี</div>';
+    }
+    card.innerHTML=h;
     container.appendChild(card);
   });
+  // ใบที่ออกแบบเดิม (ตามกลุ่มลูกค้า)
+  const legacy=issuedMon.filter(t=>!t.plant);
+  if(legacy.length){
+    any=true;
+    const c=document.createElement('div'); c.className='card'; c.style.marginBottom='1rem';
+    c.innerHTML=`<div class="ch no-print"><div class="ct">🧾 ใบกำกับภาษีที่ออกไว้แบบเดิม (ตามกลุ่มลูกค้า)</div></div>`+legacy.map(issuedCardHTML).join('');
+    container.appendChild(c);
+  }
+  if(!any) container.innerHTML='<div class="card"><div class="alert ai">ไม่มี Invoice ในเดือนนี้</div></div>';
 
   const cancelled=S.taxInvoices.filter(t=>t.mon===mon&&t.status==='cancelled');
   if(cancelled.length){
     const c=document.createElement('div');
     c.className='card no-print';
     c.innerHTML=`<div class="ch"><div class="ct">🚫 ใบกำกับภาษีที่ยกเลิกแล้ว (${monthLabel(mon)})</div></div>
-      <table class="dt"><thead><tr><th>เลขที่</th><th>กลุ่ม</th><th class="num">ยอด (฿)</th><th>ยกเลิกเมื่อ</th><th>เหตุผล</th></tr></thead><tbody>
-      ${cancelled.map(t=>`<tr><td style="font-family:'Sarabun',sans-serif">${esc(t.no)}</td><td>${t.group}</td><td class="num">${fmtNum(t.grand)}</td><td style="font-size:12px">${t.cancelledAt?new Date(t.cancelledAt).toLocaleString('th-TH'):''}</td><td style="font-size:12px">${esc(t.cancelReason||'')}</td></tr>`).join('')}
+      <table class="dt"><thead><tr><th>เลขที่</th><th>โรงงาน</th><th class="num">ยอด (฿)</th><th>ยกเลิกเมื่อ</th><th>เหตุผล</th></tr></thead><tbody>
+      ${cancelled.map(t=>`<tr><td>${esc(t.no)}</td><td>${t.plant?esc(CFG[t.plant]?.name||t.plant):'กลุ่ม '+esc(t.group)}</td><td class="num">${fmtNum(t.grand)}</td><td style="font-size:12px">${t.cancelledAt?new Date(t.cancelledAt).toLocaleString('th-TH'):''}</td><td style="font-size:12px">${esc(t.cancelReason||'')}</td></tr>`).join('')}
       </tbody></table>`;
     container.appendChild(c);
   }
 }
 
-async function issueTax(mon,g){
-  if(issuedTaxFor(mon,g)){alert('กลุ่มนี้ออกใบกำกับภาษีของเดือนนี้ไปแล้ว');return;}
-  const invs=taxGroupsFor(mon)[g]||[];
-  if(!invs.length) return;
-  const date=document.getElementById('tax-date')?.value||todayISO();
-  const total=invs.reduce((s,i)=>s+(i.grand||i.up||0),0);
+async function issueTax(mon,pk){
+  const sel=new Set(taxSelIds(mon,pk));
+  const invs=taxSort(taxPending(mon,pk).filter(i=>sel.has(i.id)));
+  if(!invs.length){alert('กรุณาเลือก Invoice อย่างน้อย 1 ใบ');return;}
+  const date=document.getElementById('tax-date')?.value||taxDefaultDate(mon);
+  const t=taxTotals(invs);
   const drafts=invs.filter(i=>invStatus(i)!=='confirmed');
-  if(!confirm(`ออกใบกำกับภาษีจริง — กลุ่ม ${g} (${CUSTOMERS[g]?.branch||''})\nInvoice ${invs.length} ใบ ยอดรวม ${fmtNum(total)} บาท${drafts.length?`\n\n⚠️ มี Invoice ร่าง ${drafts.length} ใบ (${drafts.map(i=>i.no).join(', ')}) จะถูกยืนยันอัตโนมัติ`:''}\n\nเมื่อออกแล้ว เลขที่จะถูกใช้ทันที และ Invoice ในใบนี้จะถูกล็อกไม่ให้แก้ไข/ลบ\nต้องการดำเนินการต่อ?`)) return;
+  const bill=plantBill(pk);
+  if(!bill.addr||!bill.taxId){ if(!confirm(`⚠️ ${CFG[pk]?.name||pk} ยังไม่มี${!bill.addr?'ที่อยู่':''}${!bill.addr&&!bill.taxId?'/':''}${!bill.taxId?'เลขภาษี':''}ลูกค้า (ตั้งค่า → ข้อมูลลูกค้า)\nออกต่อหรือไม่?`)) return; }
+  if(!confirm(`ออกใบกำกับภาษีจริง — ${CFG[pk]?.name||pk}\n${bill.name} (${bill.branch||''})\nวันที่ ${date}${date.slice(0,7)!==mon?'  ⚠️ คนละเดือนกับ Invoice ('+monthLabel(mon)+')':''}\n\nInvoice ${invs.length} ใบ\nมูลค่าสินค้า ${fmtNum(t.up)}\nภาษีมูลค่าเพิ่ม ${fmtNum(t.vat)}\nรวมทั้งสิ้น ${fmtNum(t.grand)} บาท${drafts.length?`\n\n⚠️ มี Invoice ร่าง ${drafts.length} ใบ (${drafts.map(i=>i.no).join(', ')}) จะถูกยืนยันอัตโนมัติ`:''}\n\nเมื่อออกแล้ว เลขที่จะถูกใช้ทันที และ Invoice ในใบนี้จะถูกล็อกไม่ให้แก้ไข/ลบ\nต้องการดำเนินการต่อ?`)) return;
   let no;
   try{ no=await allocTaxNo(); }
   catch(e){ alert('จองเลขที่ใบกำกับภาษีไม่สำเร็จ: '+(e.code||e.message)+'\nยังไม่มีการใช้เลขที่ใด ๆ'); return; }
-  const rec={id:`${mon}__G${g}__${no.replace(/\s+/g,'')}`,mon,group:+g,no,date,
-    invIds:invs.map(i=>i.id),grand:+total.toFixed(2),status:'issued',issuedAt:new Date().toISOString()};
+  const rec={id:`${mon}__P${pk}__${no.replace(/\s+/g,'')}`,mon,plant:pk,no,date,
+    invIds:invs.map(i=>i.id),up:t.up,vat:t.vat,grand:t.grand,bill:JSON.parse(JSON.stringify(bill)),
+    status:'issued',issuedAt:new Date().toISOString()};
   S.taxInvoices.push(rec);
   drafts.forEach(i=>{i.status='confirmed';i.confirmedAt=new Date().toISOString();dbSaveInv(i,true);});
+  delete _taxSel[mon+'|'+pk]; delete _taxSeen[mon+'|'+pk];
   persistLocal();
   dbSaveTax(rec);
   updateTaxCounterPreview();
@@ -3491,6 +3635,7 @@ function cancelTax(id){
   r.status='cancelled';
   r.cancelledAt=new Date().toISOString();
   r.cancelReason=reason;
+  if(r.plant){ delete _taxSel[r.mon+'|'+r.plant]; delete _taxSeen[r.mon+'|'+r.plant]; }
   persistLocal();
   dbSaveTax(r);
   renderInvList();renderSpSaved();
@@ -3753,7 +3898,7 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
     ?'<img src="'+CO.logoData+'" alt="" style="width:100%;height:100%;object-fit:contain">'
     :'<svg viewBox="0 0 100 96" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><ellipse cx="50" cy="48" rx="45" ry="41" fill="none" stroke="#d6249f" stroke-width="9" stroke-dasharray="185 90" transform="rotate(-35 50 48)"/><text x="50" y="60" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="33" font-weight="900" fill="#17c3c3" stroke="#d6249f" stroke-width="1.3">CCS</text></svg>';
 
-  const rows=(invs||[]).map((inv,i)=>({no:String(i+1),desc:(inv.no||'—')+' '+(inv.svc||'CLEANING SERVICE FEE.'),amt:fmt((+inv.up>0)?inv.up:(+inv.grand||0)*100/107)}));
+  const rows=(invs||[]).map((inv,i)=>({no:String(i+1),desc:(inv.no||'—')+' '+(inv.svc||(inv.type==='special'?(inv.title||'SPECIAL SERVICE'):'CLEANING SERVICE FEE.')),amt:fmt(invAmt(inv).up)}));
   const n=Math.max(rows.length,13);
   const col=(cls,get)=>{let h='';for(let i=0;i<n;i++) h+='<div class="ti-r '+cls+'">'+(rows[i]?get(rows[i]):'')+'</div>';return h;};
   // รายการยาว (เลขที่ Invoice รูปแบบใหม่) → ย่อขนาดตัวอักษรให้พอดีช่อง แทนการดันช่องจำนวนเงินตกขอบ
@@ -3855,7 +4000,7 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   +'</div>';
 }
 
-function taxPrintDoc(divId, group, mon){
+function taxPrintDoc(divId, name){
   const el=document.getElementById(divId);
   if(!el) return null;
   const c=el.cloneNode(true);
@@ -3865,10 +4010,11 @@ function taxPrintDoc(divId, group, mon){
     +'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">'
     +'<style>'+css+'</style></head>'
     +'<body onload="setTimeout(function(){window.print();},700)">'+c.innerHTML+'</body></html>';
-  return {html, name:'ใบกำกับภาษี-กลุ่ม'+group+'-'+mon, orient:'portrait', margin:[0,0,0,0]};
+  return {html, name:name||'ใบกำกับภาษี', orient:'portrait', margin:[0,0,0,0]};
 }
-function downloadTaxInv(divId, group, mon){ const d=taxPrintDoc(divId,group,mon); if(d) downloadText(d.html, d.name+'.html', 'text/html'); }
-function exportTaxPdf(divId, group, mon){ const d=taxPrintDoc(divId,group,mon); if(d) exportPDF(d); }
+function downloadTaxInv(divId, name){ const d=taxPrintDoc(divId,name); if(d) downloadText(d.html, d.name+'.html', 'text/html'); }
+function exportTaxPdf(divId, name){ const d=taxPrintDoc(divId,name); if(d) exportPDF(d); }
+function printTaxDoc(divId, name){ const d=taxPrintDoc(divId,name); if(d) printDocNow(d); }
 
 
 
@@ -4072,7 +4218,7 @@ async function exportXlsx(){
   let n=1;
   Object.entries(byPlant).forEach(([p,invs])=>{
     invs.forEach(inv=>{
-      ws.getRow(r).values=[n,inv.no,+inv.up||0,+inv.vat||0,+inv.grand||0];
+      ws.getRow(r).values=[n,inv.no,r2(inv.up),r2(inv.vat),r2(inv.grand)];
       xlStyleRange(ws,r,1,r,L,(c,_,ci)=>{
         c.font={name:XL.font,size:9,bold:ci===5}; c.border=XL.box();
         c.alignment={vertical:'middle',horizontal:ci===1?'center':ci===2?'left':'right',wrapText:ci===2};
@@ -4083,12 +4229,12 @@ async function exportXlsx(){
     });
     if(multi){
       ws.mergeCells(r,1,r,2); ws.getCell(r,1).value='รวม '+(CFG[p]?.name||p);
-      [3,4,5].forEach((ci,k)=>ws.getCell(r,ci).value=invs.reduce((s,i)=>s+(+[i.up,i.vat,i.grand][k]||0),0));
+      [3,4,5].forEach((ci,k)=>ws.getCell(r,ci).value=r2(invs.reduce((s,i)=>s+r2([i.up,i.vat,i.grand][k]),0)));
       xlStyleRange(ws,r,1,r,L,(c,_,ci)=>{c.font={name:XL.font,size:9,bold:true};c.fill=XL.fill('FFE8E8E8');c.border=XL.box();c.alignment={horizontal:ci<=2?'right':'right'};if(ci>=3)c.numFmt=XL.money;});
       r++;
     }
   });
-  const tUp=rel.reduce((s,i)=>s+(+i.up||0),0), tVat=rel.reduce((s,i)=>s+(+i.vat||0),0), tG=rel.reduce((s,i)=>s+(+i.grand||0),0);
+  const tUp=r2(rel.reduce((s,i)=>s+r2(i.up),0)), tVat=r2(rel.reduce((s,i)=>s+r2(i.vat),0)), tG=r2(rel.reduce((s,i)=>s+r2(i.grand),0));
   ws.mergeCells(r,1,r,2); ws.getCell(r,1).value=`TOTAL (${rel.length} invoices)`;
   ws.getCell(r,3).value=tUp; ws.getCell(r,4).value=tVat; ws.getCell(r,5).value=tG;
   xlStyleRange(ws,r,1,r,L,(c,_,ci)=>{c.font={name:XL.font,size:10,bold:true,color:{argb:'FFFFFFFF'}};c.fill=XL.fill(XL.navy);
@@ -4526,6 +4672,7 @@ function renamePlantCode(pk){
   if(!r) return;
   CFG=renameKey(CFG,pk,nk);
   if(PLANT_GROUP[pk]!==undefined){PLANT_GROUP[nk]=PLANT_GROUP[pk];delete PLANT_GROUP[pk];}
+  S.taxInvoices.filter(t=>t.plant===pk).forEach(t=>{t.plant=nk;dbSaveTax(t);}); persistLocal();
   if(_curPlant===pk) _curPlant=nk;
   afterCodeChange({'tf-plant':[pk,nk],'inv-plant':[pk,nk],'sp-plant':[pk,nk],'sum-plant':[pk,nk]});
   showToast(`✅ เปลี่ยนรหัสโรงงานเป็น ${nk} แล้ว (ย้าย ${r.ts} งวด, ${r.inv} Invoice)`);
@@ -5278,52 +5425,36 @@ function showToast(msg){
 /* ============================================================
    CUSTOMER SETTINGS
    ============================================================ */
+const BILL_FIELDS=[['name','ชื่อลูกค้า'],['branch','สาขา (แสดงในวงเล็บ)'],['branchCode','รหัสสาขา (เว้นว่าง = สำนักงานใหญ่)'],['taxId','เลขประจำตัวผู้เสียภาษีลูกค้า'],['addr','ที่อยู่','wide'],['tel','โทรศัพท์'],['fax','โทรสาร'],['terms','เงื่อนไขการชำระ']];
+/* ข้อมูลลูกค้าของโรงงาน (ใช้ในใบกำกับภาษี) — ยังไม่ได้ตั้ง = ค่าจากกลุ่มลูกค้าเดิมของโรงงานนั้น */
+function plantBill(pk){
+  const b=CFG[pk]?.bill;
+  if(b) return b;
+  const c=CUSTOMERS[PLANT_GROUP[pk]]||CUSTOMERS[1]||{};
+  return {name:c.name||'',branch:c.branch||'',branchCode:c.branchCode||'',taxId:c.taxId||'',addr:c.addr||'',tel:c.tel||'',fax:c.fax||'',terms:c.terms||'',due:c.due||''};
+}
+function initPlantBill(){ Object.keys(CFG).forEach(pk=>{ if(!CFG[pk].bill) CFG[pk].bill=JSON.parse(JSON.stringify(plantBill(pk))); }); }
+function setBill(pk,f,v){ initPlantBill(); CFG[pk].bill[f]=v; _billDirty=true; }
+let _billDirty=false;
 function renderCustomers(){
   const wrap=document.getElementById('customers-wrap');
   if(!wrap) return;
-  wrap.innerHTML=Object.entries(CUSTOMERS).map(([g,c])=>`
+  const inp='padding:5px 8px;border:1px solid var(--bord);border-radius:6px;font-size:13px;width:100%';
+  wrap.innerHTML=Object.entries(CFG).map(([pk,pv])=>{const c=plantBill(pk);return `
     <div style="border:1px solid var(--bord);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;background:var(--surf2)">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-size:12px;font-weight:700;color:var(--navy);background:#e0eaf7;padding:2px 8px;border-radius:99px">กลุ่ม ${g}</span>
-        <button class="btn bd bsm" onclick="delCustomerGroup(${g})">🗑️</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <span style="font-size:12.5px;font-weight:700;color:var(--navy);background:#e0eaf7;padding:2px 10px;border-radius:99px">🏭 ${esc(pv.name)}</span>
+        <span class="badge bg-gold">${esc(pk)}</span>
+        <span style="font-size:12px;color:var(--muted)">→ ใบกำกับภาษีของโรงงานนี้</span>
       </div>
       <div class="g2" style="gap:.5rem">
-        <div class="fg"><label style="font-size:11px">ชื่อลูกค้า</label>
-          <input type="text" value="${esc(c.name)}" oninput="CUSTOMERS[${g}].name=this.value"
-            style="padding:5px 8px;border:1px solid var(--bord);border-radius:6px;font-size:13px;width:100%"></div>
-        <div class="fg"><label style="font-size:11px">สาขา</label>
-          <input type="text" value="${esc(c.branch)}" oninput="CUSTOMERS[${g}].branch=this.value"
-            style="padding:5px 8px;border:1px solid var(--bord);border-radius:6px;font-size:13px;width:100%"></div>
-        <div class="fg"><label style="font-size:11px">รหัสสาขา</label>
-          <input type="text" value="${esc(c.branchCode||'')}" oninput="CUSTOMERS[${g}].branchCode=this.value"
-            style="padding:5px 8px;border:1px solid var(--bord);border-radius:6px;font-size:13px;width:100%"></div>
-        <div class="fg"><label style="font-size:11px">เลขภาษีลูกค้า</label>
-          <input type="text" value="${esc(c.taxId)}" oninput="CUSTOMERS[${g}].taxId=this.value"
-            style="padding:5px 8px;border:1px solid var(--bord);border-radius:6px;font-size:13px;width:100%"></div>
+        ${BILL_FIELDS.map(([f,l,w])=>`<div class="fg"${w?' style="grid-column:1/-1"':''}><label style="font-size:11px">${l}</label>
+          <input type="text" id="bill-${pk}-${f}" value="${esc(c[f]||'')}" oninput="setBill('${pk}','${f}',this.value)" style="${inp}"></div>`).join('')}
       </div>
-      <div class="fg" style="margin-top:4px"><label style="font-size:11px">ที่อยู่</label>
-        <input type="text" value="${esc(c.addr)}" oninput="CUSTOMERS[${g}].addr=this.value"
-          style="padding:5px 8px;border:1px solid var(--bord);border-radius:6px;font-size:13px;width:100%"></div>
-    </div>`).join('');
-  renderPlantGroupMap();
+    </div>`;}).join('');
   updateTaxCounterPreview();
 }
-
-function renderPlantGroupMap(){
-  const wrap=document.getElementById('plant-group-wrap');
-  if(!wrap) return;
-  wrap.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">`+
-    Object.entries(CFG).map(([pk,pv])=>`
-      <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--bord);border-radius:8px;background:var(--surf2)">
-        <span style="font-size:13px;font-weight:600">${pv.name}</span>
-        <span style="font-size:12px;color:var(--muted)">→ กลุ่ม</span>
-        <select onchange="PLANT_GROUP['${pk}']=+this.value"
-          style="padding:4px 6px;border:1px solid var(--bord);border-radius:6px;font-size:12px">
-          ${Object.keys(CUSTOMERS).map(g=>`<option value="${g}" ${PLANT_GROUP[pk]==g?'selected':''}>${g}: ${CUSTOMERS[g]?.branch||'กลุ่ม '+g}</option>`).join('')}
-        </select>
-      </div>`).join('')+
-    `</div>`;
-}
+function renderPlantGroupMap(){}
 
 function addCustomerGroup(){
   const newG=Math.max(0,...Object.keys(CUSTOMERS).map(Number))+1;
@@ -5336,8 +5467,9 @@ function delCustomerGroup(g){
   renderCustomers();
 }
 function saveCustomers(){
+  initPlantBill(); _billDirty=false;
   persistSettings();
-  alert('✅ บันทึกข้อมูลลูกค้าแล้ว');
+  alert('✅ บันทึกข้อมูลลูกค้า (แยกตามโรงงาน) แล้ว');
 }
 function saveTaxCounter(){
   const prefix=(document.getElementById('tax-prefix')?.value||'CS').trim()||'CS';
@@ -5396,6 +5528,7 @@ function seqDup(pk,dk){
 /* รูปแบบ: CCS-{ชื่อโรงงาน}-{ชื่อแผนก}[-SP]-{เดือนที่ออก}.-{ลำดับแผนก}({ปี ค.ศ. 2 หลัก})
    เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-NOV.-1(26) */
 function genInvNo(plant, dept, dt, isSpecial){
+  if(isSpecial) return genSpNo(plant, dt);
   const ds=dt||todayISO();
   const d=new Date(ds+'T00:00:00');
   const mon=MON_ABBR[d.getMonth()];
@@ -5403,13 +5536,22 @@ function genInvNo(plant, dept, dt, isSpecial){
   const pName=String(CFG[plant]?.name||plant).trim();
   const dName=String(CFG[plant]?.depts?.[dept]?.name||dept).trim();
   const seq=deptSeq(plant,dept);
-  const base=`CCS-${pName}-${dName}${isSpecial?'-SP':''}-${mon}.-${seq}`;
-  let no=`${base}(${yy})`;
-  if(isSpecial){ // Special หลายใบในเดือนเดียวกัน → ต่อท้าย /2, /3 …
-    const used=new Set(S.invoices.filter(i=>i.id!==_loadedSpId).map(i=>i.no));
-    for(let k=2;used.has(no);k++) no=`${base}/${k}(${yy})`;
-  }
-  return no;
+  return `CCS-${pName}-${dName}-${mon}.-${seq}(${yy})`;
+}
+/* Special Invoice: CCS-{ชื่อโรงงาน}-{ปี พ.ศ. 2 หลัก}{เดือน 2 หลัก}-{001}
+   นับแยกโรงงาน และเริ่ม 001 ใหม่ทุกเดือน เช่น CCS-HOYA OPTICS SLR-6911-001 */
+function spNoPrefix(plant, dt){
+  const ds=dt||todayISO();
+  const yy=String((+ds.slice(0,4)+543)%100).padStart(2,'0');
+  return `CCS-${String(CFG[plant]?.name||plant).trim()}-${yy}${ds.slice(5,7)}-`;
+}
+function spRunOf(no,prefix){ const m=String(no||'').startsWith(prefix)&&String(no).slice(prefix.length).match(/^(\d{1,4})$/); return m?+m[1]:0; }
+function genSpNo(plant, dt, excludeId){
+  const prefix=spNoPrefix(plant,dt);
+  const ex=excludeId===undefined?_loadedSpId:excludeId;
+  const used=S.invoices.filter(i=>i.id!==ex).map(i=>spRunOf(i.no,prefix)).filter(n=>n>0);
+  const next=(used.length?Math.max(...used):0)+1;
+  return prefix+String(next).padStart(3,'0');
 }
 
 function resetInvNo(){
@@ -5666,9 +5808,9 @@ function spPrintDoc(){
 function downloadSpInv(){ const d=spPrintDoc(); if(d) downloadText(d.html, d.name+'.html', 'text/html'); }
 function exportSpPdf(){ const d=spPrintDoc(); if(d) exportPDF(d); }
 
-function saveSpInv(){
+async function saveSpInv(){
   if(SP_ITEMS.length===0){alert('กรุณาเพิ่มรายการก่อน');return;}
-  const no=(document.getElementById('sp-no')?.value||'').trim();
+  let no=(document.getElementById('sp-no')?.value||'').trim();
   if(!no){alert('กรุณากรอกเลขที่ Invoice');return;}
   const dt=document.getElementById('sp-dt')?.value;
   if(!dt){alert('กรุณาเลือกวันที่ออก');return;}
@@ -5679,7 +5821,14 @@ function saveSpInv(){
     if(!confirm(`${invStatus(old)==='confirmed'?'⚠️ Invoice นี้ยืนยันแล้ว — ':''}บันทึกทับ Special Invoice ${old.no}?\n(ถ้าต้องการสร้างใบใหม่ ให้กด Cancel แล้วกดปุ่ม "🆕 ใบใหม่")`)) return;
   }
   const dup=S.invoices.find(i=>i.no===no&&i!==old);
-  if(dup){alert(`เลขที่ ${no} ถูกใช้กับ Invoice อื่นแล้ว`);return;}
+  if(dup){
+    const plantV=document.getElementById('sp-plant')?.value, nx=genSpNo(plantV,dt,old?old.id:null);
+    const v=await askChoice('⚠️ เลขที่ Invoice ซ้ำ',
+      `เลขที่ <strong>${esc(no)}</strong> ถูกใช้แล้วกับ Invoice ${dup.type==='special'?'Special ':''}วันที่ ${esc(dup.dt||'')} (${fmtNum(dup.grand)} ฿)<br>ต้องการใช้เลขถัดไป <strong>${esc(nx)}</strong> แทนหรือไม่?`,
+      [{label:'ยกเลิก',value:''},{label:'ใช้ '+nx,value:'next',cls:'bp'}]);
+    if(v!=='next') return;
+    no=nx; const ne=document.getElementById('sp-no'); ne.value=nx; ne.dataset.manual='';
+  }
   const {up,vat,grand}=calcSp();
   const id=old?old.id:Date.now();
   const inv={
