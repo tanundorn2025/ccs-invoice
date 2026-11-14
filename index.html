@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-14a | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-14b | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -306,7 +306,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-14a</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-14b</div>
 </header>
 
 <nav class="tabs">
@@ -708,7 +708,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
     </div>
     <div class="alert ai" style="font-size:12.5px">
       <div>💡 แยกใบกำกับภาษี <strong>ตามโรงงาน</strong> — ที่อยู่/เลขภาษี/สาขา ใช้ของแต่ละโรงงานในหน้า ⚙️ ตั้งค่า<br>
-      ยอด <strong>มูลค่าสินค้า / VAT / รวมทั้งสิ้น</strong> = ผลรวมของยอดใน Invoice แต่ละใบ (เหมือน Summary) ไม่คำนวณ VAT ใหม่ · เรียงตาม “ลำดับเลขที่” ของแผนก แล้วต่อด้วย Special Invoice (จัดลำดับเองได้ด้วยปุ่ม ▲▼)<br>
+      ยอด <strong>มูลค่าสินค้า / VAT / รวมทั้งสิ้น</strong> = ผลรวมของยอดใน Invoice แต่ละใบ (เหมือน Summary) ไม่คำนวณ VAT ใหม่ · เรียงตาม “ลำดับเลขที่” ของแผนก (จัดเองได้ ▲▼) · Special Invoice แยกเป็น “ชุด Special” ต่างหาก (เลือกรวมกับชุดหลักได้)<br>เลขที่ใบกำกับภาษีรันตาม <strong>ลำดับชุดงานที่กดออก</strong> — ออกทีละชุด หรือจัดลำดับชุดแล้วกด “ออกทุกชุดตามลำดับ”<br>
       เลือก Invoice ที่จะรวมในใบได้ (ติ๊กถูก) — เลขที่ใบกำกับภาษีถูกใช้เมื่อกด “ออกใบกำกับภาษี” เท่านั้น และ Invoice ในใบที่ออกแล้วจะถูกล็อก</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.6rem;background:var(--surf2);padding:8px 10px;border-radius:var(--r)">
@@ -718,7 +718,6 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
       <button class="btn bo bsm" onclick="saveTaxCounter()">ตั้งเลขเริ่ม</button>
       <span id="tax-counter-preview" style="font-size:12px;color:var(--muted)"></span>
     </div>
-    <div id="tax-plant-order"></div>
     <div id="tax-pending"></div>
     <div class="g2" style="gap:.75rem;align-items:flex-end">
       <div class="fg">
@@ -3449,6 +3448,35 @@ function taxSort(invs){
 function taxPending(mon,pk){
   return S.invoices.filter(i=>(!mon||(i.dt||'').startsWith(mon))&&(!pk||i.plant===pk)&&!taxRecOfInv(i.id));
 }
+/* ===== ชุดงาน: แต่ละโรงงาน = "ชุดหลัก" (Invoice ปกติ) + "ชุด Special" — set key: 'PK' / 'PK~S' ===== */
+function skPlant(sk){ return String(sk).split('~')[0]; }
+function skIsSp(sk){ return String(sk).endsWith('~S'); }
+function skLabel(sk){ return (CFG[skPlant(sk)]?.name||skPlant(sk))+' — '+(skIsSp(sk)?'ชุด Special':'ชุดหลัก'); }
+let _taxMerge={}, _taxSetOrd={};
+try{_taxMerge=JSON.parse(localStorage.getItem('tax_merge')||'{}')||{};}catch(e){_taxMerge={};}
+try{_taxSetOrd=JSON.parse(localStorage.getItem('tax_set_order')||'{}')||{};}catch(e){_taxSetOrd={};}
+function saveTaxSetPrefs(){ try{localStorage.setItem('tax_merge',JSON.stringify(_taxMerge));localStorage.setItem('tax_set_order',JSON.stringify(_taxSetOrd));}catch(e){} }
+function taxSpMerged(mon,pk){ return !!_taxMerge[mon+'|'+pk]; }
+function setTaxMerge(mon,pk,v){ if(v) _taxMerge[mon+'|'+pk]=true; else delete _taxMerge[mon+'|'+pk]; saveTaxSetPrefs(); rerenderTax(); }
+function taxPendingSet(mon,sk){
+  const pk=skPlant(sk), l=taxPending(mon,pk);
+  if(taxSpMerged(mon,pk)) return skIsSp(sk)?[]:l;
+  return l.filter(i=>(i.type==='special')===skIsSp(sk));
+}
+/* ลำดับการออกเลขของชุดงานในเดือน — ค่าเริ่มต้น: ชุดหลักทุกโรงงาน แล้วชุด Special ไว้ท้าย */
+function taxSetOrder(mon){
+  const ks=taxPlantKeys(mon), def=[...ks, ...ks.map(k=>k+'~S')];
+  const ord=_taxSetOrd[mon]||[], pos=new Map(ord.map((k,n)=>[k,n]));
+  return def.map((k,n)=>({k,n:pos.has(k)?pos.get(k):1e6+n})).sort((a,b)=>a.n-b.n).map(x=>x.k);
+}
+function moveTaxSet(mon,sk,d){
+  const live=taxBatchFor(mon).map(b=>b.sk), k=live.indexOf(sk), j=k+d;
+  if(k<0||j<0||j>=live.length) return;
+  [live[k],live[j]]=[live[j],live[k]];
+  const rest=taxSetOrder(mon).filter(x=>!live.includes(x));
+  _taxSetOrd[mon]=[...live,...rest]; saveTaxSetPrefs(); rerenderTax();
+}
+function resetTaxSetOrd(mon){ delete _taxSetOrd[mon]; saveTaxSetPrefs(); rerenderTax(); }
 /* ลำดับโรงงานสำหรับออกใบกำกับภาษี — เลขที่ใบกำกับภาษีจะรันตามลำดับนี้ (เก็บใน CFG[pk].taxSeq) */
 function taxPlantOrder(){
   const ks=Object.keys(CFG);
@@ -3481,7 +3509,7 @@ function taxPlantKeys(mon){
 }
 const _taxSel={}, _taxSeen={}; // `${mon}|${pk}` → [invoice id] ที่ติ๊กไว้ / สถานะที่เห็นล่าสุด
 function taxSelIds(mon,pk){
-  const key=mon+'|'+pk, pend=taxPending(mon,pk);
+  const key=mon+'|'+pk, pend=taxPendingSet(mon,pk);
   const sel=_taxSel[key]=_taxSel[key]||[], seen=_taxSeen[key]=_taxSeen[key]||{};
   pend.forEach(i=>{ // Invoice ที่เพิ่งเห็นครั้งแรก → ติ๊กให้อัตโนมัติ (ผู้ใช้เอาออกเองได้)
     if(!seen[i.id]&&!sel.includes(i.id)) sel.push(i.id);
@@ -3508,13 +3536,13 @@ function taxOrdered(mon,pk,list){
   return def.map((i,k)=>({i,k:pos.has(i.id)?pos.get(i.id):1e6+k})).sort((a,b)=>a.k-b.k).map(x=>x.i);
 }
 function moveTaxInv(mon,pk,id,d){
-  const cur=taxOrdered(mon,pk,taxPending(mon,pk)).map(i=>i.id);
+  const cur=taxOrdered(mon,pk,taxPendingSet(mon,pk)).map(i=>i.id);
   const k=cur.indexOf(id), j=k+d; if(k<0||j<0||j>=cur.length) return;
   [cur[k],cur[j]]=[cur[j],cur[k]];
   _taxOrd[mon+'|'+pk]=cur; saveTaxOrd(); rerenderTax();
 }
 function resetTaxOrd(mon,pk){ delete _taxOrd[mon+'|'+pk]; saveTaxOrd(); rerenderTax(); }
-function toggleTaxAll(mon,pk,on){ _taxSel[mon+'|'+pk]=on?taxPending(mon,pk).map(i=>i.id):[]; rerenderTax(); }
+function toggleTaxAll(mon,pk,on){ _taxSel[mon+'|'+pk]=on?taxPendingSet(mon,pk).map(i=>i.id):[]; rerenderTax(); }
 function rerenderTax(){ const y=window.scrollY; genTaxInvoices(); window.scrollTo(0,y); }
 function taxDefaultDate(mon){ return mon?mon+'-25':todayISO(); }
 function onTaxMonChange(){
@@ -3571,7 +3599,7 @@ function issuedCardHTML(rec){
   const fn=esc(taxFileName(rec)).replace(/'/g,'');
   return `<div style="border:1px solid var(--bord);border-radius:var(--r);padding:.6rem;margin-bottom:.75rem">
     <div class="ch no-print" style="margin-bottom:.4rem">
-      <div class="ct" style="font-size:13.5px"><span class="badge bg-green">ออกแล้ว ${esc(rec.no)}</span>
+      <div class="ct" style="font-size:13.5px"><span class="badge bg-green">ออกแล้ว ${esc(rec.no)}</span>${rec.set==='special'?' <span class="badge bg-navy" style="font-size:10px">ชุด Special</span>':''}
         <span style="font-size:12px;color:var(--muted);font-weight:400">วันที่ ${esc(rec.date||'')} · ${invs.length} ใบ · รวม ${fmtNum(t.grand)} ฿${rec.plant?'':' · (รูปแบบเดิม: กลุ่ม '+esc(rec.group)+')'}</span></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn bo bsm" onclick="printTaxDoc('${did}','${fn}')">🖨️ พิมพ์</button>
@@ -3583,8 +3611,36 @@ function issuedCardHTML(rec){
     ${taxDocHTML(did,rec,rec.no,rec.date,bill,invs,t,rec.mon,false)}</div>`;
 }
 
+function taxSetSectionHTML(mon,sk,pendRaw,taxDate,bill){
+  const pk=skPlant(sk), isSp=skIsSp(sk);
+  const pend=taxOrdered(mon,sk,pendRaw);
+  const customOrd=!!(_taxOrd[mon+'|'+sk]||[]).length;
+  const sel=new Set(taxSelIds(mon,sk));
+  const chosen=pend.filter(i=>sel.has(i.id));
+  const t=taxTotals(chosen), allOn=chosen.length===pend.length;
+  const merged=taxSpMerged(mon,pk);
+  let h=`<div class="no-print" style="margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--bord)">
+    <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px">${isSp?'⭐ ชุด Special':'📝 ชุดหลัก'+(merged&&pend.some(i=>i.type==='special')?' (รวม Special)':'')} — เลือก Invoice ที่จะรวมในใบกำกับภาษีใบใหม่ (${monthLabel(mon)}) <span style="font-weight:400;color:var(--muted);font-size:12px">— กด ▲▼ เพื่อจัดลำดับในใบเอง</span></div>
+    <table class="tx-sel"><thead><tr><th style="width:34px"><input type="checkbox" ${allOn?'checked':''} onchange="toggleTaxAll('${mon}','${sk}',this.checked)" title="เลือกทั้งหมด"></th><th style="width:34px">#</th><th style="width:62px">ลำดับ</th><th>เลขที่ Invoice</th><th>แผนก</th><th>วันที่</th><th>สถานะ</th><th class="num">มูลค่า</th><th class="num">VAT</th><th class="num">รวม</th></tr></thead><tbody>
+    ${(()=>{let k=0;return pend.map((i,ix)=>{const on=sel.has(i.id), a=invAmt(i); if(on) k++;
+      return `<tr class="${on?'':'off'}"><td><input type="checkbox" ${on?'checked':''} onchange="toggleTaxSel('${mon}','${sk}',${i.id},this.checked)"></td><td>${on?k:''}</td>
+        <td style="white-space:nowrap"><button class="btn bo bsm" style="padding:1px 7px" ${ix?'':'disabled'} onclick="moveTaxInv('${mon}','${sk}',${i.id},-1)" title="เลื่อนขึ้น">▲</button><button class="btn bo bsm" style="padding:1px 7px;margin-left:2px" ${ix<pend.length-1?'':'disabled'} onclick="moveTaxInv('${mon}','${sk}',${i.id},1)" title="เลื่อนลง">▼</button></td>
+        <td>${esc(i.no)}${i.type==='special'?' <span class="badge bg-navy" style="font-size:10px">Special</span>':''}</td>
+        <td>${esc(CFG[pk]?.depts?.[i.dept]?.name||i.dept||'')}${i.type==='special'?'':` <span style="color:var(--muted);font-size:11px">ลำดับ ${deptSeq(pk,i.dept)}</span>`}</td>
+        <td style="font-size:12px">${esc(i.dt||'')}</td>
+        <td>${invStatus(i)==='confirmed'?'<span class="badge bg-green">ยืนยันแล้ว</span>':'<span class="badge bg-gold" title="ถ้าติ๊กรวม จะถูกยืนยันอัตโนมัติเมื่อออกใบกำกับภาษี">ร่าง</span>'}</td>
+        <td class="num">${fmtNum(a.up)}</td><td class="num">${fmtNum(a.vat)}</td><td class="num">${fmtNum(a.grand)}</td></tr>`;}).join('');})()}
+    </tbody><tfoot><tr><td></td><td colspan="6">รวมที่เลือก ${chosen.length} ใบ${customOrd?` <button class="btn bo bsm" style="margin-left:8px;font-weight:400" onclick="resetTaxOrd('${mon}','${sk}')">↺ เรียงตามลำดับแผนก</button>`:''}</td><td class="num">${fmtNum(t.up)}</td><td class="num">${fmtNum(t.vat)}</td><td class="num">${fmtNum(t.grand)}</td></tr></tfoot></table>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.6rem">
+      <button class="btn bs" ${chosen.length?'':'disabled'} onclick="issueTax('${mon}','${sk}')">✅ ออกใบกำกับภาษี${isSp?' ชุด Special':''} (ใช้เลขที่จริง)</button>
+      <span style="font-size:12px;color:var(--muted)">วันที่ในใบ: ${esc(taxDate)}${taxDate.slice(0,7)!==mon?' <span style="color:#c8060a">(คนละเดือนกับ Invoice)</span>':''}</span>
+    </div></div>`;
+  h+=chosen.length?taxDocHTML('tax-draft-'+sk.replace('~','_')+'-'+mon,null,'(ร่าง — ยังไม่ออกเลข)',taxDate,bill,chosen,t,mon,true)
+    :'<div class="alert ai no-print">ยังไม่ได้เลือก Invoice — ติ๊กรายการด้านบนเพื่อดูตัวอย่างใบกำกับภาษี</div>';
+  return h;
+}
 function genTaxInvoices(){
-  renderTaxPlantOrder(); renderTaxPending(); refreshTaxBadge();
+  renderTaxPending(); refreshTaxBadge();
   const mon=document.getElementById('tax-mon')?.value;
   const dEl=document.getElementById('tax-date');
   if(dEl&&!dEl.value&&mon) dEl.value=taxDefaultDate(mon);
@@ -3597,49 +3653,33 @@ function genTaxInvoices(){
   let any=false;
   const batch=taxBatchFor(mon);
   if(batch.length>1){
+    const custom=!!(_taxSetOrd[mon]||[]).length;
     const bx=document.createElement('div'); bx.className='card no-print'; bx.style.marginBottom='1rem';
-    bx.innerHTML=`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <button class="btn bs" onclick="issueTaxAll('${mon}')">✅ ออกใบกำกับภาษีทุกโรงงาน (${batch.length} ใบ) เรียงเลขตามลำดับโรงงาน</button>
-      <span style="font-size:12.5px;color:var(--muted)">${batch.map((b,n)=>`${n+1}. ${esc(CFG[b.pk]?.name||b.pk)} (${b.invs.length} Invoice)`).join(' → ')}</span></div>`;
+    bx.innerHTML=`<div class="ch"><div class="ct">🔢 ลำดับการออกเลขที่ (ชุดงานที่รอออก ${monthLabel(mon)})</div>${custom?`<button class="btn bo bsm" onclick="resetTaxSetOrd('${mon}')">↺ ค่าเริ่มต้น (ชุดหลักก่อน Special ท้าย)</button>`:''}</div>
+      <table class="tx-sel"><thead><tr><th style="width:44px">ลำดับ</th><th style="width:70px"></th><th>ชุดงาน</th><th class="num">Invoice</th><th class="num">รวม (฿)</th></tr></thead><tbody>
+      ${batch.map((b,n)=>`<tr><td><strong>${n+1}</strong></td>
+        <td style="white-space:nowrap"><button class="btn bo bsm" style="padding:1px 7px" ${n?'':'disabled'} onclick="moveTaxSet('${mon}','${b.sk}',-1)" title="ออกเลขก่อน">▲</button><button class="btn bo bsm" style="padding:1px 7px;margin-left:2px" ${n<batch.length-1?'':'disabled'} onclick="moveTaxSet('${mon}','${b.sk}',1)" title="ออกเลขทีหลัง">▼</button></td>
+        <td>${skIsSp(b.sk)?'⭐':'🏭'} ${esc(skLabel(b.sk))}</td><td class="num">${b.invs.length}</td><td class="num">${fmtNum(taxTotals(b.invs).grand)}</td></tr>`).join('')}
+      </tbody></table>
+      <button class="btn bs" onclick="issueTaxAll('${mon}')">✅ ออกใบกำกับภาษีทุกชุดตามลำดับนี้ (${batch.length} ใบ)</button>
+      <span style="font-size:12px;color:var(--muted);margin-left:6px">หรือกดออกทีละชุดด้านล่าง — เลขที่จะรันตามลำดับที่กดออก</span>`;
     container.appendChild(bx);
   }
   taxPlantKeys(mon).forEach(pk=>{
     const issued=issuedMon.filter(t=>t.plant===pk);
-    const pend=taxOrdered(mon,pk,taxPending(mon,pk));
-    const customOrd=!!(_taxOrd[mon+'|'+pk]||[]).length;
-    if(!issued.length&&!pend.length) return;
+    const allPend=taxPending(mon,pk);
+    if(!issued.length&&!allPend.length) return;
     any=true;
     const bill=plantBill(pk), pname=CFG[pk]?.name||pk;
-    const sel=new Set(taxSelIds(mon,pk));
-    const chosen=pend.filter(i=>sel.has(i.id));
-    const t=taxTotals(chosen);
+    const hasSp=allPend.some(i=>i.type==='special'), hasMain=allPend.some(i=>i.type!=='special');
     const card=document.createElement('div');
     card.className='card'; card.style.marginBottom='1rem';
     let h=`<div class="ch no-print"><div class="ct">🏭 ${esc(pname)} <span style="font-size:12px;color:var(--muted);font-weight:400">— ${esc(bill.name)} (${esc(bill.branch||'')})</span></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${issued.length?`<span class="badge bg-green">ออกแล้ว ${issued.length} ใบ</span>`:''}${pend.length?`<span class="badge bg-gold">รอออก ${pend.length} Invoice</span>`:'<span class="badge bg-green">ครบแล้ว</span>'}</div></div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${issued.length?`<span class="badge bg-green">ออกแล้ว ${issued.length} ใบ</span>`:''}${allPend.length?`<span class="badge bg-gold">รอออก ${allPend.length} Invoice</span>`:'<span class="badge bg-green">ครบแล้ว</span>'}</div></div>`;
     h+=issued.map(issuedCardHTML).join('');
-    if(pend.length){
-      const allOn=chosen.length===pend.length;
-      h+=`<div class="no-print" style="margin-top:.25rem">
-        <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px">📝 เลือก Invoice ที่จะรวมในใบกำกับภาษีใบใหม่ (${monthLabel(mon)}) <span style="font-weight:400;color:var(--muted);font-size:12px">— กด ▲▼ เพื่อจัดลำดับในใบเอง</span></div>
-        <table class="tx-sel"><thead><tr><th style="width:34px"><input type="checkbox" ${allOn?'checked':''} onchange="toggleTaxAll('${mon}','${pk}',this.checked)" title="เลือกทั้งหมด"></th><th style="width:34px">#</th><th style="width:62px">ลำดับ</th><th>เลขที่ Invoice</th><th>แผนก</th><th>วันที่</th><th>สถานะ</th><th class="num">มูลค่า</th><th class="num">VAT</th><th class="num">รวม</th></tr></thead><tbody>
-        ${(()=>{let k=0;return pend.map(i=>{const on=sel.has(i.id), a=invAmt(i); if(on) k++;
-          const ix=pend.indexOf(i);
-          return `<tr class="${on?'':'off'}"><td><input type="checkbox" ${on?'checked':''} onchange="toggleTaxSel('${mon}','${pk}',${i.id},this.checked)"></td><td>${on?k:''}</td>
-            <td style="white-space:nowrap"><button class="btn bo bsm" style="padding:1px 7px" ${ix?'':'disabled'} onclick="moveTaxInv('${mon}','${pk}',${i.id},-1)" title="เลื่อนขึ้น">▲</button><button class="btn bo bsm" style="padding:1px 7px;margin-left:2px" ${ix<pend.length-1?'':'disabled'} onclick="moveTaxInv('${mon}','${pk}',${i.id},1)" title="เลื่อนลง">▼</button></td>
-            <td>${esc(i.no)}${i.type==='special'?' <span class="badge bg-navy" style="font-size:10px">Special</span>':''}</td>
-            <td>${esc(CFG[pk]?.depts?.[i.dept]?.name||i.dept||'')}${i.type==='special'?'':` <span style="color:var(--muted);font-size:11px">ลำดับ ${deptSeq(pk,i.dept)}</span>`}</td>
-            <td style="font-size:12px">${esc(i.dt||'')}</td>
-            <td>${invStatus(i)==='confirmed'?'<span class="badge bg-green">ยืนยันแล้ว</span>':'<span class="badge bg-gold" title="ถ้าติ๊กรวม จะถูกยืนยันอัตโนมัติเมื่อออกใบกำกับภาษี">ร่าง</span>'}</td>
-            <td class="num">${fmtNum(a.up)}</td><td class="num">${fmtNum(a.vat)}</td><td class="num">${fmtNum(a.grand)}</td></tr>`;}).join('');})()}
-        </tbody><tfoot><tr><td></td><td colspan="6">รวมที่เลือก ${chosen.length} ใบ${customOrd?` <button class="btn bo bsm" style="margin-left:8px;font-weight:400" onclick="resetTaxOrd('${mon}','${pk}')">↺ เรียงตามลำดับแผนก</button>`:''}</td><td class="num">${fmtNum(t.up)}</td><td class="num">${fmtNum(t.vat)}</td><td class="num">${fmtNum(t.grand)}</td></tr></tfoot></table>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.6rem">
-          <button class="btn bs" ${chosen.length?'':'disabled'} onclick="issueTax('${mon}','${pk}')">✅ ออกใบกำกับภาษี (ใช้เลขที่จริง)</button>
-          <span style="font-size:12px;color:var(--muted)">วันที่ในใบ: ${esc(taxDate)}${taxDate.slice(0,7)!==mon?' <span style="color:#c8060a">(คนละเดือนกับ Invoice)</span>':''}</span>
-        </div></div>`;
-      h+=chosen.length?taxDocHTML('tax-draft-'+pk+'-'+mon,null,'(ร่าง — ยังไม่ออกเลข)',taxDate,bill,chosen,t,mon,true)
-        :'<div class="alert ai no-print">ยังไม่ได้เลือก Invoice — ติ๊กรายการด้านบนเพื่อดูตัวอย่างใบกำกับภาษี</div>';
-    }
+    if(hasSp&&hasMain) h+=`<label class="no-print" style="display:inline-flex;gap:6px;align-items:center;font-size:12.5px;margin:.25rem 0 .5rem;cursor:pointer">
+      <input type="checkbox" ${taxSpMerged(mon,pk)?'checked':''} onchange="setTaxMerge('${mon}','${pk}',this.checked)"> รวม Special Invoice ไว้ในใบเดียวกับชุดหลัก <span style="color:var(--muted)">(ไม่ติ๊ก = แยกเป็นชุด Special ออกเลขต่างหาก)</span></label>`;
+    [pk,pk+'~S'].forEach(sk=>{ const pend=taxPendingSet(mon,sk); if(pend.length) h+=taxSetSectionHTML(mon,sk,pend,taxDate,bill); });
     card.innerHTML=h;
     container.appendChild(card);
   });
@@ -3665,42 +3705,41 @@ function genTaxInvoices(){
   }
 }
 
-/* โรงงานที่มี Invoice เลือกไว้ในเดือนนี้ เรียงตามลำดับโรงงาน */
+/* ชุดงานที่มี Invoice เลือกไว้ในเดือนนี้ ตามลำดับการออกเลข */
 function taxBatchFor(mon){
-  return taxPlantKeys(mon).map(pk=>{const sel=new Set(taxSelIds(mon,pk));
-    return {pk,invs:taxOrdered(mon,pk,taxPending(mon,pk)).filter(i=>sel.has(i.id))};}).filter(b=>b.invs.length);
+  return taxSetOrder(mon).map(sk=>{const sel=new Set(taxSelIds(mon,sk));
+    return {sk,pk:skPlant(sk),invs:taxOrdered(mon,sk,taxPendingSet(mon,sk)).filter(i=>sel.has(i.id))};}).filter(b=>b.invs.length);
 }
 function billMissing(pk){ const b=plantBill(pk); const m=[]; if(!b.addr) m.push('ที่อยู่'); if(!b.taxId) m.push('เลขภาษี'); return m; }
-async function doIssueTax(mon,pk,invs,date){
-  const t=taxTotals(invs), bill=plantBill(pk);
+async function doIssueTax(mon,sk,invs,date){
+  const pk=skPlant(sk), t=taxTotals(invs), bill=plantBill(pk);
   const drafts=invs.filter(i=>invStatus(i)!=='confirmed');
   const no=await allocTaxNo();
   const rec={id:`${mon}__P${pk}__${no.replace(/\s+/g,'')}`,mon,plant:pk,no,date,
     invIds:invs.map(i=>i.id),up:t.up,vat:t.vat,grand:t.grand,bill:JSON.parse(JSON.stringify(bill)),
-    status:'issued',issuedAt:new Date().toISOString()};
+    set:skIsSp(sk)?'special':'main',status:'issued',issuedAt:new Date().toISOString()};
   S.taxInvoices.push(rec);
   drafts.forEach(i=>{i.status='confirmed';i.confirmedAt=new Date().toISOString();dbSaveInv(i,true);});
-  delete _taxSel[mon+'|'+pk]; delete _taxSeen[mon+'|'+pk]; delete _taxOrd[mon+'|'+pk]; saveTaxOrd();
+  delete _taxSel[mon+'|'+sk]; delete _taxSeen[mon+'|'+sk]; delete _taxOrd[mon+'|'+sk]; saveTaxOrd();
   persistLocal();
   dbSaveTax(rec);
   return rec;
 }
 function afterIssue(){ updateTaxCounterPreview(); renderInvList(); renderSpSaved(); genTaxInvoices(); }
-async function issueTax(mon,pk){
-  const sel=new Set(taxSelIds(mon,pk));
-  const invs=taxOrdered(mon,pk,taxPending(mon,pk)).filter(i=>sel.has(i.id));
+async function issueTax(mon,sk){
+  const pk=skPlant(sk);
+  const sel=new Set(taxSelIds(mon,sk));
+  const invs=taxOrdered(mon,sk,taxPendingSet(mon,sk)).filter(i=>sel.has(i.id));
   if(!invs.length){alert('กรุณาเลือก Invoice อย่างน้อย 1 ใบ');return;}
   const date=document.getElementById('tax-date')?.value||taxDefaultDate(mon);
   const t=taxTotals(invs);
   const drafts=invs.filter(i=>invStatus(i)!=='confirmed');
   const bill=plantBill(pk), miss=billMissing(pk);
   if(miss.length&&!confirm(`⚠️ ${CFG[pk]?.name||pk} ยังไม่มี${miss.join('/')}ลูกค้า (ตั้งค่า → ข้อมูลลูกค้า)\nออกต่อหรือไม่?`)) return;
-  // โรงงานที่อยู่ลำดับก่อนหน้ายังค้าง → เลขจะไม่เรียงตามลำดับโรงงาน
-  const ord=taxPlantOrder(), before=taxBatchFor(mon).filter(b=>b.pk!==pk&&ord.indexOf(b.pk)>=0&&ord.indexOf(b.pk)<ord.indexOf(pk));
-  if(before.length&&!confirm(`⚠️ โรงงานที่อยู่ลำดับก่อนหน้ายังไม่ได้ออกใบกำกับภาษีเดือนนี้:\n${before.map(b=>'• '+(CFG[b.pk]?.name||b.pk)).join('\n')}\n\nถ้าออกใบนี้ก่อน เลขที่จะไม่เรียงตามลำดับโรงงาน\n(ใช้ปุ่ม “ออกใบกำกับภาษีทุกโรงงาน” ด้านบนเพื่อให้เลขเรียงตามลำดับ)\n\nออกใบนี้ต่อหรือไม่?`)) return;
-  if(!confirm(`ออกใบกำกับภาษีจริง — ${CFG[pk]?.name||pk}\n${bill.name} (${bill.branch||''})\nวันที่ ${date}${date.slice(0,7)!==mon?'  ⚠️ คนละเดือนกับ Invoice ('+monthLabel(mon)+')':''}\n\nInvoice ${invs.length} ใบ\nมูลค่าสินค้า ${fmtNum(t.up)}\nภาษีมูลค่าเพิ่ม ${fmtNum(t.vat)}\nรวมทั้งสิ้น ${fmtNum(t.grand)} บาท${drafts.length?`\n\n⚠️ มี Invoice ร่าง ${drafts.length} ใบ (${drafts.map(i=>i.no).join(', ')}) จะถูกยืนยันอัตโนมัติ`:''}\n\nเมื่อออกแล้ว เลขที่จะถูกใช้ทันที และ Invoice ในใบนี้จะถูกล็อกไม่ให้แก้ไข/ลบ\nต้องการดำเนินการต่อ?`)) return;
+  let nx=''; try{ nx=document.getElementById('tax-counter-preview')?.textContent||''; }catch(e){}
+  if(!confirm(`ออกใบกำกับภาษีจริง — ${skLabel(sk)}${nx?'\n'+nx:''}\n${bill.name} (${bill.branch||''})\nวันที่ ${date}${date.slice(0,7)!==mon?'  ⚠️ คนละเดือนกับ Invoice ('+monthLabel(mon)+')':''}\n\nInvoice ${invs.length} ใบ\nมูลค่าสินค้า ${fmtNum(t.up)}\nภาษีมูลค่าเพิ่ม ${fmtNum(t.vat)}\nรวมทั้งสิ้น ${fmtNum(t.grand)} บาท${drafts.length?`\n\n⚠️ มี Invoice ร่าง ${drafts.length} ใบ (${drafts.map(i=>i.no).join(', ')}) จะถูกยืนยันอัตโนมัติ`:''}\n\nเมื่อออกแล้ว เลขที่จะถูกใช้ทันที และ Invoice ในใบนี้จะถูกล็อกไม่ให้แก้ไข/ลบ\nต้องการดำเนินการต่อ?`)) return;
   let rec;
-  try{ rec=await doIssueTax(mon,pk,invs,date); }
+  try{ rec=await doIssueTax(mon,sk,invs,date); }
   catch(e){ alert('จองเลขที่ใบกำกับภาษีไม่สำเร็จ: '+(e.code||e.message)+'\nยังไม่มีการใช้เลขที่ใด ๆ'); return; }
   afterIssue();
   showToast(`🧾 ออกใบกำกับภาษี ${rec.no} แล้ว`);
@@ -3710,15 +3749,15 @@ async function issueTaxAll(mon){
   const batch=taxBatchFor(mon);
   if(!batch.length){alert('ไม่มี Invoice ที่เลือกไว้');return;}
   const date=document.getElementById('tax-date')?.value||taxDefaultDate(mon);
-  const miss=batch.filter(b=>billMissing(b.pk).length);
+  const miss=[...new Set(batch.filter(b=>billMissing(b.pk).length).map(b=>b.pk))].map(pk=>({pk}));
   let nx=''; try{ nx=document.getElementById('tax-counter-preview')?.textContent||''; }catch(e){}
-  const lines=batch.map((b,n)=>{const t=taxTotals(b.invs);return `${n+1}. ${CFG[b.pk]?.name||b.pk} — ${b.invs.length} Invoice — ${fmtNum(t.grand)} บาท`;}).join('\n');
+  const lines=batch.map((b,n)=>{const t=taxTotals(b.invs);return `${n+1}. ${skLabel(b.sk)} — ${b.invs.length} Invoice — ${fmtNum(t.grand)} บาท`;}).join('\n');
   const drafts=batch.reduce((a,b)=>a+b.invs.filter(i=>invStatus(i)!=='confirmed').length,0);
-  if(!confirm(`ออกใบกำกับภาษีจริง ${batch.length} ใบ (${monthLabel(mon)})\nวันที่ ${date}${date.slice(0,7)!==mon?'  ⚠️ คนละเดือนกับ Invoice':''}\nเลขที่จะรันตามลำดับนี้${nx?' ('+nx+')':''}:\n\n${lines}${miss.length?`\n\n⚠️ ยังไม่มีที่อยู่/เลขภาษีลูกค้า: ${miss.map(b=>CFG[b.pk]?.name||b.pk).join(', ')}`:''}${drafts?`\n\n⚠️ Invoice ร่าง ${drafts} ใบจะถูกยืนยันอัตโนมัติ`:''}\n\nเมื่อออกแล้ว เลขที่จะถูกใช้ทันที และ Invoice จะถูกล็อก\nต้องการดำเนินการต่อ?`)) return;
+  if(!confirm(`ออกใบกำกับภาษีจริง ${batch.length} ใบ (${monthLabel(mon)})\nวันที่ ${date}${date.slice(0,7)!==mon?'  ⚠️ คนละเดือนกับ Invoice':''}\nเลขที่จะรันตามลำดับชุดงานนี้${nx?' ('+nx+')':''}:\n\n${lines}${miss.length?`\n\n⚠️ ยังไม่มีที่อยู่/เลขภาษีลูกค้า: ${miss.map(b=>CFG[b.pk]?.name||b.pk).join(', ')}`:''}${drafts?`\n\n⚠️ Invoice ร่าง ${drafts} ใบจะถูกยืนยันอัตโนมัติ`:''}\n\nเมื่อออกแล้ว เลขที่จะถูกใช้ทันที และ Invoice จะถูกล็อก\nต้องการดำเนินการต่อ?`)) return;
   const done=[];
   for(const b of batch){
-    try{ done.push(await doIssueTax(mon,b.pk,b.invs,date)); }
-    catch(e){ alert(`จองเลขที่ไม่สำเร็จที่ ${CFG[b.pk]?.name||b.pk}: ${e.code||e.message}\nออกไปแล้ว ${done.length} ใบ${done.length?' ('+done.map(r=>r.no).join(', ')+')':''} — ที่เหลือยังไม่ได้ออก`); break; }
+    try{ done.push(await doIssueTax(mon,b.sk,b.invs,date)); }
+    catch(e){ alert(`จองเลขที่ไม่สำเร็จที่ ${skLabel(b.sk)}: ${e.code||e.message}\nออกไปแล้ว ${done.length} ใบ${done.length?' ('+done.map(r=>r.no).join(', ')+')':''} — ที่เหลือยังไม่ได้ออก`); break; }
   }
   afterIssue();
   if(done.length) showToast(`🧾 ออกใบกำกับภาษี ${done.length} ใบ: ${done[0].no} – ${done[done.length-1].no}`);
@@ -3732,7 +3771,7 @@ function cancelTax(id){
   r.status='cancelled';
   r.cancelledAt=new Date().toISOString();
   r.cancelReason=reason;
-  if(r.plant){ delete _taxSel[r.mon+'|'+r.plant]; delete _taxSeen[r.mon+'|'+r.plant]; }
+  if(r.plant){ [r.plant,r.plant+'~S'].forEach(k=>{delete _taxSel[r.mon+'|'+k]; delete _taxSeen[r.mon+'|'+k];}); }
   persistLocal();
   dbSaveTax(r);
   renderInvList();renderSpSaved();
