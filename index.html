@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-13i | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-13j | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -306,7 +306,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13i</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-13j</div>
 </header>
 
 <nav class="tabs">
@@ -616,6 +616,8 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
       <div class="ct"><div class="ci">⭐</div>Special Invoice (กรอกเองอิสระ)</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn bo bsm" onclick="newSpInv()">🆕 ใบใหม่</button>
+        <button class="btn bd bsm" onclick="discardSp()" title="ทิ้งสิ่งที่กรอก/แก้ไขที่ยังไม่ได้บันทึก">🗑️ ละทิ้ง</button>
+        <button class="btn bo bsm" onclick="addSpHead()">+ หัวข้อ</button>
         <button class="btn bs bsm" onclick="addSpItem()">+ เพิ่มรายการ</button>
         <button class="btn bp bsm" onclick="showSpPreview()">👁️ Preview</button>
         <button class="btn ba bsm" onclick="saveSpInv()">💾 บันทึก</button>
@@ -652,7 +654,8 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
     </div>
 
     <!-- รายการ items -->
-    <div class="st">📋 รายการ (กรอกเองได้ไม่จำกัด)</div>
+    <div class="st">📋 รายการ (กรอกเองได้ไม่จำกัด) <span id="sp-dirty" style="font-size:11.5px;font-weight:600;color:#8a5a00;margin-left:8px"></span></div>
+    <div style="font-size:12px;color:var(--muted);margin:-4px 0 6px">💡 “หัวข้อ” = บรรทัดชื่อรายการหลัก (มีเลขลำดับ ไม่มีราคา) · “รายการ” ที่อยู่ใต้หัวข้อจะเป็นรายละเอียดของหัวข้อนั้น พร้อมจำนวน/หน่วย/ราคา</div>
     <div id="sp-items-wrap">
       <!-- rows added dynamically -->
     </div>
@@ -705,8 +708,15 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
     </div>
     <div class="alert ai" style="font-size:12.5px">
       <div>💡 แยกใบกำกับภาษี <strong>ตามโรงงาน</strong> — ที่อยู่/เลขภาษี/สาขา ใช้ของแต่ละโรงงานในหน้า ⚙️ ตั้งค่า<br>
-      ยอด <strong>มูลค่าสินค้า / VAT / รวมทั้งสิ้น</strong> = ผลรวมของยอดใน Invoice แต่ละใบ (เหมือน Summary) ไม่คำนวณ VAT ใหม่ · เรียงตาม “ลำดับเลขที่” ของแผนก แล้วต่อด้วย Special Invoice<br>
+      ยอด <strong>มูลค่าสินค้า / VAT / รวมทั้งสิ้น</strong> = ผลรวมของยอดใน Invoice แต่ละใบ (เหมือน Summary) ไม่คำนวณ VAT ใหม่ · เรียงตาม “ลำดับเลขที่” ของแผนก แล้วต่อด้วย Special Invoice (จัดลำดับเองได้ด้วยปุ่ม ▲▼)<br>
       เลือก Invoice ที่จะรวมในใบได้ (ติ๊กถูก) — เลขที่ใบกำกับภาษีถูกใช้เมื่อกด “ออกใบกำกับภาษี” เท่านั้น และ Invoice ในใบที่ออกแล้วจะถูกล็อก</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.6rem;background:var(--surf2);padding:8px 10px;border-radius:var(--r)">
+      <span style="font-size:12.5px;font-weight:600;color:var(--navy)">🔢 เลขที่เอกสารใบกำกับภาษี</span>
+      <input type="text" id="tax-prefix" value="CS" style="width:60px;padding:5px;border:1px solid var(--bord);border-radius:6px;font-size:13px" title="อักษรนำหน้า">
+      <input type="number" id="tax-start" placeholder="เลขถัดไป เช่น 1198" style="width:150px;padding:5px;border:1px solid var(--bord);border-radius:6px;font-size:13px">
+      <button class="btn bo bsm" onclick="saveTaxCounter()">ตั้งเลขเริ่ม</button>
+      <span id="tax-counter-preview" style="font-size:12px;color:var(--muted)"></span>
     </div>
     <div id="tax-pending"></div>
     <div class="g2" style="gap:.75rem;align-items:flex-end">
@@ -799,15 +809,6 @@ service cloud.firestore {
     </div>
     <div class="alert ai" style="font-size:12.5px"><div>💡 ข้อมูลลูกค้าสำหรับใบกำกับภาษี <strong>แยกตามโรงงาน</strong> — ใบกำกับภาษีของแต่ละโรงงานจะใช้ชื่อ/สาขา/ที่อยู่/เลขภาษีของโรงงานนั้น (ใบที่ออกไปแล้วเก็บที่อยู่ ณ วันที่ออกไว้ ไม่เปลี่ยนตาม)</div></div>
     <div style="margin-bottom:.75rem">
-      <div class="g2" style="gap:.5rem;margin-bottom:.5rem;background:var(--surf2);padding:8px 10px;border-radius:var(--r)">
-        <span style="font-size:12px;font-weight:600;color:var(--navy)">เลขที่เอกสารใบกำกับภาษี (CS XXXXXXX)</span>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input type="text" id="tax-prefix" value="CS" style="width:60px;padding:5px;border:1px solid var(--bord);border-radius:6px;font-size:13px">
-          <input type="number" id="tax-start" placeholder="เช่น 1198" style="width:100px;padding:5px;border:1px solid var(--bord);border-radius:6px;font-size:13px">
-          <button class="btn bo bsm" onclick="saveTaxCounter()">ตั้งค่า</button>
-          <span id="tax-counter-preview" style="font-size:12px;color:var(--muted)"></span>
-        </div>
-      </div>
       <div id="customers-wrap"></div>
     </div>
   </div>
@@ -2493,7 +2494,9 @@ document.addEventListener('input',e=>{if(e.target.closest&&e.target.closest('#ts
 /* ปิด/รีเฟรชหน้า */
 window.addEventListener('beforeunload',e=>{
   if(_tsDirty&&hasTsContent()){ writeDraft(); e.preventDefault(); e.returnValue=''; return ''; }
+  if(typeof _spDirty!=='undefined'&&_spDirty&&hasSpContent()){ e.preventDefault(); e.returnValue=''; return ''; }
 });
+document.addEventListener('input',e=>{ if(e.target?.closest&&e.target.closest('#t5 .card')&&['sp-title','sp-messrs','sp-no'].includes(e.target.id)&&SP_ITEMS.length) setSpDirty(true); });
 
 /* ============================================================
    SAVE / LOAD TIMESHEET
@@ -3060,7 +3063,7 @@ function saveInv(confirmIt){
   alert(`✅ บันทึก Invoice "${no}" เป็น${status==='confirmed'?' “ยืนยันแล้ว” (ยอดคงที่)':' “ร่าง” (จะตามอัตราในตั้งค่า)'} เรียบร้อย`);
 }
 
-function invStatus(i){ return i.status||'confirmed'; }   // ข้อมูลเก่าก่อนมีสถานะ = ถือว่ายืนยันแล้ว
+function invStatus(i){ return i.type==='special'?'confirmed':(i.status||'confirmed'); }   // Special: บันทึกแล้ว = พร้อมออกใบกำกับภาษี   // ข้อมูลเก่าก่อนมีสถานะ = ถือว่ายืนยันแล้ว
 function renderInvList(){
   const el=document.getElementById('inv-list');
   if(!el) return;
@@ -3392,8 +3395,14 @@ function refreshMonthSelects(){
     sel.value=sorted.includes(cur)?cur:latestWithInv;
   });
 }
+let _taxMonPicked=false;
 function initTaxMonDropdown(){
   refreshMonthSelects();
+  const sel=document.getElementById('tax-mon');
+  if(sel&&!_taxMonPicked){ // ยังไม่ได้เลือกเอง → เปิดเดือนเก่าสุดที่ยังค้างออกใบกำกับภาษี
+    const pm=Object.keys(taxPendingSummary()).sort()[0];
+    if(pm){ if(![...sel.options].some(o=>o.value===pm)) sel.innerHTML+=`<option value="${pm}">${monthLabel(pm)}</option>`; if(sel.value!==pm){ sel.value=pm; const d=document.getElementById('tax-date'); if(d) d.value=taxDefaultDate(pm);} }
+  }
   const tdEl=document.getElementById('tax-date');
   if(tdEl&&!tdEl.value) tdEl.value=taxDefaultDate(document.getElementById('tax-mon')?.value);
 }
@@ -3462,10 +3471,29 @@ function toggleTaxSel(mon,pk,id,on){
   _taxSel[mon+'|'+pk]=arr;
   rerenderTax();
 }
+/* ลำดับในใบกำกับภาษี: ผู้ใช้จัดเองได้ (▲▼) — ค่าเริ่มต้น = ลำดับแผนก แล้ว Special */
+let _taxOrd={};
+try{_taxOrd=JSON.parse(localStorage.getItem('tax_order')||'{}')||{};}catch(e){_taxOrd={};}
+function saveTaxOrd(){ try{localStorage.setItem('tax_order',JSON.stringify(_taxOrd));}catch(e){} }
+function taxOrdered(mon,pk,list){
+  const def=taxSort(list), ord=_taxOrd[mon+'|'+pk];
+  if(!ord||!ord.length) return def;
+  const pos=new Map(ord.map((id,k)=>[id,k]));
+  // ใบที่ยังไม่อยู่ในลำดับที่จัดไว้ → แทรกตามลำดับค่าเริ่มต้น (ต่อท้าย)
+  return def.map((i,k)=>({i,k:pos.has(i.id)?pos.get(i.id):1e6+k})).sort((a,b)=>a.k-b.k).map(x=>x.i);
+}
+function moveTaxInv(mon,pk,id,d){
+  const cur=taxOrdered(mon,pk,taxPending(mon,pk)).map(i=>i.id);
+  const k=cur.indexOf(id), j=k+d; if(k<0||j<0||j>=cur.length) return;
+  [cur[k],cur[j]]=[cur[j],cur[k]];
+  _taxOrd[mon+'|'+pk]=cur; saveTaxOrd(); rerenderTax();
+}
+function resetTaxOrd(mon,pk){ delete _taxOrd[mon+'|'+pk]; saveTaxOrd(); rerenderTax(); }
 function toggleTaxAll(mon,pk,on){ _taxSel[mon+'|'+pk]=on?taxPending(mon,pk).map(i=>i.id):[]; rerenderTax(); }
 function rerenderTax(){ const y=window.scrollY; genTaxInvoices(); window.scrollTo(0,y); }
 function taxDefaultDate(mon){ return mon?mon+'-25':todayISO(); }
 function onTaxMonChange(){
+  _taxMonPicked=true;
   const mon=document.getElementById('tax-mon')?.value, d=document.getElementById('tax-date');
   if(d&&mon) d.value=taxDefaultDate(mon);
   genTaxInvoices();
@@ -3543,7 +3571,8 @@ function genTaxInvoices(){
   let any=false;
   taxPlantKeys(mon).forEach(pk=>{
     const issued=issuedMon.filter(t=>t.plant===pk);
-    const pend=taxSort(taxPending(mon,pk));
+    const pend=taxOrdered(mon,pk,taxPending(mon,pk));
+    const customOrd=!!(_taxOrd[mon+'|'+pk]||[]).length;
     if(!issued.length&&!pend.length) return;
     any=true;
     const bill=plantBill(pk), pname=CFG[pk]?.name||pk;
@@ -3558,16 +3587,18 @@ function genTaxInvoices(){
     if(pend.length){
       const allOn=chosen.length===pend.length;
       h+=`<div class="no-print" style="margin-top:.25rem">
-        <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px">📝 เลือก Invoice ที่จะรวมในใบกำกับภาษีใบใหม่ (${monthLabel(mon)})</div>
-        <table class="tx-sel"><thead><tr><th style="width:34px"><input type="checkbox" ${allOn?'checked':''} onchange="toggleTaxAll('${mon}','${pk}',this.checked)" title="เลือกทั้งหมด"></th><th style="width:34px">#</th><th>เลขที่ Invoice</th><th>แผนก</th><th>วันที่</th><th>สถานะ</th><th class="num">มูลค่า</th><th class="num">VAT</th><th class="num">รวม</th></tr></thead><tbody>
+        <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:4px">📝 เลือก Invoice ที่จะรวมในใบกำกับภาษีใบใหม่ (${monthLabel(mon)}) <span style="font-weight:400;color:var(--muted);font-size:12px">— กด ▲▼ เพื่อจัดลำดับในใบเอง</span></div>
+        <table class="tx-sel"><thead><tr><th style="width:34px"><input type="checkbox" ${allOn?'checked':''} onchange="toggleTaxAll('${mon}','${pk}',this.checked)" title="เลือกทั้งหมด"></th><th style="width:34px">#</th><th style="width:62px">ลำดับ</th><th>เลขที่ Invoice</th><th>แผนก</th><th>วันที่</th><th>สถานะ</th><th class="num">มูลค่า</th><th class="num">VAT</th><th class="num">รวม</th></tr></thead><tbody>
         ${(()=>{let k=0;return pend.map(i=>{const on=sel.has(i.id), a=invAmt(i); if(on) k++;
+          const ix=pend.indexOf(i);
           return `<tr class="${on?'':'off'}"><td><input type="checkbox" ${on?'checked':''} onchange="toggleTaxSel('${mon}','${pk}',${i.id},this.checked)"></td><td>${on?k:''}</td>
+            <td style="white-space:nowrap"><button class="btn bo bsm" style="padding:1px 7px" ${ix?'':'disabled'} onclick="moveTaxInv('${mon}','${pk}',${i.id},-1)" title="เลื่อนขึ้น">▲</button><button class="btn bo bsm" style="padding:1px 7px;margin-left:2px" ${ix<pend.length-1?'':'disabled'} onclick="moveTaxInv('${mon}','${pk}',${i.id},1)" title="เลื่อนลง">▼</button></td>
             <td>${esc(i.no)}${i.type==='special'?' <span class="badge bg-navy" style="font-size:10px">Special</span>':''}</td>
             <td>${esc(CFG[pk]?.depts?.[i.dept]?.name||i.dept||'')}${i.type==='special'?'':` <span style="color:var(--muted);font-size:11px">ลำดับ ${deptSeq(pk,i.dept)}</span>`}</td>
             <td style="font-size:12px">${esc(i.dt||'')}</td>
             <td>${invStatus(i)==='confirmed'?'<span class="badge bg-green">ยืนยันแล้ว</span>':'<span class="badge bg-gold" title="ถ้าติ๊กรวม จะถูกยืนยันอัตโนมัติเมื่อออกใบกำกับภาษี">ร่าง</span>'}</td>
             <td class="num">${fmtNum(a.up)}</td><td class="num">${fmtNum(a.vat)}</td><td class="num">${fmtNum(a.grand)}</td></tr>`;}).join('');})()}
-        </tbody><tfoot><tr><td></td><td colspan="5">รวมที่เลือก ${chosen.length} ใบ</td><td class="num">${fmtNum(t.up)}</td><td class="num">${fmtNum(t.vat)}</td><td class="num">${fmtNum(t.grand)}</td></tr></tfoot></table>
+        </tbody><tfoot><tr><td></td><td colspan="6">รวมที่เลือก ${chosen.length} ใบ${customOrd?` <button class="btn bo bsm" style="margin-left:8px;font-weight:400" onclick="resetTaxOrd('${mon}','${pk}')">↺ เรียงตามลำดับแผนก</button>`:''}</td><td class="num">${fmtNum(t.up)}</td><td class="num">${fmtNum(t.vat)}</td><td class="num">${fmtNum(t.grand)}</td></tr></tfoot></table>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:.6rem">
           <button class="btn bs" ${chosen.length?'':'disabled'} onclick="issueTax('${mon}','${pk}')">✅ ออกใบกำกับภาษี (ใช้เลขที่จริง)</button>
           <span style="font-size:12px;color:var(--muted)">วันที่ในใบ: ${esc(taxDate)}${taxDate.slice(0,7)!==mon?' <span style="color:#c8060a">(คนละเดือนกับ Invoice)</span>':''}</span>
@@ -3602,7 +3633,7 @@ function genTaxInvoices(){
 
 async function issueTax(mon,pk){
   const sel=new Set(taxSelIds(mon,pk));
-  const invs=taxSort(taxPending(mon,pk).filter(i=>sel.has(i.id)));
+  const invs=taxOrdered(mon,pk,taxPending(mon,pk)).filter(i=>sel.has(i.id));
   if(!invs.length){alert('กรุณาเลือก Invoice อย่างน้อย 1 ใบ');return;}
   const date=document.getElementById('tax-date')?.value||taxDefaultDate(mon);
   const t=taxTotals(invs);
@@ -3618,7 +3649,7 @@ async function issueTax(mon,pk){
     status:'issued',issuedAt:new Date().toISOString()};
   S.taxInvoices.push(rec);
   drafts.forEach(i=>{i.status='confirmed';i.confirmedAt=new Date().toISOString();dbSaveInv(i,true);});
-  delete _taxSel[mon+'|'+pk]; delete _taxSeen[mon+'|'+pk];
+  delete _taxSel[mon+'|'+pk]; delete _taxSeen[mon+'|'+pk]; delete _taxOrd[mon+'|'+pk]; saveTaxOrd();
   persistLocal();
   dbSaveTax(rec);
   updateTaxCounterPreview();
@@ -5610,7 +5641,14 @@ let SP_ITEMS=[]; // [{desc, qty, unit, price, amt}]
 let _loadedSpId=null; // Special Invoice ที่เปิดแก้ไขอยู่
 /* Special Invoice เก็บรวมใน S.invoices (type:'special') ที่เดียว — ไม่มีรายการแยกแล้ว */
 function spList(){ return S.invoices.filter(i=>i.type==='special'); }
-function newSpInv(){
+let _spDirty=false;
+function setSpDirty(v){
+  _spDirty=v;
+  const el=document.getElementById('sp-dirty');
+  if(el) el.textContent=v?'● ยังไม่ได้บันทึก':'';
+}
+function newSpInv(force){
+  if(!force&&_spDirty&&hasSpContent()&&!confirm('Special Invoice ที่กรอกอยู่ยังไม่ได้บันทึก — ต้องการทิ้งแล้วเริ่มใบใหม่?')) return false;
   _loadedSpId=null;
   SP_ITEMS=[];
   const noEl=document.getElementById('sp-no');
@@ -5618,8 +5656,20 @@ function newSpInv(){
   autoFillSpNo();
   renderSpItems();
   renderSpSaved();
+  setSpDirty(false);
   const pc=document.getElementById('sp-preview-card');
   if(pc) pc.style.display='none';
+  return true;
+}
+function hasSpContent(){ return SP_ITEMS.some(it=>String(it.desc||'').trim()||+it.price||+it.amt); }
+/* ละทิ้ง: ใบที่โหลดมาแก้ → กลับไปค่าที่บันทึกไว้ / ใบใหม่ → ล้างทิ้ง (ไม่ได้บันทึก = ไม่มีเก็บไว้ที่ไหน) */
+function discardSp(){
+  if(_loadedSpId){
+    if(_spDirty&&!confirm('ทิ้งการแก้ไขที่ยังไม่ได้บันทึก แล้วกลับไปใช้ค่าที่บันทึกไว้?')) return;
+    loadSpInv(_loadedSpId); showToast('↩️ กลับไปค่าที่บันทึกไว้แล้ว'); return;
+  }
+  if(hasSpContent()&&!confirm('ทิ้ง Special Invoice ที่กรอกอยู่ (ยังไม่ได้บันทึก)?')) return;
+  newSpInv(true); showToast('🗑️ ล้างแบบฟอร์มแล้ว');
 }
 
 function onSpPlantChange(){
@@ -5641,48 +5691,101 @@ function initSpDropdowns(){
 
 function addSpItem(desc='',qty=1,unit='งาน',price=0){
   const id='sp-item-'+Date.now()+Math.random().toString(36).slice(2,6);
-  SP_ITEMS.push({id,desc,qty,unit,price,amt:qty*price});
+  SP_ITEMS.push({id,desc,qty,unit,price,amt:r2(qty*price)});
+  setSpDirty(true);
   renderSpItems();
+  focusSpDesc(SP_ITEMS.length-1);
+}
+function addSpHead(desc=''){
+  const id='sp-item-'+Date.now()+Math.random().toString(36).slice(2,6);
+  SP_ITEMS.push({id,head:true,desc,qty:0,unit:'',price:0,amt:0});
+  setSpDirty(true);
+  renderSpItems();
+  focusSpDesc(SP_ITEMS.length-1);
+}
+function focusSpDesc(i){ const el=document.getElementById('sp-desc-'+i); if(el) el.focus(); }
+/* หัวข้อ = ตั้งเป็นหัวข้อ หรือ (ข้อมูลเก่า) มีข้อความแต่ไม่มีจำนวน/ราคา */
+function isSpHead(it){ return !!it.head||(!(+it.qty)&&!(+it.price)&&!(+it.amt)&&String(it.desc||'').trim()!==''&&!String(it.unit||'').trim()); }
+/* เลขลำดับ: หัวข้อได้เลข · รายการใต้หัวข้อไม่มีเลข (เป็นรายละเอียด) · รายการที่ไม่มีหัวข้อได้เลขของตัวเอง */
+function spNumbering(items){
+  let n=0, under=false;
+  return items.map(it=>{
+    if(isSpHead(it)){n++;under=true;return {num:n,head:true,sub:false};}
+    if(under) return {num:'',head:false,sub:true};
+    n++; return {num:n,head:false,sub:false};
+  });
+}
+function fmtQty(q){ q=+q||0; return Number.isInteger(q)?q.toLocaleString('en-US'):fmtNum(q); }
+function spSet(i,f,v){
+  const it=SP_ITEMS[i]; if(!it) return;
+  it[f]=(f==='qty'||f==='price')?(+v||0):v;
+  if(f==='qty'||f==='price'){
+    it.amt=r2((+it.qty||0)*(+it.price||0));
+    const a=document.getElementById('sp-amt-'+i); if(a) a.textContent=fmtNum(it.amt);
+    calcSp();
+  }
+  setSpDirty(true);
+}
+function toggleSpHead(i){
+  const it=SP_ITEMS[i]; if(!it) return;
+  if(isSpHead(it)){ it.head=false; if(!(+it.qty)) it.qty=1; if(!String(it.unit||'').trim()) it.unit='งาน'; }
+  else { it.head=true; it.qty=0; it.price=0; it.amt=0; it.unit=''; }
+  setSpDirty(true); renderSpItems();
+}
+function moveSpItem(i,d){
+  const j=i+d; if(j<0||j>=SP_ITEMS.length) return;
+  [SP_ITEMS[i],SP_ITEMS[j]]=[SP_ITEMS[j],SP_ITEMS[i]];
+  setSpDirty(true); renderSpItems();
 }
 
 function renderSpItems(){
   const wrap=document.getElementById('sp-items-wrap');
   if(!wrap) return;
   if(SP_ITEMS.length===0){
-    wrap.innerHTML='<p style="color:var(--light);font-size:13px;padding:.5rem 0">ยังไม่มีรายการ — กด "+ เพิ่มรายการ"</p>';
+    wrap.innerHTML='<p style="color:var(--light);font-size:13px;padding:.5rem 0">ยังไม่มีรายการ — กด “+ หัวข้อ” (เช่น ค่าบริการ) แล้วกด “+ เพิ่มรายการ” สำหรับรายละเอียด</p>';
     calcSp(); return;
   }
+  const nb=spNumbering(SP_ITEMS);
+  const inp='width:100%;padding:5px 7px;border:1px solid var(--bord);border-radius:6px;font-size:13px';
+  const th='padding:7px 8px;border-bottom:1px solid var(--bord)';
+  const sbtn='background:var(--surf2);border:1px solid var(--bord);border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px';
   wrap.innerHTML=`
   <div style="overflow-x:auto">
   <table style="width:100%;border-collapse:collapse;font-size:13.5px">
     <thead><tr style="background:var(--surf2)">
-      <th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--bord);min-width:280px">รายการ / Description</th>
-      <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--bord);width:80px">จำนวน</th>
-      <th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--bord);width:80px">หน่วย</th>
-      <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--bord);width:120px">ราคา/หน่วย</th>
-      <th style="padding:7px 8px;text-align:right;border-bottom:1px solid var(--bord);width:120px">จำนวนเงิน</th>
-      <th style="padding:7px 8px;width:40px;border-bottom:1px solid var(--bord)"></th>
+      <th style="${th};text-align:center;width:38px">ลำดับ</th>
+      <th style="${th};text-align:left;min-width:280px">รายการ / Description</th>
+      <th style="${th};text-align:center;width:80px">จำนวน</th>
+      <th style="${th};text-align:center;width:80px">หน่วย</th>
+      <th style="${th};text-align:right;width:120px">ราคา/หน่วย</th>
+      <th style="${th};text-align:right;width:120px">จำนวนเงิน</th>
+      <th style="${th};width:150px"></th>
     </tr></thead>
     <tbody>
-    ${SP_ITEMS.map((item,i)=>`<tr style="border-bottom:1px solid var(--bord)">
-      <td style="padding:5px 8px"><input type="text" value="${esc(item.desc)}"
-        style="width:100%;padding:5px 7px;border:1px solid var(--bord);border-radius:6px;font-size:13px;font-family:Sarabun,sans-serif"
-        oninput="SP_ITEMS[${i}].desc=this.value"></td>
-      <td style="padding:5px 8px"><input type="number" value="${item.qty}" min="0" step="0.01"
-        style="width:100%;padding:5px 7px;border:1px solid var(--bord);border-radius:6px;font-size:13px;text-align:center"
-        oninput="SP_ITEMS[${i}].qty=+this.value;SP_ITEMS[${i}].amt=SP_ITEMS[${i}].qty*SP_ITEMS[${i}].price;calcSp()"></td>
-      <td style="padding:5px 8px"><input type="text" value="${esc(item.unit)}"
-        style="width:100%;padding:5px 7px;border:1px solid var(--bord);border-radius:6px;font-size:13px;text-align:center"
-        oninput="SP_ITEMS[${i}].unit=this.value"></td>
-      <td style="padding:5px 8px"><input type="number" value="${item.price}" min="0" step="0.01"
-        style="width:100%;padding:5px 7px;border:1px solid var(--bord);border-radius:6px;font-size:13px;text-align:right"
-        oninput="SP_ITEMS[${i}].price=+this.value;SP_ITEMS[${i}].amt=SP_ITEMS[${i}].qty*SP_ITEMS[${i}].price;calcSp()"></td>
-      <td style="padding:5px 8px;text-align:right;font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600">
-        ${fmtNum(item.amt)}</td>
-      <td style="padding:5px 8px;text-align:center">
-        <button onclick="delSpItem(${i})" style="background:#fee2e2;color:#c00;border:none;border-radius:4px;padding:3px 7px;cursor:pointer;font-size:13px">✕</button>
-      </td>
-    </tr>`).join('')}
+    ${SP_ITEMS.map((item,i)=>{const n=nb[i];
+      const tools=`<div style="display:flex;gap:3px;justify-content:flex-end;align-items:center">
+        <button style="${sbtn}" onclick="toggleSpHead(${i})" title="สลับ หัวข้อ ↔ รายการ">${n.head?'→ รายการ':'→ หัวข้อ'}</button>
+        <button style="${sbtn}" onclick="moveSpItem(${i},-1)" ${i?'':'disabled'} title="เลื่อนขึ้น">▲</button>
+        <button style="${sbtn}" onclick="moveSpItem(${i},1)" ${i<SP_ITEMS.length-1?'':'disabled'} title="เลื่อนลง">▼</button>
+        <button onclick="delSpItem(${i})" style="background:#fee2e2;color:#c00;border:none;border-radius:4px;padding:3px 7px;cursor:pointer;font-size:13px" title="ลบ">✕</button></div>`;
+      if(n.head) return `<tr style="border-bottom:1px solid var(--bord);background:#f6f9fd">
+      <td style="padding:5px 8px;text-align:center;font-weight:700">${n.num}</td>
+      <td style="padding:5px 8px"><input type="text" id="sp-desc-${i}" value="${esc(item.desc)}" placeholder="หัวข้อ เช่น ค่าบริการ"
+        style="${inp};font-weight:700;font-family:Sarabun,sans-serif" oninput="spSet(${i},'desc',this.value)"></td>
+      <td colspan="4" style="padding:5px 8px;font-size:11.5px;color:var(--muted)">หัวข้อ — ไม่มีจำนวน/ราคา (รายการด้านล่างคือรายละเอียด)</td>
+      <td style="padding:5px 8px">${tools}</td></tr>`;
+      return `<tr style="border-bottom:1px solid var(--bord)">
+      <td style="padding:5px 8px;text-align:center">${n.num}</td>
+      <td style="padding:5px 8px${n.sub?';padding-left:24px':''}"><input type="text" id="sp-desc-${i}" value="${esc(item.desc)}"
+        style="${inp};font-family:Sarabun,sans-serif" oninput="spSet(${i},'desc',this.value)"></td>
+      <td style="padding:5px 8px"><input type="number" value="${item.qty}" min="0" step="0.01" style="${inp};text-align:center"
+        oninput="spSet(${i},'qty',this.value)"></td>
+      <td style="padding:5px 8px"><input type="text" value="${esc(item.unit)}" style="${inp};text-align:center"
+        oninput="spSet(${i},'unit',this.value)"></td>
+      <td style="padding:5px 8px"><input type="number" value="${item.price}" min="0" step="0.01" style="${inp};text-align:right"
+        oninput="spSet(${i},'price',this.value)"></td>
+      <td id="sp-amt-${i}" style="padding:5px 8px;text-align:right;font-size:13px;font-weight:600">${fmtNum(item.amt)}</td>
+      <td style="padding:5px 8px">${tools}</td></tr>`;}).join('')}
     </tbody>
   </table></div>`;
   calcSp();
@@ -5690,15 +5793,16 @@ function renderSpItems(){
 
 function delSpItem(i){
   SP_ITEMS.splice(i,1);
+  setSpDirty(true);
   renderSpItems();
 }
 
 function fmtNum(n){ return (+n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 function calcSp(){
-  const up=SP_ITEMS.reduce((s,r)=>s+(r.amt||0),0);
-  const vat=up*0.07;
-  const grand=up+vat;
+  const up=r2(SP_ITEMS.reduce((s,r)=>s+(isSpHead(r)?0:r2((+r.qty||0)*(+r.price||0))),0));
+  const vat=r2(up*0.07);
+  const grand=r2(up+vat);
   const el=(id)=>document.getElementById(id);
   if(el('sp-up'))    el('sp-up').textContent   =fmtNum(up)+' Baht';
   if(el('sp-vat'))   el('sp-vat').textContent  =fmtNum(vat)+' Baht';
@@ -5720,14 +5824,20 @@ function getSpInvHTML(forPrint=false){
   const fmt=fmtNum;
   const lhHtml=getLetterheadHTML(forPrint);
 
-  const rows=SP_ITEMS.map(item=>`
-    <tr>
-      <td style="padding:8px 10px;border-bottom:1px solid #eee">${esc(item.desc)}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:center">${fmt(item.qty)}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:center">${esc(item.unit)}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:right">${fmt(item.price)}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #eee;text-align:right;font-weight:600">${fmt(item.amt)}</td>
-    </tr>`).join('');
+  const nb=spNumbering(SP_ITEMS);
+  const cb='border-left:1px solid #555;border-right:1px solid #555';
+  const rows=SP_ITEMS.map((item,i)=>{const n=nb[i];
+    if(n.head) return `<tr>
+      <td style="padding:6px 8px 2px;${cb};text-align:center;vertical-align:top">${n.num}</td>
+      <td style="padding:6px 10px 2px;${cb};font-weight:600">${esc(item.desc)}</td>
+      <td style="${cb}"></td><td style="${cb}"></td><td style="${cb}"></td></tr>`;
+    return `<tr>
+      <td style="padding:3px 8px;${cb};text-align:center;vertical-align:top">${n.num}</td>
+      <td style="padding:3px 10px;${cb};${n.sub?'padding-left:12px;':''}">${esc(item.desc)}</td>
+      <td style="padding:3px 10px;${cb};text-align:center;vertical-align:bottom;white-space:nowrap">${fmtQty(item.qty)} ${esc(item.unit||'')}</td>
+      <td style="padding:3px 10px;${cb};text-align:right;vertical-align:bottom">${fmt(item.price)}</td>
+      <td style="padding:3px 10px;${cb};text-align:right;vertical-align:bottom">${fmt(r2((+item.qty||0)*(+item.price||0)))}</td></tr>`;}).join('')
+    +`<tr><td style="height:40px;${cb};border-bottom:1px solid #555"></td><td style="${cb};border-bottom:1px solid #555"></td><td style="${cb};border-bottom:1px solid #555"></td><td style="${cb};border-bottom:1px solid #555"></td><td style="${cb};border-bottom:1px solid #555"></td></tr>`;
 
   return `
   <div style="font-family:'Sarabun',sans-serif;max-width:800px;margin:0 auto;padding:20px">
@@ -5748,14 +5858,14 @@ function getSpInvHTML(forPrint=false){
     </div>
     <div style="font-weight:700;font-size:13.5px;color:var(--navy,#1a3a5c);margin:.5rem 0;letter-spacing:.04em">${esc(title)}</div>
 
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:1rem">
+    <table class="sp-doc-tbl" style="width:100%;border-collapse:collapse;font-size:13px;margin-top:1rem;border:1px solid #555">
       <thead>
         <tr style="background:#1a3a5c;color:#fff">
-          <th style="padding:9px 10px;text-align:left">รายการ / Description</th>
-          <th style="padding:9px 10px;text-align:center;width:80px">จำนวน</th>
-          <th style="padding:9px 10px;text-align:center;width:70px">หน่วย</th>
-          <th style="padding:9px 10px;text-align:right;width:110px">ราคา/หน่วย (฿)</th>
-          <th style="padding:9px 10px;text-align:right;width:120px">จำนวนเงิน (฿)</th>
+          <th style="padding:6px 4px;text-align:center;width:64px;line-height:1.3;border:1px solid #555;white-space:nowrap">ลำดับที่<br><span style="font-size:10.5px">ITEM</span></th>
+          <th style="padding:6px 10px;text-align:center;line-height:1.3;border:1px solid #555">รายการ<br><span style="font-size:10.5px">DESCRIPTION</span></th>
+          <th style="padding:6px 8px;text-align:center;width:90px;line-height:1.3;border:1px solid #555">จำนวน<br><span style="font-size:10.5px">Quantity</span></th>
+          <th style="padding:6px 8px;text-align:center;width:110px;line-height:1.3;border:1px solid #555">ราคาต่อหน่วย<br><span style="font-size:10.5px">UNIT PRICE</span></th>
+          <th style="padding:6px 8px;text-align:center;width:120px;line-height:1.3;border:1px solid #555">จำนวนเงิน<br><span style="font-size:10.5px">Amount</span></th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
@@ -5798,8 +5908,8 @@ function spPrintDoc(){
   @page{size:A4 portrait;margin:15mm 12mm}
   body{font-family:'Sarabun',sans-serif;font-size:10pt;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   table{width:100%;border-collapse:collapse}
-  th{background:#1a3a5c!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:8px 10px}
-  td{border-bottom:1px solid #eee;padding:7px 10px}`;
+  th{background:#1a3a5c!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tr{page-break-inside:avoid}`;
   const body='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+esc(no)+'</title>'+'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">'
     +'<style>'+css+'</style></head>'
     +'<body onload="setTimeout(function(){window.print();},400)">'+getSpInvHTML(true)+'</body></html>';
@@ -5839,11 +5949,12 @@ async function saveSpInv(){
     title:document.getElementById('sp-title')?.value,
     messrs:document.getElementById('sp-messrs')?.value,
     items:JSON.parse(JSON.stringify(SP_ITEMS)), up, vat, grand,
-    status:old?invStatus(old):'draft', confirmedAt:old?old.confirmedAt||null:null
+    status:'confirmed', confirmedAt:old?.confirmedAt||new Date().toISOString()
   };
   S.invoices=S.invoices.filter(i=>i!==old);
   S.invoices.push(inv);
   _loadedSpId=id;
+  setSpDirty(false);
   persistLocal();
   renderSpSaved();renderInvList();refreshMonthSelects();buildSum();
   dbSaveInv(inv);
@@ -5864,19 +5975,20 @@ function renderSpSaved(){
         <strong style="margin-left:8px;font-size:13px">${esc(inv.no)}</strong>
         <span style="font-size:12px;color:var(--muted);margin-left:6px">${esc(inv.dt||'')}</span>
         <span style="font-size:12px;color:var(--navy);margin-left:8px;font-weight:600">${fmtNum(inv.grand)} ฿</span>
-        ${r?`<span class="badge bg-navy" style="margin-left:6px">🔒 ${esc(r.no)}</span>`:invStatus(inv)==='confirmed'?'<span class="badge bg-green" style="margin-left:6px">✅ ยืนยันแล้ว</span>':'<span class="badge bg-gold" style="margin-left:6px">ร่าง</span>'}
+        ${r?`<span class="badge bg-navy" style="margin-left:6px">🔒 ${esc(r.no)}</span>`:'<span class="badge bg-green" style="margin-left:6px">✅ บันทึกแล้ว · รอออกใบกำกับภาษี</span>'}
         ${inv.id===_loadedSpId?'<span class="badge bg-green" style="margin-left:6px">กำลังแก้ไข</span>':''}
       </div>
       <div style="display:flex;gap:6px">
-        <button class="btn bs bsm" onclick="loadSpInv(${inv.id})">📂 โหลด</button>
+        <button class="btn bs bsm" onclick="loadSpInv(${inv.id},true)">📂 โหลด</button>
         ${r?'':`<button class="btn bd bsm" onclick="delSpInv(${inv.id})">🗑️ ลบ</button>`}
       </div>
     </div>`;}).join('');
 }
 
-function loadSpInv(id){
+function loadSpInv(id,ask){
   const inv=spList().find(i=>i.id===id);
   if(!inv) return;
+  if(ask&&_spDirty&&hasSpContent()&&id!==_loadedSpId&&!confirm('Special Invoice ที่กรอกอยู่ยังไม่ได้บันทึก — ต้องการทิ้งแล้วโหลดใบนี้?')) return;
   _loadedSpId=id;
   const noEl=document.getElementById('sp-no');
   noEl.value=inv.no; noEl.dataset.manual='1';
@@ -5890,6 +6002,7 @@ function loadSpInv(id){
     SP_ITEMS=JSON.parse(JSON.stringify(inv.items||[]));
     renderSpItems();
     renderSpSaved();
+    setSpDirty(false);
   },50);
 }
 
