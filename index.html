@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-14b | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-15a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -306,7 +306,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-14b</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-15a</div>
 </header>
 
 <nav class="tabs">
@@ -3470,7 +3470,7 @@ function taxSetOrder(mon){
   return def.map((k,n)=>({k,n:pos.has(k)?pos.get(k):1e6+n})).sort((a,b)=>a.n-b.n).map(x=>x.k);
 }
 function moveTaxSet(mon,sk,d){
-  const live=taxBatchFor(mon).map(b=>b.sk), k=live.indexOf(sk), j=k+d;
+  const live=taxSetOrder(mon).filter(x=>taxPendingSet(mon,x).length), k=live.indexOf(sk), j=k+d;
   if(k<0||j<0||j>=live.length) return;
   [live[k],live[j]]=[live[j],live[k]];
   const rest=taxSetOrder(mon).filter(x=>!live.includes(x));
@@ -3651,38 +3651,57 @@ function genTaxInvoices(){
   const issuedMon=S.taxInvoices.filter(t=>t.mon===mon&&t.status==='issued');
   container.innerHTML='';
   let any=false;
+  // ===== ทุกชุดงานของเดือน (ชุดหลัก + Special) อยู่ในรายการเดียว เรียงตามลำดับการออกเลข =====
   const batch=taxBatchFor(mon);
-  if(batch.length>1){
+  const pendSets=taxSetOrder(mon).filter(sk=>taxPendingSet(mon,sk).length);
+  const issuedSorted=issuedMon.filter(t=>t.plant).sort((x,y)=>String(x.no).localeCompare(String(y.no),'en',{numeric:true}));
+  if(pendSets.length||issuedSorted.length){
+    any=true;
     const custom=!!(_taxSetOrd[mon]||[]).length;
+    let nx=''; try{ nx=document.getElementById('tax-counter-preview')?.textContent||''; }catch(e){}
     const bx=document.createElement('div'); bx.className='card no-print'; bx.style.marginBottom='1rem';
-    bx.innerHTML=`<div class="ch"><div class="ct">🔢 ลำดับการออกเลขที่ (ชุดงานที่รอออก ${monthLabel(mon)})</div>${custom?`<button class="btn bo bsm" onclick="resetTaxSetOrd('${mon}')">↺ ค่าเริ่มต้น (ชุดหลักก่อน Special ท้าย)</button>`:''}</div>
-      <table class="tx-sel"><thead><tr><th style="width:44px">ลำดับ</th><th style="width:70px"></th><th>ชุดงาน</th><th class="num">Invoice</th><th class="num">รวม (฿)</th></tr></thead><tbody>
-      ${batch.map((b,n)=>`<tr><td><strong>${n+1}</strong></td>
-        <td style="white-space:nowrap"><button class="btn bo bsm" style="padding:1px 7px" ${n?'':'disabled'} onclick="moveTaxSet('${mon}','${b.sk}',-1)" title="ออกเลขก่อน">▲</button><button class="btn bo bsm" style="padding:1px 7px;margin-left:2px" ${n<batch.length-1?'':'disabled'} onclick="moveTaxSet('${mon}','${b.sk}',1)" title="ออกเลขทีหลัง">▼</button></td>
-        <td>${skIsSp(b.sk)?'⭐':'🏭'} ${esc(skLabel(b.sk))}</td><td class="num">${b.invs.length}</td><td class="num">${fmtNum(taxTotals(b.invs).grand)}</td></tr>`).join('')}
+    const bIdx=new Map(batch.map((x,n)=>[x.sk,n]));
+    bx.innerHTML=`<div class="ch"><div class="ct">🔢 ชุดงานทั้งหมด ${monthLabel(mon)} — เรียงตามลำดับการออกเลขที่</div>${custom?`<button class="btn bo bsm" onclick="resetTaxSetOrd('${mon}')">↺ ค่าเริ่มต้น (ชุดหลักก่อน Special ท้าย)</button>`:''}</div>
+      <div style="font-size:12px;color:var(--muted);margin:-4px 0 6px">ชุดหลักและ Special อยู่ในรายการเดียวกัน — กด ▲▼ เพื่อเลือกว่าชุดไหนออกเลขก่อน (เช่น ให้ Special ขึ้นก่อนก็ได้) · ${esc(nx)}</div>
+      <table class="tx-sel"><thead><tr><th style="width:52px">ลำดับ</th><th style="width:70px"></th><th>ชุดงาน</th><th class="num">Invoice</th><th class="num">รวม (฿)</th><th style="width:150px">สถานะ</th></tr></thead><tbody>
+      ${issuedSorted.map(r=>`<tr style="background:#f3faf5"><td>✔</td><td></td>
+        <td>${r.set==='special'?'⭐':'🏭'} ${esc((CFG[r.plant]?.name||r.plant)+' — '+(r.set==='special'?'ชุด Special':'ชุดหลัก'))}</td>
+        <td class="num">${(r.invIds||[]).length}</td><td class="num">${fmtNum(r.grand)}</td><td><span class="badge bg-green">ออกแล้ว ${esc(r.no)}</span></td></tr>`).join('')}
+      ${pendSets.map((sk,n)=>{const bi=bIdx.get(sk), cnt=bi!==undefined?batch[bi].invs.length:0;
+        return `<tr><td><strong>${bi!==undefined?bi+1:'–'}</strong></td>
+        <td style="white-space:nowrap"><button class="btn bo bsm" style="padding:1px 7px" ${n?'':'disabled'} onclick="moveTaxSet('${mon}','${sk}',-1)" title="ออกเลขก่อน">▲</button><button class="btn bo bsm" style="padding:1px 7px;margin-left:2px" ${n<pendSets.length-1?'':'disabled'} onclick="moveTaxSet('${mon}','${sk}',1)" title="ออกเลขทีหลัง">▼</button></td>
+        <td><a href="#taxset-${sk.replace('~','_')}" style="color:inherit">${skIsSp(sk)?'⭐':'🏭'} ${esc(skLabel(sk))}</a></td><td class="num">${cnt}/${taxPendingSet(mon,sk).length}</td>
+        <td class="num">${cnt?fmtNum(taxTotals(batch[bi].invs).grand):'-'}</td><td><span class="badge bg-gold">รอออก</span></td></tr>`;}).join('')}
       </tbody></table>
-      <button class="btn bs" onclick="issueTaxAll('${mon}')">✅ ออกใบกำกับภาษีทุกชุดตามลำดับนี้ (${batch.length} ใบ)</button>
-      <span style="font-size:12px;color:var(--muted);margin-left:6px">หรือกดออกทีละชุดด้านล่าง — เลขที่จะรันตามลำดับที่กดออก</span>`;
+      ${batch.length?`<button class="btn bs" onclick="issueTaxAll('${mon}')">✅ ออกใบกำกับภาษีทุกชุดที่รอ ตามลำดับนี้ (${batch.length} ใบ)</button>
+      <span style="font-size:12px;color:var(--muted);margin-left:6px">หรือกดออกทีละชุดด้านล่าง — เลขที่จะรันตามลำดับที่กดออก</span>`:''}`;
     container.appendChild(bx);
   }
-  taxPlantKeys(mon).forEach(pk=>{
-    const issued=issuedMon.filter(t=>t.plant===pk);
+  // การ์ดของแต่ละชุดที่รอออก — เรียงตามลำดับเดียวกับตารางด้านบน
+  pendSets.forEach((sk,n)=>{
+    const pk=skPlant(sk), bill=plantBill(pk), pend=taxPendingSet(mon,sk);
     const allPend=taxPending(mon,pk);
-    if(!issued.length&&!allPend.length) return;
-    any=true;
-    const bill=plantBill(pk), pname=CFG[pk]?.name||pk;
     const hasSp=allPend.some(i=>i.type==='special'), hasMain=allPend.some(i=>i.type!=='special');
+    const bi=batch.findIndex(x=>x.sk===sk);
     const card=document.createElement('div');
-    card.className='card'; card.style.marginBottom='1rem';
-    let h=`<div class="ch no-print"><div class="ct">🏭 ${esc(pname)} <span style="font-size:12px;color:var(--muted);font-weight:400">— ${esc(bill.name)} (${esc(bill.branch||'')})</span></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${issued.length?`<span class="badge bg-green">ออกแล้ว ${issued.length} ใบ</span>`:''}${allPend.length?`<span class="badge bg-gold">รอออก ${allPend.length} Invoice</span>`:'<span class="badge bg-green">ครบแล้ว</span>'}</div></div>`;
-    h+=issued.map(issuedCardHTML).join('');
-    if(hasSp&&hasMain) h+=`<label class="no-print" style="display:inline-flex;gap:6px;align-items:center;font-size:12.5px;margin:.25rem 0 .5rem;cursor:pointer">
-      <input type="checkbox" ${taxSpMerged(mon,pk)?'checked':''} onchange="setTaxMerge('${mon}','${pk}',this.checked)"> รวม Special Invoice ไว้ในใบเดียวกับชุดหลัก <span style="color:var(--muted)">(ไม่ติ๊ก = แยกเป็นชุด Special ออกเลขต่างหาก)</span></label>`;
-    [pk,pk+'~S'].forEach(sk=>{ const pend=taxPendingSet(mon,sk); if(pend.length) h+=taxSetSectionHTML(mon,sk,pend,taxDate,bill); });
+    card.className='card'; card.style.marginBottom='1rem'; card.id='taxset-'+sk.replace('~','_');
+    let h=`<div class="ch no-print"><div class="ct"><span class="badge bg-navy" style="font-size:12px">ลำดับ ${bi>=0?bi+1:'–'}</span> ${skIsSp(sk)?'⭐':'🏭'} ${esc(skLabel(sk))} <span style="font-size:12px;color:var(--muted);font-weight:400">— ${esc(bill.name)} (${esc(bill.branch||'')})</span></div>
+      <div style="display:flex;gap:4px">
+        <button class="btn bo bsm" ${n?'':'disabled'} onclick="moveTaxSet('${mon}','${sk}',-1)" title="ออกเลขก่อน">▲</button><button class="btn bo bsm" ${n<pendSets.length-1?'':'disabled'} onclick="moveTaxSet('${mon}','${sk}',1)" title="ออกเลขทีหลัง">▼</button></div></div>`;
+    if(hasSp&&hasMain&&!skIsSp(sk)) h+=`<label class="no-print" style="display:inline-flex;gap:6px;align-items:center;font-size:12.5px;margin:.1rem 0 .3rem;cursor:pointer">
+      <input type="checkbox" ${taxSpMerged(mon,pk)?'checked':''} onchange="setTaxMerge('${mon}','${pk}',this.checked)"> รวม Special Invoice ของโรงงานนี้ไว้ในใบเดียวกัน <span style="color:var(--muted)">(ไม่ติ๊ก = แยกเป็นชุด Special)</span></label>`;
+    h+=taxSetSectionHTML(mon,sk,pend,taxDate,bill);
     card.innerHTML=h;
     container.appendChild(card);
   });
+  // ใบที่ออกแล้วของเดือน — เรียงตามเลขที่
+  if(issuedSorted.length){
+    const c=document.createElement('div'); c.className='card'; c.style.marginBottom='1rem';
+    c.innerHTML=`<div class="ch no-print"><div class="ct">✅ ใบกำกับภาษีที่ออกแล้ว (${monthLabel(mon)}) — ${issuedSorted.length} ใบ</div></div>`+issuedSorted.map(r=>{
+      const pre=`<div class="no-print" style="font-size:13px;font-weight:600;color:var(--navy);margin:.25rem 0">${r.set==='special'?'⭐':'🏭'} ${esc((CFG[r.plant]?.name||r.plant)+' — '+(r.set==='special'?'ชุด Special':'ชุดหลัก'))}</div>`;
+      return pre+issuedCardHTML(r);}).join('');
+    container.appendChild(c);
+  }
   // ใบที่ออกแบบเดิม (ตามกลุ่มลูกค้า)
   const legacy=issuedMon.filter(t=>!t.plant);
   if(legacy.length){
