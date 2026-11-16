@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-16a | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-16b | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -127,6 +127,9 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 
 /* เซลล์วันที่มี OT เลขล่าง = ชั่วโมง, เลขบน = OT */
 .cell-wrap{display:flex;flex-direction:column;align-items:stretch;gap:0px}
+/* ป้าย OT / W: แต่ละตัวอยู่กึ่งกลางแถวของตัวเอง (สูงเท่าช่อง OT / ช่องวัน) */
+.otw-row{display:flex!important;align-items:center;justify-content:center;padding:0!important}
+.otw-row span{font-weight:700;font-size:9px;line-height:1}
 .cell-ot{font-size:8px;color:#c8060a;font-weight:700;line-height:1;min-height:9px;font-family:'Sarabun',sans-serif}
 .cell-day{display:flex;align-items:center;justify-content:center}
 
@@ -315,7 +318,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-16a</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-16b</div>
 </header>
 
 <nav class="tabs">
@@ -1891,11 +1894,13 @@ function buildGrid(){
           onclick="${isReg?`toggleStar(${i})`:''}">
           ${isReg?label:subLabel}
         </td>
-        <td class="nm"><input class="nm-in" type="text" placeholder="${isReg?'ชื่อ-นามสกุล '+(i+1):row.letter}" value="${esc(row.name)}" list="ts-name-list" autocomplete="off"
-          oninput="${arrName}[${i}].name=this.value"></td>
-        <td style="width:22px;min-width:22px;background:#1a1a2a;text-align:center;vertical-align:middle;padding:1px">
-          <span style="color:#ff9090;font-weight:700;font-size:8px;display:block;line-height:1.5">OT</span>
-          <span style="color:#7ec8f0;font-weight:700;font-size:8px;display:block;line-height:1.5">W</span>
+        <td class="nm"><input class="nm-in" type="text" placeholder="${isReg?'ชื่อ-นามสกุล '+(i+1):row.letter}" value="${esc(row.name)}" autocomplete="off"
+          onfocus="nmListOn(this)" oninput="${arrName}[${i}].name=this.value;nmListOn(this)"></td>
+        <td class="otw-lbl" style="width:22px;min-width:22px;background:#1a1a2a;text-align:center;vertical-align:middle;padding:1px 0">
+          <div class="cell-wrap">
+            <div class="otw-row otw-ot"><span style="color:#ff9090">OT</span></div>
+            <div class="otw-row otw-w"><span style="color:#7ec8f0">W</span></div>
+          </div>
         </td>`;
       dates.forEach((d,di)=>{
         const key=d.toISOString().slice(0,10);
@@ -1983,6 +1988,7 @@ function buildGrid(){
     Array.from(_focusTr?.querySelectorAll('td')||[]).indexOf(_focusEl.closest('td')):-1;
 
   document.getElementById('ts-out').innerHTML=html;
+  alignOtwLabels();
 
   // restore focus หลัง rebuild
   if(_focusKey!==null&&_focusRowIdx>=0){
@@ -2624,6 +2630,21 @@ function tsTotalText(t){
     const d=new Date(k); if(isSunday(d)||hol.has(k)) return; min+=parseWorkToMin(String(v||''));
   }));
   return minToDisplay(min)||'-';
+}
+/* ป้าย OT / W ให้สูงเท่าแถวช่อง OT และช่องวันของแถวนั้น → แต่ละตัวอยู่กึ่งกลางแถวของตัวเอง */
+function alignOtwLabels(){
+  document.querySelectorAll('#ts-out td.otw-lbl').forEach(td=>{
+    const cell=td.nextElementSibling; if(!cell) return;
+    const ot=cell.querySelector('.cell-ot'), day=cell.querySelector('.cell-day');
+    if(!ot||!day) return;
+    td.querySelector('.otw-ot').style.height=ot.offsetHeight+'px';
+    td.querySelector('.otw-w').style.height=day.offsetHeight+'px';
+  });
+}
+/* แสดงรายชื่อแนะนำเฉพาะตอนพิมพ์แล้ว (กรองตามที่พิมพ์) — ช่องว่างไม่แสดงรายชื่อทั้งหมด */
+function nmListOn(el){
+  if(String(el.value||'').trim()) { if(el.getAttribute('list')!=='ts-name-list') el.setAttribute('list','ts-name-list'); }
+  else if(el.hasAttribute('list')) el.removeAttribute('list');
 }
 /* ชื่อที่เคยพิมพ์ → ตัวช่วยเลือก (แผนกเดียวกันขึ้นก่อน) */
 function refreshNameList(){
