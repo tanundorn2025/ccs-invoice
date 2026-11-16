@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-15c | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-16a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -315,7 +315,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-15c</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-16a</div>
 </header>
 
 <nav class="tabs">
@@ -813,7 +813,7 @@ service cloud.firestore {
   <!-- Customer Branches Card -->
   <div class="card">
     <div class="ch">
-      <div class="ct"><div class="ci">🏭</div>ข้อมูลลูกค้า HOYA — แต่ละกลุ่ม/สาขา</div>
+      <div class="ct"><div class="ci">🏭</div>ข้อมูลลูกค้า HOYA — แยกตามโรงงาน (ใช้ในใบกำกับภาษี)</div>
       <button class="btn bp bsm" onclick="saveCustomers()">💾 บันทึก</button>
     </div>
     <div class="alert ai" style="font-size:12.5px"><div>💡 ข้อมูลลูกค้าสำหรับใบกำกับภาษี <strong>แยกตามโรงงาน</strong> — ใบกำกับภาษีของแต่ละโรงงานจะใช้ชื่อ/สาขา/ที่อยู่/เลขภาษีของโรงงานนั้น (ใบที่ออกไปแล้วเก็บที่อยู่ ณ วันที่ออกไว้ ไม่เปลี่ยนตาม)</div></div>
@@ -1205,7 +1205,9 @@ function persistSettings(){_settingsAt=new Date().toISOString();saveSettingsLoca
 function initAutoRatesFlags(){
   initPlantBill();
   Object.values(CFG).forEach(p=>Object.values(p.depts||{}).forEach(d=>{
-    if(d.autoRates===undefined) d.autoRates=Math.abs(d.ot_rate-otFromRate(d.rate))<0.005&&Math.abs(d.hol_rate-holFromRate(d.rate))<0.005;
+    if(d.autoRates===undefined){ const b=rateBase(d.rate); // ข้อมูลเก่าอาจคิดแบบปัดขึ้น → ถือว่าเป็นค่าตามสูตรเหมือนกัน
+      const m=(v,x)=>Math.abs(v-r2(x))<0.005||Math.abs(v-ceil2(x))<0.005;
+      d.autoRates=m(d.ot_rate,b/30/8*1.5)&&m(d.hol_rate,b/30*2); }
   }));
 }
 /* แผนกที่ติ๊ก "คำนวณตามอัตรา/เดือน" → ให้ค่าตรงกับสูตรปัจจุบันเสมอ (เช่น หลังเปลี่ยนกติกาฐาน) */
@@ -4687,13 +4689,15 @@ function addPlant(){
   const name=document.getElementById('new-plant-name').value.trim();
   if(!id||!name){alert('กรุณากรอกรหัสและชื่อโรงงาน');return;}
   if(CFG[id]){alert('รหัสโรงงาน "'+id+'" มีอยู่แล้ว');return;}
-  CFG[id]={name,depts:{}};
+  const base=plantBill(Object.keys(CFG)[0]||'');
+  CFG[id]={name,depts:{},bill:{name:base.name||'',branch:'',branchCode:'',taxId:base.taxId||'',addr:'',tel:base.tel||'',fax:base.fax||'',terms:base.terms||'',due:base.due||''}};
   document.getElementById('new-plant-id').value='';
   document.getElementById('new-plant-name').value='';
   renderCfg();
   refreshAllSelects();
   persistSettings();
-  alert('✅ เพิ่มโรงงาน "'+name+'" แล้ว');
+  renderCustomers();
+  alert('✅ เพิ่มโรงงาน "'+name+'" แล้ว\n\nอย่าลืมกรอก สาขา / ที่อยู่ ของโรงงานนี้ในส่วน “ข้อมูลลูกค้า” (หรือเลือก “ใช้ข้อมูลเดียวกับ” โรงงานที่ใช้ที่อยู่เดียวกัน) เพื่อใช้ในใบกำกับภาษี');
 }
 
 function removePlant(pk){
@@ -4767,8 +4771,9 @@ function ceil2(x){return Math.ceil(Math.round(x*1e6)/1e4)/100;}
 /* ฐานที่ใช้คิด OT/Holiday: อัตรา/เดือนไม่เกิน 10,000 บาท → ใช้ อัตรา × 2 เป็นฐาน */
 const LOW_RATE_LIMIT=10000;
 function rateBase(r){r=+r||0;return r<=LOW_RATE_LIMIT?r*2:r;}
-function otFromRate(r){return ceil2(rateBase(r)/30/8*1.5);}
-function holFromRate(r){return ceil2(rateBase(r)/30*2);}
+/* ปัดทศนิยม 2 ตำแหน่งแบบ 5 ขึ้น 4 ลง */
+function otFromRate(r){return r2(rateBase(r)/30/8*1.5);}
+function holFromRate(r){return r2(rateBase(r)/30*2);}
 function rateFormulaRow(pk,dk,dv){
   const ot=otFromRate(dv.rate), hol=holFromRate(dv.rate);
   const okOT=Math.abs((+dv.ot_rate||0)-ot)<0.005, okH=Math.abs((+dv.hol_rate||0)-hol)<0.005;
@@ -5698,7 +5703,11 @@ function renderCustomers(){
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
         <span style="font-size:12.5px;font-weight:700;color:var(--navy);background:#e0eaf7;padding:2px 10px;border-radius:99px">🏭 ${esc(pv.name)}</span>
         <span class="badge bg-gold">${esc(pk)}</span>
-        <span style="font-size:12px;color:var(--muted)">→ ใบกำกับภาษีของโรงงานนี้</span>
+        <span style="font-size:12px;color:var(--muted)">→ ใบกำกับภาษีของโรงงานนี้ (ทุกแผนกในโรงงานใช้ข้อมูลนี้)</span>
+        <select onchange="copyBill('${pk}',this.value);this.value=''" style="margin-left:auto;padding:4px 6px;border:1px solid var(--bord);border-radius:6px;font-size:12px">
+          <option value="">📋 ใช้ข้อมูลเดียวกับโรงงาน…</option>
+          ${Object.keys(CFG).filter(k=>k!==pk).map(k=>`<option value="${k}">${esc(CFG[k].name)}</option>`).join('')}
+        </select>
       </div>
       <div class="g2" style="gap:.5rem">
         ${BILL_FIELDS.map(([f,l,w])=>`<div class="fg"${w?' style="grid-column:1/-1"':''}><label style="font-size:11px">${l}</label>
@@ -5708,6 +5717,13 @@ function renderCustomers(){
   updateTaxCounterPreview();
 }
 function renderPlantGroupMap(){}
+function copyBill(pk,from){
+  if(!from||!CFG[from]) return;
+  initPlantBill();
+  CFG[pk].bill=JSON.parse(JSON.stringify(plantBill(from)));
+  _billDirty=true; renderCustomers();
+  showToast('📋 คัดลอกข้อมูลลูกค้าจาก '+CFG[from].name+' แล้ว — กด “💾 บันทึก” ของส่วนข้อมูลลูกค้าเพื่อบันทึก');
+}
 
 function addCustomerGroup(){
   const newG=Math.max(0,...Object.keys(CUSTOMERS).map(Number))+1;
