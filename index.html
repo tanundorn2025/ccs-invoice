@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-20a | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-20b | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -318,7 +318,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-20a</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-20b</div>
 </header>
 
 <nav class="tabs">
@@ -4289,7 +4289,9 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   const n=Math.max(rows.length,13);
   const col=(cls,get)=>{let h='';for(let i=0;i<n;i++) h+='<div class="ti-r '+cls+'">'+(rows[i]?get(rows[i]):'')+'</div>';return h;};
   // รายการยาว (เลขที่ Invoice รูปแบบใหม่) → ย่อขนาดตัวอักษรให้พอดีช่อง แทนการดันช่องจำนวนเงินตกขอบ
-  const fitDesc=t=>{const pt=fitPt(t,352,10,6.5);return pt<10?'<span style="font-size:'+pt+'pt">'+esc(t)+'</span>':esc(t);};
+  // ลำดับ / รายการ / จำนวนเงิน ใช้ขนาดอักษรเท่ากัน (ค่าเดียวทั้งตาราง = ขนาดที่ทำให้รายการที่ยาวที่สุดยังพอดีช่อง, สูงสุด 10pt)
+  const rowPt=Math.min(10,...rows.map(r=>fitPt(r.desc,362,10,6.5)));
+  const fitDesc=t=>esc(t);
 
   /* เส้นปะกรอบ: ปรับที่ TI_DASH (ความยาวขีด/ระยะห่าง/ความหนา หน่วย px) — ใช้ค่าตัวเลขตรง ๆ เพื่อให้ export PDF แสดงผลได้ */
   const DP=(TI_DASH.da+TI_DASH.gap)+'px', LW=TI_DASH.lw+'px';
@@ -4321,10 +4323,10 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   +'.ti-dg{letter-spacing:.18em}'
   +'.ti-items{display:flex;margin-top:2.8mm;font-size:10pt}'
   
-  +'.ti-col:nth-child(1){flex:0 0 9.9mm}.ti-col:nth-child(2){flex:0 0 100.4mm}.ti-col:nth-child(3){flex:0 0 21.8mm}.ti-col:nth-child(4){flex:0 0 25.5mm}.ti-col:nth-child(5){flex:1}'
+  +'.ti-col:nth-child(1){flex:0 0 9.9mm}.ti-col:nth-child(2){flex:0 0 108.2mm}.ti-col:nth-child(3){flex:0 0 14mm}.ti-col:nth-child(4){flex:0 0 25.5mm}.ti-col:nth-child(5){flex:1}'
   +'.ti-h{height:9.2mm;line-height:9.2mm;text-align:center;font-weight:700;white-space:nowrap}'
   +'.ti-r{height:7.7mm;line-height:7.7mm;padding:0 1.6mm;white-space:nowrap;overflow:hidden}'
-  +'.ti-r.c{text-align:center;padding:0}.ti-r.rt{text-align:right;padding-right:2mm;font-size:9pt}'
+  +'.ti-r{font-size:'+rowPt+'pt}.ti-r.c{text-align:center;padding:0}.ti-r.rt{text-align:right;padding-right:2mm}'
   +'.ti-bot{display:flex;gap:2.7mm;margin-top:1.7mm}'
   +'.ti-bl2{flex:0 0 118.5mm}'
   +'.ti-note{display:flex;height:8mm;line-height:8mm;padding-left:.8mm}.ti-note .dot{flex:1;margin:0 0 1.8mm 2mm;border-bottom:1px dotted #000}'
@@ -4340,7 +4342,7 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   +'.ti-sig{position:relative;height:16mm;margin-top:16.7mm;font-size:10.5pt}'
   +'.ti-sig>*{position:absolute}'
   +'.ti-sig .sl{left:117.8mm;top:0;line-height:8mm;font-weight:700}'
-  +'.ti-sig .sd{left:127mm;width:60.2mm;top:0;height:6.2mm;border-bottom:1px dotted #000}'
+  +'.ti-sig .sd{left:131.5mm;width:55.7mm;top:0;height:6.2mm;border-bottom:1px dotted #000}'
   +'.ti-sig .sn{left:133.8mm;width:51.7mm;top:8mm;line-height:8mm;display:flex;justify-content:space-between;font-weight:700;font-size:9.5pt}';
 
   return '<div class="ti-page"><style>'+css+'</style>'
