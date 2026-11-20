@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-20d | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-21a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -318,7 +318,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-20d</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-21a</div>
 </header>
 
 <nav class="tabs">
@@ -505,7 +505,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
     <div id="inv-ts-issues"></div>
     <div class="g2">
       <div class="fg"><label style="display:flex;justify-content:space-between;align-items:center">เลขที่ Invoice <a href="#" onclick="resetInvNo();return false" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--navy2)" title="สร้างเลขที่ใหม่จากโรงงาน/แผนก/วันที่">↻ สร้างเลขอัตโนมัติ</a></label><input type="text" id="inv-no" autocomplete="off" placeholder="เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-NOV.-1(26)" oninput="this.dataset.manual=this.value.trim()?'1':'';invNoNote();calcInv()"></div>
-      <div class="fg"><label>วันที่ออก</label><input type="date" id="inv-dt" onchange="_preferTsId=null;loadTStoInv();autoFillInvNo();calcInv()"></div>
+      <div class="fg"><label>วันที่ออก</label><input type="date" id="inv-dt" onchange="invDtChanged()"></div>
       <div class="fg">
         <label>โรงงาน (Plant)</label>
         <select id="inv-plant" onchange="onInvPlantChange();autoFillInvNo();calcInv()">
@@ -3114,6 +3114,8 @@ function saveInv(confirmIt){
       if(!confirm(`มี Invoice ร่างของ ${pName} / ${dName} เดือน ${monthLabel(dt.slice(0,7))} อยู่แล้ว (${old.no})\nต้องการบันทึกทับหรือไม่?`)) return;
     }
   }
+  { const same=S.invoices.find(i=>i.type!=='special'&&i.key===key&&i!==old);
+    if(same){alert(`${pName} / ${dName} เดือน ${monthLabel(dt.slice(0,7))} มี Invoice ${same.no} อยู่แล้ว\nเลือกวันที่เดือนอื่น หรือลบใบนั้นก่อน`);return;} }
   const dup=S.invoices.find(i=>i.no===no&&i!==old);
   if(dup){alert(`เลขที่ ${no} ถูกใช้กับ Invoice อื่นแล้ว`);return;}
   const ts=window._lastTS;
@@ -3236,7 +3238,8 @@ function editInv(id){
   window._lastSummary={partial:i.partial||[]};
   const ss=document.getElementById('inv-staff-summary');
   if(ss) ss.innerHTML=`กำลังแก้ไขค่าที่บันทึกไว้ใน ${esc(i.no)}${i.tsPeriod?' (จากใบบันทึกเวลางวด '+rangeText(...i.tsPeriod.split('..'))+')':''}`;
-  ['inv-plant','inv-dept','inv-dt'].forEach(k=>document.getElementById(k).disabled=true);
+  ['inv-plant','inv-dept'].forEach(k=>document.getElementById(k).disabled=true);
+  document.getElementById('inv-dt').disabled=false;   // วันที่ออก แก้ไขได้
   renderInvEditBanner();
   invNoNote();
   calcInv();
@@ -3244,6 +3247,14 @@ function editInv(id){
   const b=[...document.querySelectorAll('.tb')].find(x=>(x.getAttribute('onclick')||'').includes("'t2'"));
   if(!document.getElementById('t2').classList.contains('on')) sw('t2',b);
   window.scrollTo({top:0,behavior:'smooth'});
+}
+function invDtChanged(){
+  if(_editInvId){
+    const i=S.invoices.find(x=>x.id===_editInvId), v=document.getElementById('inv-dt').value;
+    if(i&&v&&v.slice(0,7)!==(i.dt||'').slice(0,7)) showToast('📅 เปลี่ยนเป็นคนละเดือน — เลขที่ Invoice ยังเป็นเลขเดิม ถ้าต้องการเลขใหม่กด “สร้างเลขอัตโนมัติ”');
+    calcInv(); return;
+  }
+  _preferTsId=null;loadTStoInv();autoFillInvNo();calcInv();
 }
 function exitEditInv(){
   _editInvId=null;
