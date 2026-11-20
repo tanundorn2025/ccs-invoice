@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-16b | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-20a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -318,7 +318,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-16b</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-20a</div>
 </header>
 
 <nav class="tabs">
@@ -586,9 +586,8 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
       </div>
     </div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:8px">
-      <span class="badge bg-gold">ร่าง</span> ยอดเงินจะคำนวณใหม่ตามอัตราในตั้งค่าอัตโนมัติ ·
-      <span class="badge bg-green">✅ ยืนยันแล้ว</span> ยอดเงินคงที่ ไม่เปลี่ยนตามตั้งค่า (แก้ไขเองได้ด้วยปุ่ม ✏️) ·
-      <span class="badge bg-navy">🔒</span> อยู่ในใบกำกับภาษีที่ออกแล้ว แก้ไขไม่ได้
+      <span class="badge bg-gold">ร่าง</span> / <span class="badge bg-green">✅ ยืนยันแล้ว</span> ยอดเงินยังคำนวณใหม่ตามอัตราในตั้งค่าอัตโนมัติ จนกว่าจะออกใบกำกับภาษี ·
+      <span class="badge bg-navy">🔒</span> อยู่ในใบกำกับภาษีที่ออกแล้ว ยอดคงที่ แก้ไขไม่ได้
     </div>
     <div id="inv-list"><p style="color:var(--light);font-size:13px">ยังไม่มี Invoice</p></div>
   </div>
@@ -867,6 +866,15 @@ service cloud.firestore {
           <button class="btn bo bsm" onclick="resetLogo()" style="margin-top:4px">↺ รีเซ็ต</button>
         </div>
         <div class="alert ai" style="font-size:11.5px;padding:8px 10px">💡 รองรับ PNG, JPG, SVG<br>แนะนำขนาด 200×200px</div>
+        <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:.5rem">✍️ ลายเซ็นผู้ลงนาม (CCS)</label>
+        <div id="co-sign-preview" style="width:210px;height:90px;border:2px dashed var(--bord);border-radius:var(--r);display:flex;align-items:center;justify-content:center;background:#fff"></div>
+        <div>
+          <label class="btn bo bsm" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px">✍️ เลือกรูปลายเซ็น
+            <input type="file" id="co-sign-file" accept="image/*" style="display:none" onchange="loadSign(this)"></label>
+          <button class="btn bo bsm" onclick="resetSign()" style="margin-top:4px">ลบ</button>
+        </div>
+        <label style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="co-sign-show" onchange="setSignShow(this.checked)"> แสดงลายเซ็นใน Invoice / Summary / Special</label>
+        <div class="alert ai" style="font-size:11.5px;padding:8px 10px">💡 ใช้รูป PNG พื้นใสหรือพื้นขาว สแกน/ถ่ายลายเซ็นบนกระดาษขาว</div>
       </div>
     </div>
     <!-- Preview letterhead -->
@@ -1050,6 +1058,40 @@ function resetLogo(){
   persistSettings();
 }
 
+/* ช่องลงนามท้าย Invoice / Summary / Special — สูงขึ้น และแสดงรูปลายเซ็น (ตั้งค่า → ข้อมูลบริษัท) */
+function signBlockHTML(){
+  const img=(CO.signData&&CO.signShow!==false)?`<img src="${CO.signData}" alt="signature" style="max-height:64px;max-width:200px;object-fit:contain">`:'';
+  const box='height:72px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px';
+  return `<div class="sign-blk" style="display:flex;justify-content:space-between;margin-top:1.75rem;font-size:12px;padding-top:.75rem;border-top:1px solid #ddd;page-break-inside:avoid">
+    <div style="text-align:center;width:220px"><div style="${box}"></div><div style="border-top:1px solid #333;padding-top:4px">HOYA OPTICS (THAILAND) LTD.</div></div>
+    <div style="text-align:center;width:250px"><div style="${box}">${img}</div><div style="border-top:1px solid #333;padding-top:4px">${CO.nameEn}<br>${CO.contact}</div></div>
+  </div>`;
+}
+function loadSign(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const im=new Image();
+    im.onload=()=>{ // ย่อให้ไม่เกิน 500×200 px (PNG โปร่งใส) — ไฟล์เล็ก ซิงก์ขึ้น Firebase ได้
+      const k=Math.min(1,500/im.width,200/im.height), c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(im.width*k)); c.height=Math.max(1,Math.round(im.height*k));
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      CO.signData=c.toDataURL('image/png'); CO.signShow=true;
+      renderSignPreview(); persistSettings(); showToast('✍️ บันทึกลายเซ็นแล้ว');
+    };
+    im.onerror=()=>alert('อ่านไฟล์รูปไม่ได้');
+    im.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+function resetSign(){ if(CO.signData&&!confirm('ลบรูปลายเซ็น?')) return; CO.signData=null; renderSignPreview(); persistSettings(); }
+function setSignShow(v){ CO.signShow=!!v; persistSettings(); renderSignPreview(); }
+function renderSignPreview(){
+  const el=document.getElementById('co-sign-preview'); if(!el) return;
+  el.innerHTML=CO.signData?`<img src="${CO.signData}" style="max-width:200px;max-height:80px;object-fit:contain">`:'<span style="font-size:12px;color:var(--light)">ยังไม่มีลายเซ็น</span>';
+  const cb=document.getElementById('co-sign-show'); if(cb){ cb.checked=CO.signShow!==false; cb.disabled=!CO.signData; }
+}
 /* สร้าง HTML letterhead สำหรับใส่ใน Invoice/Summary */
 function getLetterheadHTML(forPrint=false){
   const logoSrc = CO.logoData || `data:image/svg+xml,${encodeURIComponent('<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="60" r="55" fill="%23c8006a" opacity=".15"/><circle cx="60" cy="60" r="42" fill="none" stroke="%23c8006a" stroke-width="3"/><text x="60" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="36" font-weight="900" fill="%23c8006a">CCS</text></svg>')}`;
@@ -1190,7 +1232,13 @@ function normTS(t){t.key=tsKey(t.plant,t.dept,t.ds);return t;}
 function normInv(i){i.key=invKey(i);return i;}
 function taxRecOfInv(id){return S.taxInvoices.find(t=>t.status==='issued'&&(t.invIds||[]).includes(id))||null;}
 function sumInvoices(plant,monKey){
-  return S.invoices.filter(i=>(plant==='ALL'||i.plant===plant)&&(!monKey||(i.dt||'').startsWith(monKey)));
+  const po=(typeof taxPlantOrder==='function')?taxPlantOrder():Object.keys(CFG);
+  const pr=p=>{const k=po.indexOf(p);return k<0?999:k;};
+  return S.invoices.filter(i=>(plant==='ALL'||i.plant===plant)&&(!monKey||(i.dt||'').startsWith(monKey)))
+    .sort((a,b)=>(pr(a.plant)-pr(b.plant))
+      ||((a.type==='special'?1:0)-(b.type==='special'?1:0))
+      ||(a.type==='special'?0:deptSeq(a.plant,a.dept)-deptSeq(b.plant,b.dept))
+      ||String(a.no||'').localeCompare(String(b.no||''),'en',{numeric:true}));
 }
 
 /* ---- settings: CFG, CO, CUSTOMERS, PLANT_GROUP ---- */
@@ -1245,6 +1293,7 @@ function fillCompanyInputs(){
   Object.entries(m).forEach(([id,k])=>{const el=document.getElementById(id);if(el) el.value=CO[k]||'';});
   const prev=document.getElementById('co-logo-preview');
   if(prev&&CO.logoData) prev.innerHTML=`<img src="${CO.logoData}" style="max-width:110px;max-height:110px;object-fit:contain">`;
+  renderSignPreview();
 }
 
 /* ---- data: timesheets, invoices, tax invoices ---- */
@@ -2903,17 +2952,21 @@ function updateInvSaveButtons(){
   const locked=rec&&taxRecOfInv(rec.id);
   const same=invFormSame(rec);
   const conf=rec&&invStatus(rec)==='confirmed';
-  sb.disabled=!!(locked||same||issues.length);
-  cb.disabled=!!(locked||(same&&conf)||issues.length);
+  const confView=!!(conf&&!_editInvId);   // เดือนนี้ยืนยันแล้ว และยังไม่ได้กด ✏️ แก้ไข → บันทึกทับไม่ได้
+  sb.disabled=!!(locked||same||confView||issues.length);
+  cb.disabled=!!(locked||(same&&conf)||confView||issues.length);
   [sb,cb].forEach(b=>{b.style.opacity=b.disabled?'.45':'';b.style.cursor=b.disabled?'not-allowed':'';});
   if(st){
     st.style.color=locked?'var(--navy)':'#16723c';
     st.textContent=locked?`🔒 อยู่ในใบกำกับภาษี ${locked.no} — แก้ไขไม่ได้`
       :issues.length?`⚠️ แก้ใบบันทึกเวลาก่อน (${issues.length} จุด)`
+      :confView?`✅ ${rec.no} ยืนยันแล้ว — ถ้าต้องการแก้ไข กด “✏️ แก้ไขใบนี้”`
       :same&&conf?'✅ ยืนยันแล้ว — ไม่มีการเปลี่ยนแปลง'
-      :same?'💾 บันทึกร่างแล้ว — กด “บันทึกและยืนยัน” เพื่อล็อกยอด'
+      :same?'💾 บันทึกร่างแล้ว — กด “บันทึกและยืนยัน” เมื่อตรวจเรียบร้อย'
+      :rec&&conf?'✏️ แก้ไขแล้ว (ยังไม่บันทึก) — “บันทึกร่าง” = กลับเป็นร่าง · “บันทึกและยืนยัน” = ยืนยันยอดใหม่'
       :rec?'✏️ มีการเปลี่ยนแปลงจากที่บันทึกไว้':'';
-    if(!same&&rec) st.style.color='#8a5a00';
+    if(confView&&!locked){ st.innerHTML=esc(st.textContent)+` <button class="btn bo bsm" style="margin-left:6px" onclick="editInv(${rec.id})">✏️ แก้ไขใบนี้</button>`; }
+    if(!same&&rec&&!confView) st.style.color='#8a5a00';
     if(issues.length&&!locked) st.style.color='var(--red)';
   }
 }
@@ -3028,14 +3081,7 @@ function showInvPreview(){
     <div class="t-row"><span class="t-lbl">VAT 7%</span><span class="t-val">${fmt(d.vat)} Baht</span></div>
     <div class="t-row grand"><span class="t-lbl">GRAND TOTAL</span><span class="t-val">${fmt(d.grand)} Baht</span></div>
   </div>
-  <div style="display:flex;justify-content:space-between;margin-top:2rem;font-size:12px;padding-top:.75rem;border-top:1px solid var(--bord)">
-    <div style="text-align:center">
-      <div style="border-top:1px solid #333;width:180px;padding-top:4px;margin-top:24px">HOYA OPTICS (THAILAND) LTD.</div>
-    </div>
-    <div style="text-align:center">
-      <div style="border-top:1px solid #333;width:200px;padding-top:4px;margin-top:24px">${CO.nameEn}<br>${CO.contact}</div>
-    </div>
-  </div>
+  ${signBlockHTML()}
   </div>`;
   const pvEl=document.getElementById('inv-preview');
   const wasOpen=pvEl.style.display!=='none';
@@ -3063,7 +3109,7 @@ function saveInv(confirmIt){
     const oldConf=invStatus(old)==='confirmed';
     if(oldConf){
       manual=true;
-      if(!confirm(`Invoice ${old.no} (${pName} / ${dName} เดือน ${monthLabel((old.dt||'').slice(0,7))}) ยืนยันแล้ว\n\nบันทึกการแก้ไขแบบ manual ด้วยค่าบนหน้าจอ?\nยอดเดิม ${fmtNum(old.grand)} → ยอดใหม่ ${fmtNum(d.grand)} บาท`)) return;
+      if(!confirm(`Invoice ${old.no} (${pName} / ${dName} เดือน ${monthLabel((old.dt||'').slice(0,7))}) ยืนยันแล้ว\n\nบันทึกการแก้ไขด้วยค่าบนหน้าจอ?\nยอดเดิม ${fmtNum(old.grand)} → ยอดใหม่ ${fmtNum(d.grand)} บาท\n\n${confirmIt?'สถานะ: ✅ ยืนยันแล้ว (ยอดใหม่)':'สถานะจะกลับเป็น “ร่าง” — ต้องกดยืนยันอีกครั้ง '}`)) return;
     } else if(!editing){
       if(!confirm(`มี Invoice ร่างของ ${pName} / ${dName} เดือน ${monthLabel(dt.slice(0,7))} อยู่แล้ว (${old.no})\nต้องการบันทึกทับหรือไม่?`)) return;
     }
@@ -3073,13 +3119,13 @@ function saveInv(confirmIt){
   const ts=window._lastTS;
   const sum=window._lastSummary;
   const wasConf=old&&invStatus(old)==='confirmed';
-  const status=(confirmIt||wasConf)?'confirmed':'draft';
+  const status=confirmIt?'confirmed':'draft';   // แก้ไขแล้วกด “บันทึกร่าง” → กลับเป็นร่าง
   const rec={id:old?old.id:Date.now(),key,plant,dept,no,dt,
     service:document.getElementById('inv-svc').value,
     tsId:ts?ts.id:(old?old.tsId:null), tsPeriod:ts?`${ts.ds}..${ts.de}`:(old?old.tsPeriod:null),
     partial:sum&&sum.partial?sum.partial.map(r=>({name:r.name,worked:r.worked})):(old?.partial||[]),
     ...d, status,
-    confirmedAt:status==='confirmed'?(wasConf?old.confirmedAt:new Date().toISOString()):null,
+    confirmedAt:status==='confirmed'?(wasConf&&!manual?old.confirmedAt:new Date().toISOString()):null,
     edits:old?.edits||[]};
   if(manual&&Math.abs((old.grand||0)-d.grand)>0.004) rec.edits=[...rec.edits,{at:new Date().toISOString(),grandBefore:old.grand,grandAfter:+d.grand.toFixed(2)}];
   S.invoices=S.invoices.filter(i=>i!==old);
@@ -3092,7 +3138,7 @@ function saveInv(confirmIt){
   refreshMonthSelects();
   buildSum();
   dbSaveInv(rec);
-  alert(`✅ บันทึก Invoice "${no}" เป็น${status==='confirmed'?' “ยืนยันแล้ว” (ยอดคงที่)':' “ร่าง” (จะตามอัตราในตั้งค่า)'} เรียบร้อย`);
+  alert(`✅ บันทึก Invoice "${no}" เป็น${status==='confirmed'?' “ยืนยันแล้ว”':' “ร่าง”'} เรียบร้อย\n(ยอดยังตามอัตราในตั้งค่า จนกว่าจะออกใบกำกับภาษี)`);
 }
 
 function invStatus(i){ return i.type==='special'?'confirmed':(i.status||'confirmed'); }   // Special: บันทึกแล้ว = พร้อมออกใบกำกับภาษี   // ข้อมูลเก่าก่อนมีสถานะ = ถือว่ายืนยันแล้ว
@@ -3146,14 +3192,14 @@ function setInvStatus(list,status){
 }
 function confirmInv(id){
   const i=S.invoices.find(x=>x.id===id); if(!i) return;
-  if(!confirm(`ยืนยัน Invoice ${i.no}?\nยอด ${fmtNum(i.grand)} บาทจะคงที่ ไม่เปลี่ยนตามการแก้ไขในตั้งค่าอีก`)) return;
+  if(!confirm(`ยืนยัน Invoice ${i.no}?\nยอด ${fmtNum(i.grand)} บาท\n(ยอดยังตามอัตราในตั้งค่า จนกว่าจะออกใบกำกับภาษี)`)) return;
   setInvStatus([i],'confirmed');
   showToast('✅ ยืนยัน '+i.no+' แล้ว');
 }
 function unconfirmInv(id){
   const i=S.invoices.find(x=>x.id===id); if(!i) return;
   if(taxRecOfInv(id)){alert('Invoice นี้อยู่ในใบกำกับภาษีที่ออกแล้ว');return;}
-  if(!confirm(`เปลี่ยน ${i.no} กลับเป็นร่าง?\n${i.type==='special'?'':'ยอดเงินจะถูกคำนวณใหม่ตามอัตราในตั้งค่าครั้งถัดไปที่มีการแก้ไขอัตรา'}`)) return;
+  if(!confirm(`เปลี่ยน ${i.no} กลับเป็นร่าง?\n${i.type==='special'?'':'(ยอดเงินตามอัตราในตั้งค่าเหมือนเดิม จนกว่าจะออกใบกำกับภาษี)'}`)) return;
   setInvStatus([i],'draft');
 }
 function confirmMonth(){
@@ -3162,7 +3208,7 @@ function confirmMonth(){
   const list=S.invoices.filter(i=>(i.dt||'').startsWith(mon)&&invStatus(i)!=='confirmed');
   if(!list.length){alert(`Invoice ทุกใบของ ${monthLabel(mon)} ยืนยันแล้ว`);return;}
   const tot=list.reduce((s,i)=>s+(i.grand||0),0);
-  if(!confirm(`ยืนยัน Invoice ร่างของ ${monthLabel(mon)} ทั้งหมด ${list.length} ใบ (รวม ${fmtNum(tot)} บาท)?\n\nหลังยืนยัน ยอดของเดือนนี้จะคงที่ แม้จะแก้อัตราในตั้งค่าภายหลัง\n(ยังแก้ไขเองได้ทีละใบด้วยปุ่ม ✏️)`)) return;
+  if(!confirm(`ยืนยัน Invoice ร่างของ ${monthLabel(mon)} ทั้งหมด ${list.length} ใบ (รวม ${fmtNum(tot)} บาท)?\n\nยอดยังตามอัตราในตั้งค่า จนกว่าจะออกใบกำกับภาษี`)) return;
   setInvStatus(list,'confirmed');
   showToast(`✅ ยืนยัน ${list.length} ใบของ ${monthLabel(mon)} แล้ว`);
 }
@@ -3222,13 +3268,51 @@ function pullLatestInv(){
   loadTStoInv(true);
 }
 
-/* ---- Invoice ร่าง: คำนวณใหม่ตามอัตราล่าสุดในตั้งค่า (ใบที่ยืนยันแล้วไม่เปลี่ยน) ---- */
+/* ---- Invoice ที่ยังไม่ออกใบกำกับภาษี (ร่าง + ยืนยันแล้ว): คำนวณใหม่ตามอัตราล่าสุดในตั้งค่า ---- */
+/* Invoice ที่ยังไม่อยู่ในใบกำกับภาษี ซึ่งยอดจะเปลี่ยนถ้าคำนวณตามตั้งค่าปัจจุบัน */
+function invRecalcPreview(list){
+  return list.filter(i=>i.type!=='special'&&!taxRecOfInv(i.id)).map(i=>{
+    const cfg=CFG[i.plant]?.depts?.[i.dept]; if(!cfg) return null;
+    const c=calcFromInputs({...i,rate:cfg.rate,otr:cfg.ot_rate,hr:cfg.hol_rate});
+    if(Math.abs(c.grand-(i.grand||0))<0.004&&i.rate===c.rate&&i.otr===c.otr&&i.hr===c.hr) return null;
+    return {inv:i,c};
+  }).filter(Boolean);
+}
+function applyRecalc(changes){
+  changes.forEach(({inv,c})=>{Object.assign(inv,c);dbSaveInv(inv,true);});
+  if(changes.length){persistLocal();renderInvList();buildSum();}
+  return changes.length;
+}
+/* แก้ตั้งค่าแผนก → ปรับ Invoice ที่ยังไม่ออกใบกำกับภาษี
+   ถ้ามีหลายงวด (เดือน) ให้เลือกว่าจะปรับงวดไหน — ค่าเริ่มต้น = งวดล่าสุดเท่านั้น (ไม่ย้อนแก้งวดก่อน) */
+async function recalcByPeriod(pk,dk){
+  const all=S.invoices.filter(i=>i.type!=='special'&&i.plant===pk&&i.dept===dk);
+  const m=all.filter(i=>taxRecOfInv(i.id)).length;
+  const ch=invRecalcPreview(all);
+  if(!ch.length) return {n:0,m};
+  const mons=[...new Set(ch.map(x=>(x.inv.dt||'').slice(0,7)))].sort();
+  let pick=new Set(mons);
+  if(mons.length>1){
+    pick=new Set([mons[mons.length-1]]);
+    window._recalcPick=pick;
+    const rows=mons.map(mo=>{const l=ch.filter(x=>(x.inv.dt||'').startsWith(mo));
+      return `<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--bord);cursor:pointer">
+        <input type="checkbox" ${pick.has(mo)?'checked':''} onchange="this.checked?_recalcPick.add('${mo}'):_recalcPick.delete('${mo}')" style="margin-top:3px">
+        <span><strong>${monthLabel(mo)}</strong><br>${l.map(x=>`<span style="font-size:12px">${esc(x.inv.no)}: ${fmtNum(x.inv.grand)} → <strong>${fmtNum(x.c.grand)}</strong>${invStatus(x.inv)==='confirmed'?' <span class="badge bg-green" style="font-size:10px">ยืนยันแล้ว</span>':''}</span>`).join('<br>')}</span></label>`;}).join('');
+    const v=await askChoice(`ปรับ Invoice ${esc(CFG[pk]?.depts?.[dk]?.name||dk)} งวดไหน?`,
+      `ค่าที่แก้ในตั้งค่ามีผลกับ Invoice ที่ยังไม่ออกใบกำกับภาษี ${mons.length} งวด — เลือกงวดที่ต้องการให้เปลี่ยน (งวดที่ไม่ติ๊กจะคงยอดเดิม)<div style="margin-top:8px;max-height:260px;overflow:auto">${rows}</div>`,
+      [{label:'ไม่ปรับงวดไหนเลย',value:'none',cls:'bo'},{label:'ปรับงวดที่เลือก',value:'ok',cls:'bp'}]);
+    if(v!=='ok') pick=new Set();
+  }
+  const n=applyRecalc(ch.filter(x=>pick.has((x.inv.dt||'').slice(0,7))));
+  return {n,m,kept:ch.length-n};
+}
 function recalcDraftInvoices(pk,dk){
   let n=0,m=0;
   S.invoices.filter(i=>i.type!=='special'&&(!pk||i.plant===pk)&&(!dk||i.dept===dk)).forEach(i=>{
     const cfg=CFG[i.plant]?.depts?.[i.dept];
     if(!cfg) return;
-    if(invStatus(i)!=='draft'||taxRecOfInv(i.id)){m++;return;}
+    if(taxRecOfInv(i.id)){m++;return;}   // ล็อกเมื่อออกใบกำกับภาษีแล้วเท่านั้น (ร่าง/ยืนยันแล้ว ยังตามตั้งค่า)
     const c=calcFromInputs({...i,rate:cfg.rate,otr:cfg.ot_rate,hr:cfg.hol_rate});
     if(Math.abs(c.grand-(i.grand||0))<0.004&&i.rate===c.rate&&i.otr===c.otr&&i.hr===c.hr) return;
     Object.assign(i,c);
@@ -3316,7 +3400,7 @@ function buildSum(){
         <td class="num">${fmt(pUp)}</td><td class="num">${fmt(pVat)}</td><td class="num">${fmt(pG)}</td></tr>`;
   });
 
-  el.innerHTML=`${_drafts?`<div class="alert no-print" style="background:var(--goldbg);color:#6b4a00;border-left:4px solid var(--gold);margin-bottom:10px">⚠️ เดือนนี้มี Invoice ร่าง ${_drafts} ใบ — ยอดอาจเปลี่ยนถ้าแก้อัตราในตั้งค่า และต้องยืนยันก่อนพิมพ์/Export <button class="btn bs bsm" style="margin-left:8px" onclick="confirmSumMonth()">✅ ยืนยันทั้งเดือน</button></div>`:''}
+  el.innerHTML=`${_drafts?`<div class="alert no-print" style="background:var(--goldbg);color:#6b4a00;border-left:4px solid var(--gold);margin-bottom:10px">⚠️ เดือนนี้มี Invoice ร่าง ${_drafts} ใบ — ต้องยืนยันก่อนพิมพ์/Export <button class="btn bs bsm" style="margin-left:8px" onclick="confirmSumMonth()">✅ ยืนยันทั้งเดือน</button></div>`:''}
   <div class="sum-letterhead">${getLetterheadHTML(false)}</div>
   <div style="text-align:center;margin-bottom:10px">
     <div style="font-size:16px;font-weight:700;color:var(--navy)">DEBIT NOTE SUMMARY</div>
@@ -3348,10 +3432,7 @@ function buildSum(){
     ( ${numToEng(tG)} )
   </td></tr></tfoot></table>
   </div>
-  <div style="display:flex;justify-content:space-between;margin-top:2rem;font-size:12px;padding-top:.75rem;border-top:1px solid var(--bord)">
-    <div style="text-align:center"><div style="border-top:1px solid #333;width:180px;padding-top:4px;margin-top:24px">HOYA OPTICS (THAILAND) LTD.</div></div>
-    <div style="text-align:center"><div style="border-top:1px solid #333;width:200px;padding-top:4px;margin-top:24px">${CO.nameEn}<br>${CO.contact}</div></div>
-  </div>`;
+  ${signBlockHTML()}`;
 }
 
 async function showSumPreview(){
@@ -3912,11 +3993,16 @@ function cancelTax(id){
   r.cancelledAt=new Date().toISOString();
   r.cancelReason=reason;
   if(r.plant){ [r.plant,r.plant+'~S'].forEach(k=>{delete _taxSel[r.mon+'|'+k]; delete _taxSeen[r.mon+'|'+k];}); }
+  // Invoice ในใบที่ยกเลิก → คำนวณใหม่ตามตั้งค่าปัจจุบันทันที (เฉพาะใบในงวดนี้ ไม่แตะงวดอื่น)
+  const ch=invRecalcPreview((r.invIds||[]).map(id=>S.invoices.find(i=>i.id===id)).filter(Boolean));
+  const lines=ch.map(x=>'• '+x.inv.no+': '+fmtNum(x.inv.grand)+' → '+fmtNum(x.c.grand)).join('\n');
+  const n=applyRecalc(ch);
   persistLocal();
   dbSaveTax(r);
   renderInvList();renderSpSaved();
   genTaxInvoices();
-  showToast(`ยกเลิกใบกำกับภาษี ${r.no} แล้ว`);
+  showToast(`ยกเลิกใบกำกับภาษี ${r.no} แล้ว`+(n?` · ปรับยอด Invoice ตามตั้งค่าปัจจุบัน ${n} ใบ`:''));
+  if(n) alert(`ยกเลิกใบกำกับภาษี ${r.no} แล้ว\n\nInvoice ในใบนี้ถูกคำนวณใหม่ตามตั้งค่าปัจจุบัน:\n${lines}\n\n(งวดอื่นไม่เปลี่ยน)`);
 }
 
 function buildTaxInvHTML(taxNo, taxDate, group, cust, invs, beforeVat, vat, grand, mon){
@@ -4161,6 +4247,31 @@ function thaiBahtText(amount){
   return (neg?'ลบ':'')+out;
 }
 
+/* ขนาดรูป (px) จาก header ของ PNG/JPEG/GIF — ใช้คงสัดส่วนโลโก้โดยไม่พึ่ง object-fit (ตอน export PDF จะไม่ถูกบีบ) */
+function imgDims(src){
+  try{
+    const m=String(src).match(/^data:image\/(png|jpe?g|gif);base64,(.+)$/i); if(!m) return null;
+    const b=atob(m[2].slice(0,70000)); const u=i=>b.charCodeAt(i);
+    if(/png/i.test(m[1])) return {w:(u(16)<<24|u(17)<<16|u(18)<<8|u(19))>>>0,h:(u(20)<<24|u(21)<<16|u(22)<<8|u(23))>>>0};
+    if(/gif/i.test(m[1])) return {w:u(6)|u(7)<<8,h:u(8)|u(9)<<8};
+    let i=2; while(i<b.length-9){ if(u(i)!==0xFF){i++;continue;} const t=u(i+1);
+      if(t>=0xC0&&t<=0xCF&&t!==0xC4&&t!==0xC8&&t!==0xCC) return {h:u(i+5)<<8|u(i+6),w:u(i+7)<<8|u(i+8)};
+      i+=2+(u(i+2)<<8|u(i+3)); }
+  }catch(e){}
+  return null;
+}
+const TI_DASH={da:2,gap:2,lw:1};   // เส้นปะกรอบ (px; 1px≈0.26 มม.): ขีดยาว 2 เว้น 2 หนา 1 — ปรับตัวเลขตรงนี้ได้
+const TI_LOGO_W=37, TI_LOGO_H=32.4;   // พื้นที่โลโก้ในใบกำกับภาษี (มม.)
+function tiLogoImg(src){
+  const d=imgDims(src);
+  let st='width:100%;height:100%;object-fit:contain';
+  if(d&&d.w&&d.h){
+    const k=Math.min(TI_LOGO_W/d.w,TI_LOGO_H/d.h), w=(d.w*k).toFixed(2), h=(d.h*k).toFixed(2);
+    st='width:'+w+'mm;height:'+h+'mm;display:block;margin:'+((TI_LOGO_H-h)/2).toFixed(2)+'mm 0 0 0';
+  }
+  return '<img src="'+src+'" alt="" style="'+st+'">';
+}
+
 /* ── ใบกำกับภาษี / บิลเงินสด : จัดหน้าตามต้นฉบับ (A4, หน่วย mm) ── */
 function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -4171,7 +4282,7 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   const mNo=String(taxNo||'').match(/^(\D*?)\s*(\d+)$/);
   const docNo=mNo?esc(mNo[1])+' <span class="ti-dg">'+mNo[2]+'</span>':esc(taxNo);
   const logo=CO.logoData
-    ?'<img src="'+CO.logoData+'" alt="" style="width:100%;height:100%;object-fit:contain">'
+    ?tiLogoImg(CO.logoData)
     :'<svg viewBox="0 0 100 96" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%"><ellipse cx="50" cy="48" rx="45" ry="41" fill="none" stroke="#d6249f" stroke-width="9" stroke-dasharray="185 90" transform="rotate(-35 50 48)"/><text x="50" y="60" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="33" font-weight="900" fill="#17c3c3" stroke="#d6249f" stroke-width="1.3">CCS</text></svg>';
 
   const rows=(invs||[]).map((inv,i)=>({no:String(i+1),desc:(inv.no||'—')+' '+(inv.svc||(inv.type==='special'?(inv.title||'SPECIAL SERVICE'):'CLEANING SERVICE FEE.')),amt:fmt(invAmt(inv).up)}));
@@ -4180,28 +4291,38 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   // รายการยาว (เลขที่ Invoice รูปแบบใหม่) → ย่อขนาดตัวอักษรให้พอดีช่อง แทนการดันช่องจำนวนเงินตกขอบ
   const fitDesc=t=>{const pt=fitPt(t,352,10,6.5);return pt<10?'<span style="font-size:'+pt+'pt">'+esc(t)+'</span>':esc(t);};
 
+  /* เส้นปะกรอบ: ปรับที่ TI_DASH (ความยาวขีด/ระยะห่าง/ความหนา หน่วย px) — ใช้ค่าตัวเลขตรง ๆ เพื่อให้ export PDF แสดงผลได้ */
+  const DP=(TI_DASH.da+TI_DASH.gap)+'px', LW=TI_DASH.lw+'px';
+  // html2canvas ไม่รองรับ repeating-gradient → ใช้ลายสี่เหลี่ยมเล็ก 1 รอบ (ขีด+ช่องว่าง) แล้วทำซ้ำ
+  const pc=(TI_DASH.da/(TI_DASH.da+TI_DASH.gap)*100).toFixed(2)+'%';
+  const bTop='linear-gradient(90deg,#000 '+pc+',transparent '+pc+') top left/'+DP+' '+LW+' repeat-x';
+  const bBot='linear-gradient(90deg,#000 '+pc+',transparent '+pc+') bottom left/'+DP+' '+LW+' repeat-x';
+  const bLeft='linear-gradient(180deg,#000 '+pc+',transparent '+pc+') top left/'+LW+' '+DP+' repeat-y';
+  const bRight='linear-gradient(180deg,#000 '+pc+',transparent '+pc+') top right/'+LW+' '+DP+' repeat-y';
   const css='.ti-page,.ti-page *{box-sizing:border-box}.ti-col{min-width:0}'
+  +'.ti-fr{background:'+[bTop,bBot,bLeft,bRight].join(',')+'}'
+  +'.ti-lf{background:'+bLeft+'}.ti-bb{background:'+bBot+'}'
   +'.ti-page{width:210mm;margin:0 auto;padding:5mm 10.2mm 0 12.6mm;background:#fff;color:#000;font-family:Sarabun,"TH Sarabun New",Tahoma,sans-serif;font-size:10pt;line-height:1.2;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
   +'@media screen{.ti-page{min-height:297mm;border:1px solid #cfd4dc;box-shadow:0 2px 10px rgba(0,0,0,.12)}}'
   +'.ti-page b{font-weight:700}'
   +'.ti-head{display:flex;height:34.4mm}'
-  +'.ti-logo{flex:0 0 36.8mm;height:32.4mm;margin-top:1.6mm;padding-right:2.8mm}'
+  +'.ti-logo{flex:0 0 38.5mm;height:32.4mm;margin-top:1.6mm;padding-right:1.5mm}'
   +'.ti-hl{flex:1}.ti-hl>div{height:8.6mm;line-height:8.6mm;white-space:nowrap}'
   +'.ti-hn{font-size:15pt;font-weight:700}.ti-hb{font-size:11pt;font-weight:700}'
   +'.ti-hr{display:flex;justify-content:space-between;font-size:10.5pt}.ti-hr b{font-size:11pt}'
   +'.ti-title{height:9mm;line-height:9mm;text-align:center;font-size:13pt;font-weight:700;margin-bottom:.4mm}'
   +'.ti-info{display:flex;gap:1.7mm;align-items:stretch}'
-  +'.ti-box{border:1px dashed #000;min-height:40.6mm}.ti-in{padding:1mm 1mm 0 3mm}'
+  +'.ti-box{min-height:40.6mm}.ti-in{padding:1mm 1mm 0 3mm}'
   +'.ti-bl{flex:0 0 117.4mm}.ti-br{flex:1}'
   +'.ti-row{display:flex;min-height:7.7mm;line-height:7.7mm;align-items:flex-start;font-size:10pt}'
   +'.ti-row.ti-addr{min-height:15.4mm}'
   +'.ti-row .lb{flex:0 0 20mm;font-weight:700}.ti-br .ti-row{font-size:9.5pt}.ti-br .ti-row .lb{flex:0 0 34mm}.ti-br .ti-row .v{white-space:nowrap}'
   +'.ti-row .v{flex:1;min-width:0}'
   +'.ti-dg{letter-spacing:.18em}'
-  +'.ti-items{display:flex;border:1px dashed #000;margin-top:2.8mm;font-size:10pt}'
-  +'.ti-col{border-left:1px dashed #000}.ti-col:first-child{border-left:0}'
+  +'.ti-items{display:flex;margin-top:2.8mm;font-size:10pt}'
+  
   +'.ti-col:nth-child(1){flex:0 0 9.9mm}.ti-col:nth-child(2){flex:0 0 100.4mm}.ti-col:nth-child(3){flex:0 0 21.8mm}.ti-col:nth-child(4){flex:0 0 25.5mm}.ti-col:nth-child(5){flex:1}'
-  +'.ti-h{height:9.2mm;line-height:9.2mm;text-align:center;font-weight:700;border-bottom:1px dashed #000;white-space:nowrap}'
+  +'.ti-h{height:9.2mm;line-height:9.2mm;text-align:center;font-weight:700;white-space:nowrap}'
   +'.ti-r{height:7.7mm;line-height:7.7mm;padding:0 1.6mm;white-space:nowrap;overflow:hidden}'
   +'.ti-r.c{text-align:center;padding:0}.ti-r.rt{text-align:right;padding-right:2mm;font-size:9pt}'
   +'.ti-bot{display:flex;gap:2.7mm;margin-top:1.7mm}'
@@ -4210,7 +4331,7 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   +'.ti-wl{height:8.5mm;line-height:8.5mm;padding-left:.8mm;font-weight:700}'
   +'.ti-wbar{height:9.2mm;margin-top:.5mm;background:#bfbfbf;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10.5pt}'
   +'.ti-dis{height:7.2mm;line-height:7.2mm;padding-left:1mm;font-size:8.5pt;white-space:nowrap}'
-  +'.ti-tot{flex:1;height:35.9mm;border:1px dashed #000;padding:.6mm 2.4mm 0}'
+  +'.ti-tot{flex:1;height:35.9mm;padding:.6mm 2.4mm 0}'
   +'.ti-tot div{display:flex;justify-content:space-between;height:8.5mm;line-height:8.5mm;font-size:10.5pt}.ti-tot span:first-child{font-weight:700}'
   +'.ti-pay{position:relative;height:9mm;margin-top:3.1mm;font-size:10pt}'
   +'.ti-pay>*{position:absolute;line-height:8.2mm;white-space:nowrap}'
@@ -4231,13 +4352,13 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   +'</div></div>'
   +'<div class="ti-title">บิลเงินสด / ใบกำกับภาษี</div>'
   +'<div class="ti-info">'
-    +'<div class="ti-box ti-bl"><div class="ti-in">'
+    +'<div class="ti-box ti-fr ti-bl"><div class="ti-in">'
       +'<div class="ti-row"><b class="lb">ชื่อลูกค้า</b><span class="v">'+esc(cust.name)+' ('+esc(cust.branch)+')</span></div>'
       +'<div class="ti-row ti-addr"><b class="lb">ที่อยู่</b><span class="v">'+esc(cust.addr)+' <span style="white-space:nowrap">เลขประจำตัวผู้เสียภาษี '+esc(cust.taxId)+(cust.branchCode?' สาขา '+esc(cust.branchCode):'')+'</span></span></div>'
       +'<div class="ti-row"><b class="lb">โทรศัพท์</b><span class="v" style="flex:0 0 28mm">'+esc(cust.tel||'-')+'</span><b style="flex:0 0 25.2mm">โทรสาร</b><span class="v">'+esc(cust.fax||'-')+'</span></div>'
       +'<div class="ti-row"><b style="flex:0 0 34.4mm">เงื่อนไขการชำระ</b><span style="flex:0 0 8.2mm">'+esc(cust.terms||'-')+'</span><b style="flex:0 0 58.5mm">วันครบกำหนดชำระเงิน</b><span class="v">'+esc(cust.due||'-')+'</span></div>'
     +'</div></div>'
-    +'<div class="ti-box ti-br"><div class="ti-in">'
+    +'<div class="ti-box ti-fr ti-br"><div class="ti-in">'
       +'<div class="ti-row"><b class="lb">เลขทะเบียนนิติบุคคล</b><span class="v">'+esc(CO.tax)+'</span></div>'
       +'<div class="ti-row"><b class="lb">เลขประจำตัวผู้เสียภาษี</b><span class="v">'+esc(CO.tax)+'</span></div>'
       +'<div class="ti-row"><b class="lb">เลขที่เอกสาร</b><span class="v">'+docNo+'</span></div>'
@@ -4245,12 +4366,12 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
       +'<div class="ti-row"><b class="lb">อัตราภาษีร้อยละ</b><span class="v">7</span></div>'
     +'</div></div>'
   +'</div>'
-  +'<div class="ti-items">'
-    +'<div class="ti-col"><div class="ti-h">ลำดับ</div>'+col('c',r=>r.no)+'</div>'
-    +'<div class="ti-col"><div class="ti-h">รายการ</div>'+col('',r=>fitDesc(r.desc))+'</div>'
-    +'<div class="ti-col"><div class="ti-h">จำนวน</div>'+col('',()=>'')+'</div>'
-    +'<div class="ti-col"><div class="ti-h">ราคาต่อหน่วย</div>'+col('',()=>'')+'</div>'
-    +'<div class="ti-col"><div class="ti-h">จำนวนเงิน</div>'+col('rt',r=>r.amt)+'</div>'
+  +'<div class="ti-items ti-fr">'
+    +'<div class="ti-col"><div class="ti-h ti-bb">ลำดับ</div>'+col('c',r=>r.no)+'</div>'
+    +'<div class="ti-col ti-lf"><div class="ti-h ti-bb">รายการ</div>'+col('',r=>fitDesc(r.desc))+'</div>'
+    +'<div class="ti-col ti-lf"><div class="ti-h ti-bb">จำนวน</div>'+col('',()=>'')+'</div>'
+    +'<div class="ti-col ti-lf"><div class="ti-h ti-bb">ราคาต่อหน่วย</div>'+col('',()=>'')+'</div>'
+    +'<div class="ti-col ti-lf"><div class="ti-h ti-bb">จำนวนเงิน</div>'+col('rt',r=>r.amt)+'</div>'
   +'</div>'
   +'<div class="ti-bot"><div class="ti-bl2">'
     +'<div class="ti-note"><b>หมายเหตุ</b><span class="dot"></span></div>'
@@ -4258,7 +4379,7 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
     +'<div class="ti-wbar">( '+esc(thaiBahtText(grand))+' )</div>'
     +'<div class="ti-dis">* ได้รับสินค้าตามรายการข้างต้นในสภาพที่เรียบร้อย จำนวนสินค้าและราคาถูกต้องแล้ว</div>'
     +'<div class="ti-dis">* เอกสารฉบับนี้จะสมบูรณ์ต่อเมื่อได้รับเงินจากลูกค้าหรือเช็คผ่านธนาคารเรียบร้อยแล้ว</div>'
-  +'</div><div class="ti-tot">'
+  +'</div><div class="ti-tot ti-fr">'
     +'<div><span>ส่วนลดการค้า</span><span>-</span></div>'
     +'<div><span>มูลค่าสินค้า</span><span>'+fmt(beforeVat)+'</span></div>'
     +'<div><span>ภาษีมูลค่าเพิ่ม</span><span>'+fmt(vat)+'</span></div>'
@@ -4267,6 +4388,7 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   +'<div class="ti-pay">'
     +'<div class="sq" style="left:2.7mm"></div><span style="left:13.9mm">เงินสด</span>'
     +'<div class="sq" style="left:30.3mm"></div><span style="left:41.9mm">เช็คธนาคาร</span>'
+    +'<div class="dl" style="left:61.5mm;width:25.3mm"></div>'
     +'<span style="left:88.8mm">สาขา</span><div class="dl" style="left:97mm;width:20.4mm"></div>'
     +'<span style="left:120.8mm">เลขที่</span><div class="dl" style="left:127.6mm;width:23.2mm"></div>'
     +'<span style="left:153.5mm">วันที่</span><div class="dl" style="left:160.3mm;width:26.9mm"></div>'
@@ -4520,7 +4642,15 @@ async function exportXlsx(){
   ws.mergeCells(r,1,r,L); const w=ws.getCell(r,1); w.value='( '+numToEng(tG)+' )';
   w.font={name:XL.font,size:9,italic:true,color:{argb:XL.navy}}; w.alignment={horizontal:'center',vertical:'middle',wrapText:true};
   w.fill=XL.fill('FFF0F7FF'); xlStyleRange(ws,r,1,r,L,c=>c.border=XL.box()); ws.getRow(r).height=22;
-  r+=4;
+  r+=2;
+  ws.getRow(r).height=58; // ช่องเซ็น
+  if(CO.signData&&CO.signShow!==false){
+    try{ const imgId=wb.addImage({base64:CO.signData,extension:'png'});
+      const im=await new Promise(res=>{const x=new Image();x.onload=()=>res(x);x.onerror=()=>res(null);x.src=CO.signData;});
+      const k=im?Math.min(1,150/im.width,70/im.height):1, w=im?im.width*k:150, h=im?im.height*k:60;
+      ws.addImage(imgId,{tl:{col:3.3,row:(r-1)+Math.max(0.02,(74-h)/78)},ext:{width:w,height:h},editAs:'oneCell'}); }catch(e){console.warn('sign img',e);}
+  }
+  r++;
   ws.getCell(r,2).value='HOYA OPTICS (THAILAND) LTD.'; ws.getCell(r,2).border={top:XL.thin('FF333333')};
   ws.mergeCells(r,4,r,5); ws.getCell(r,4).value=CO.nameEn||''; ws.getCell(r,4).alignment={horizontal:'center',wrapText:true};
   xlStyleRange(ws,r,4,r,5,c=>c.border={top:XL.thin('FF333333')});
@@ -4888,16 +5018,18 @@ function setCfgValDone(pk,dk,field,n,extra){
   const d=CFG[pk].depts[dk];
   if(extra===undefined) extra=field==='rate'?` · OT ${d.ot_rate} / Holiday ${d.hol_rate}`:'';
   persistSettings();
-  const rc=(field==='workers'||field==='seq')?{n:0,m:0}:recalcDraftInvoices(pk,dk);
   renderCfg();
-  refreshInvForm(pk,dk);
-  if(field==='seq'){ autoFillInvNo(); autoFillSpNo(); }
-  showToast(`✅ ${CFG[pk].depts[dk].name}: ${CFG_LABEL[field]} = ${n.toLocaleString('th-TH')}${extra}`
-    +(rc.n?` · ปรับ Invoice ร่าง ${rc.n} ใบ`:'')+(rc.m?` · ใบที่ยืนยันแล้ว ${rc.m} ใบไม่เปลี่ยน`:''));
+  (async()=>{
+    const rc=(field==='workers'||field==='seq')?{n:0,m:0}:await recalcByPeriod(pk,dk);
+    refreshInvForm(pk,dk);
+    if(field==='seq'){ autoFillInvNo(); autoFillSpNo(); }
+    showToast(`✅ ${CFG[pk].depts[dk].name}: ${CFG_LABEL[field]} = ${n.toLocaleString('th-TH')}${extra}`
+      +(rc.n?` · ปรับ Invoice ${rc.n} ใบ`:'')+(rc.kept?` · คงยอดเดิม ${rc.kept} ใบ`:'')+(rc.m?` · ใบที่ออกใบกำกับภาษีแล้ว ${rc.m} ใบไม่เปลี่ยน`:''));
+  })();
 }
 /* โหลดค่าใหม่เข้าฟอร์ม Invoice ถ้าฟอร์มกำลังแสดงแผนกนี้อยู่ (หรือไม่ระบุแผนก) */
 function refreshInvForm(pk,dk){
-  if(_editInvId){ const i=S.invoices.find(x=>x.id===_editInvId); if(i&&invStatus(i)==='draft') editInv(_editInvId); return; }
+  if(_editInvId){ const i=S.invoices.find(x=>x.id===_editInvId); if(i&&!taxRecOfInv(i.id)) editInv(_editInvId); return; }
   const p=document.getElementById('inv-plant')?.value, d=document.getElementById('inv-dept')?.value;
   if(pk&&(p!==pk||(dk&&d!==dk))) return;
   loadTStoInv();
@@ -5341,7 +5473,7 @@ async function confirmDraftsForSummary(action,allowView=true){
   const v=await askChoice('✅ ยืนยัน Invoice ก่อน'+action,
     `${monthLabel(monKey)} มี Invoice ที่ยังเป็น <strong>ร่าง ${drafts.length} ใบ</strong> (รวม ${fmtNum(tot)} บาท):<br>
      <div style="font-family:'Sarabun',sans-serif;font-size:12px;margin:6px 0 2px;max-height:140px;overflow:auto">${drafts.map(i=>esc(i.no)).join('<br>')}</div>
-     หลังยืนยัน ยอดจะคงที่ ไม่เปลี่ยนตามการแก้อัตราในตั้งค่า (แก้แบบ manual ได้ภายหลัง)`+(allowView?'':'<br><strong>ต้องยืนยันก่อนจึงจะ'+action+'ได้</strong>'),
+     (ยอดยังตามอัตราในตั้งค่า จนกว่าจะออกใบกำกับภาษี)`+(allowView?'':'<br><strong>ต้องยืนยันก่อนจึงจะ'+action+'ได้</strong>'),
     btns);
   if(v==='cancel') return false;
   if(v==='confirm'){ setInvStatus(drafts,'confirmed'); showToast(`✅ ยืนยัน ${drafts.length} ใบแล้ว`); }
@@ -6144,10 +6276,7 @@ function getSpInvHTML(forPrint=false){
       <div style="font-size:12px;color:#1a3a5c;font-style:italic;margin-top:4px">( ${numToEng(grand)} )</div>
     </div>
 
-    <div style="display:flex;justify-content:space-between;margin-top:2.5rem;font-size:12px;padding-top:.75rem;border-top:1px solid #ddd">
-      <div style="text-align:center"><div style="border-top:1px solid #333;width:180px;padding-top:4px;margin-top:28px">HOYA OPTICS (THAILAND) LTD.</div></div>
-      <div style="text-align:center"><div style="border-top:1px solid #333;width:200px;padding-top:4px;margin-top:28px">${CO.nameEn}<br>${CO.contact}</div></div>
-    </div>
+    ${signBlockHTML()}
   </div>`;
 }
 
