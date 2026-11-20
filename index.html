@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-21b | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-21c | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -318,7 +318,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-21b</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-21c</div>
 </header>
 
 <nav class="tabs">
@@ -1153,7 +1153,7 @@ async function exportPDF(doc){
   // กว้างกว่าหน้ากระดาษเล็กน้อยและสูงมาก เพื่อไม่ให้มี scrollbar ไปเบียดความกว้างตอนแปลงเป็นภาพ
   ifr.style.cssText=`position:fixed;left:-${contentPx+400}px;top:0;width:${contentPx+60}px;height:6000px;border:0;background:#fff`;
   const html=doc.html.replace(/\sonload="[^"]*print\(\)[^"]*"/g,'')
-    .replace('</head>','<style>@media screen{html,body{background:#fff}.ti-page{min-height:0!important;border:none!important;box-shadow:none!important}}</style></head>');
+    .replace('</head>','<style>@media screen{html,body{background:#fff}.ti-page{border:none!important;box-shadow:none!important}}</style></head>');
   try{
     await new Promise((res,rej)=>{ ifr.onload=res; ifr.onerror=rej; ifr.srcdoc=html; document.body.appendChild(ifr); });
     const w=ifr.contentWindow;
@@ -4328,8 +4328,8 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   const css='.ti-page,.ti-page *{box-sizing:border-box}.ti-col{min-width:0}'
   +'.ti-fr{background:'+[bTop,bBot,bLeft,bRight].join(',')+'}'
   +'.ti-lf{background:'+bLeft+'}.ti-bb{background:'+bBot+'}'
-  +'.ti-page{width:210mm;margin:0 auto;padding:5mm 10.2mm 0 12.6mm;background:#fff;color:#000;font-family:Sarabun,"TH Sarabun New",Tahoma,sans-serif;font-size:10pt;line-height:1.2;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
-  +'@media screen{.ti-page{min-height:297mm;border:1px solid #cfd4dc;box-shadow:0 2px 10px rgba(0,0,0,.12)}}'
+  +'.ti-page{width:210mm;margin:0 auto;padding:5mm 10.2mm 5mm 12.6mm;min-height:296mm;display:flex;flex-direction:column;background:#fff;color:#000;font-family:Sarabun,"TH Sarabun New",Tahoma,sans-serif;font-size:10pt;line-height:1.2;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+  +'@media screen{.ti-page{border:1px solid #cfd4dc;box-shadow:0 2px 10px rgba(0,0,0,.12)}}'
   +'.ti-page b{font-weight:700}'
   +'.ti-head{display:flex;height:34.4mm}'
   +'.ti-logo{flex:0 0 38.5mm;height:32.4mm;margin-top:1.6mm;padding-right:1.5mm}'
@@ -4345,6 +4345,7 @@ function buildDCTaxHTML(taxNo,taxDate,group,cust,invs,beforeVat,vat,grand,mon){
   +'.ti-row .lb{flex:0 0 20mm;font-weight:700}.ti-br .ti-row{font-size:9.5pt}.ti-br .ti-row .lb{flex:0 0 34mm}.ti-br .ti-row .v{white-space:nowrap;font-size:10.5pt}'
   +'.ti-row .v{flex:1;min-width:0}'
   +'.ti-dg{letter-spacing:.18em}'
+  +'.ti-page>*{flex:0 0 auto}.ti-page>.ti-items{flex:1 1 0;min-height:'+(9.2+Math.max(rows.length,1)*7.7)+'mm;overflow:hidden}'
   +'.ti-items{display:flex;margin-top:2.8mm;font-size:10pt}'
   
   +'.ti-col:nth-child(1){flex:0 0 9.9mm}.ti-col:nth-child(2){flex:0 0 108.2mm}.ti-col:nth-child(3){flex:0 0 14mm}.ti-col:nth-child(4){flex:0 0 25.5mm}.ti-col:nth-child(5){flex:1}'
