@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-22a | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-22c | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -318,7 +318,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-22a</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-22c</div>
 </header>
 
 <nav class="tabs">
@@ -775,11 +775,13 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
       </div>
     </div>
     <div class="brow">
-      <button class="btn bp bsm" onclick="initFirebase()">🔥 เชื่อมต่อ Firebase</button>
+      <button class="btn bp bsm" onclick="connectFB()">🔥 เชื่อมต่อ Firebase</button>
       <button class="btn bo bsm" onclick="copyFBLink()" title="เปิดลิงก์นี้ในเบราว์เซอร์/เครื่องอื่น จะเชื่อม Database เดียวกันให้อัตโนมัติ">🔗 ลิงก์สำหรับเบราว์เซอร์อื่น</button>
       <button class="btn bo bsm" onclick="exportFBConfig()" title="เก็บ API Key / Project ID / App ID เป็นไฟล์ไว้ — เปิดเบราว์เซอร์หรือเครื่องใหม่แล้วกด “โหลดค่าจากไฟล์” ได้เลย">💾 บันทึกค่าเชื่อมต่อเป็นไฟล์</button>
       <button class="btn bo bsm" onclick="document.getElementById('fb-file').click()">📂 โหลดค่าจากไฟล์</button>
       <input type="file" id="fb-file" accept=".json,application/json" style="display:none" onchange="importFBConfig(this)">
+      <button class="btn bo bsm" onclick="recoverCfgFromData()" title="สร้างโรงงาน/แผนก/อัตราที่หายกลับมา โดยอ่านจาก Invoice และใบกำกับภาษีที่บันทึกไว้">🧯 กู้โรงงาน/แผนกจาก Invoice</button>
+      <button class="btn bo bsm" onclick="restoreSettingsPrev()" title="ถ้าการตั้งค่าถูกทับ กู้ฉบับก่อนหน้าที่ระบบสำรองไว้ใน Database">↩️ กู้การตั้งค่าครั้งก่อน</button>
       <button class="btn bs bsm" onclick="dbLoad()" title="รวมข้อมูลในเครื่องกับ Database ให้ตรงกันทั้งสองฝั่ง">🔄 ซิงก์กับ DB</button>
       <button class="btn bo bsm" onclick="dbBackupAll()">📦 Backup ข้อมูลปัจจุบัน → DB</button>
     </div>
@@ -819,7 +821,7 @@ service cloud.firestore {
   <div class="card">
     <div class="ch">
       <div class="ct"><div class="ci">🏭</div>ข้อมูลลูกค้า HOYA — แยกตามโรงงาน (ใช้ในใบกำกับภาษี)</div>
-      <button class="btn bp bsm" onclick="saveCustomers()">💾 บันทึก</button>
+      <span style="font-size:12px;color:#1a6b3c;margin-right:6px">✓ บันทึกอัตโนมัติ</span><button class="btn bo bsm" onclick="saveCustomers()">💾 บันทึกทันที</button>
     </div>
     <div class="alert ai" style="font-size:12.5px"><div>💡 ข้อมูลลูกค้าสำหรับใบกำกับภาษี <strong>แยกตามโรงงาน</strong> — ใบกำกับภาษีของแต่ละโรงงานจะใช้ชื่อ/สาขา/ที่อยู่/เลขภาษีของโรงงานนั้น (ใบที่ออกไปแล้วเก็บที่อยู่ ณ วันที่ออกไว้ ไม่เปลี่ยนตาม)</div></div>
     <div style="margin-bottom:.75rem">
@@ -831,24 +833,24 @@ service cloud.firestore {
   <div class="card">
     <div class="ch">
       <div class="ct"><div class="ci">🏢</div>ข้อมูลบริษัท (แสดงใน Invoice &amp; Summary)</div>
-      <button class="btn bp bsm" onclick="saveCompanyInfo()">💾 บันทึก</button>
+      <span style="font-size:12px;color:#1a6b3c;margin-right:6px">✓ บันทึกอัตโนมัติ</span><button class="btn bo bsm" onclick="saveCompanyInfo()">💾 บันทึกทันที</button>
     </div>
     <div class="g2" style="gap:.875rem;align-items:start">
       <div style="display:flex;flex-direction:column;gap:.75rem">
         <div class="fg"><label>ชื่อบริษัท (ไทย)</label>
-          <input type="text" id="co-name-th" value="ห้างหุ้นส่วนจำกัด เชียงใหม่ คลีนนิ่ง แอนด์ ซัพพลาย เซอร์วิส"></div>
+          <input type="text" id="co-name-th" oninput="autoSaveCompany()" value="ห้างหุ้นส่วนจำกัด เชียงใหม่ คลีนนิ่ง แอนด์ ซัพพลาย เซอร์วิส"></div>
         <div class="fg"><label>ชื่อบริษัท (อังกฤษ)</label>
-          <input type="text" id="co-name-en" value="CHIANGMAI CLEANING AND SUPPLY SERVICE PART., LTD."></div>
+          <input type="text" id="co-name-en" oninput="autoSaveCompany()" value="CHIANGMAI CLEANING AND SUPPLY SERVICE PART., LTD."></div>
         <div class="fg"><label>ที่อยู่</label>
-          <input type="text" id="co-addr" value="159 ม.11 ต.หนองจาก อ.สันทราย จ.เชียงใหม่ 50290"></div>
+          <input type="text" id="co-addr" oninput="autoSaveCompany()" value="159 ม.11 ต.หนองจาก อ.สันทราย จ.เชียงใหม่ 50290"></div>
         <div class="fg"><label>โทรศัพท์</label>
-          <input type="text" id="co-tel" value="081-2879000"></div>
+          <input type="text" id="co-tel" oninput="autoSaveCompany()" value="081-2879000"></div>
         <div class="fg"><label>อีเมล</label>
-          <input type="text" id="co-email" value="CLEANING_CCS@HOTMAIL.COM"></div>
+          <input type="text" id="co-email" oninput="autoSaveCompany()" value="CLEANING_CCS@HOTMAIL.COM"></div>
         <div class="fg"><label>เลขที่ภาษี (TAX No.)</label>
-          <input type="text" id="co-tax" value="0503554005172"></div>
+          <input type="text" id="co-tax" oninput="autoSaveCompany()" value="0503554005172"></div>
         <div class="fg"><label>ผู้ติดต่อ / ผู้ลงนาม</label>
-          <input type="text" id="co-contact" value="(MISS. MONTIRA YAINTHORN)"></div>
+          <input type="text" id="co-contact" oninput="autoSaveCompany()" value="(MISS. MONTIRA YAINTHORN)"></div>
       </div>
       <!-- Logo preview -->
       <div style="display:flex;flex-direction:column;gap:.75rem">
@@ -902,7 +904,7 @@ service cloud.firestore {
 
     <div class="st">🏗️ โรงงานและแผนกทั้งหมด</div>
     <div id="fac-cfg"></div>
-    <div class="brow"><button class="btn bp" onclick="saveCfg()">💾 บันทึกการตั้งค่า</button></div>
+    <div class="brow"><span style="font-size:12px;color:#1a6b3c">✓ ค่าที่แก้ในช่องต่าง ๆ บันทึกอัตโนมัติทันที</span> <button class="btn bo" onclick="saveCfg()">💾 บันทึกทันที</button></div>
   </div>
 
 </div>
@@ -5766,16 +5768,46 @@ async function dbSaveTax(rec){
   catch(e){ console.error('dbSaveTax:',e); showToast('⚠️ บันทึกใบกำกับภาษีขึ้น Firebase ไม่สำเร็จ ('+(e.code||e.message)+')'); }
 }
 
-async function dbSaveSettings(){
+/* กันการตั้งค่าถูกทับ: เขียนขึ้น DB ได้ก็ต่อเมื่อเครื่องนี้ "เคยซิงก์กับฉบับใน DB ล่าสุดแล้ว" (_cfgBase = เวลาแก้ไขของฉบับใน DB ที่ซิงก์ล่าสุด)
+   ถ้าใน DB มีฉบับที่เครื่องนี้ไม่เคยเห็น (เช่น เปิดเบราว์เซอร์ใหม่ที่ยังเป็นค่าเริ่มต้น) → ดึงฉบับใน DB มาใช้แทน ไม่เขียนทับ
+   ก่อนเขียนทับทุกครั้งจะเก็บฉบับเดิมไว้ที่ settings/config_prev (กู้คืนได้ที่ ตั้งค่า → Firebase) */
+let _cfgBase=null;
+async function dbSaveSettings(opts){
   if(!ensureDB()) return;
   const p=JSON.parse(JSON.stringify(settingsPayload()));
   if(p.CO&&p.CO.logoData&&p.CO.logoData.length>700000){
     p.CO.logoData=null; p.CO.logoSkipped=true;
     showToast('โลโก้ใหญ่เกินไปสำหรับ Firebase — เก็บไว้เฉพาะในเครื่องนี้');
   }
-  try{ await _db.collection('settings').doc('config').set(p); }
+  try{
+    const ref=_db.collection('settings').doc('config');
+    const snap=await ref.get();
+    if(snap.exists){
+      const r=snap.data();
+      if(!(opts&&opts.force)&&(r.updatedAt||'')!==_cfgBase){
+        applySettings(r); _settingsAt=r.updatedAt||''; _cfgBase=_settingsAt; initAutoRatesFlags(); renderCfg(); saveSettingsLocal();
+        showToast('⚠️ ใน Database มีการตั้งค่าที่ใหม่กว่า/ต่างจากเครื่องนี้ — ดึงฉบับใน Database มาใช้ ไม่ได้เขียนทับ (ถ้าต้องการแก้ ให้แก้ซ้ำอีกครั้ง)');
+        return;
+      }
+      await _db.collection('settings').doc('config_prev').set(JSON.parse(JSON.stringify(r)));
+    }
+    await ref.set(p); _cfgBase=p.updatedAt||'';
+  }
   catch(e){ console.error('dbSaveSettings:',e); showToast('⚠️ บันทึกการตั้งค่าขึ้น Firebase ไม่สำเร็จ ('+(e.code||e.message)+')'); }
 }
+async function restoreSettingsPrev(){
+  if(!ensureDB()){alert('ยังไม่ได้เชื่อม Firebase');return;}
+  try{
+    const snap=await _db.collection('settings').doc('config_prev').get();
+    if(!snap.exists){alert('ไม่พบฉบับสำรองการตั้งค่าใน Database (ระบบเริ่มเก็บสำรองตั้งแต่เวอร์ชัน 2026-11-22b)');return;}
+    const r=snap.data(), n=Object.keys(r.CFG||{}).length;
+    if(!confirm(`กู้การตั้งค่าฉบับก่อนหน้า (บันทึกเมื่อ ${r.updatedAt?new Date(r.updatedAt).toLocaleString('th-TH'):'—'}, ${n} โรงงาน)?\nฉบับปัจจุบันจะถูกเก็บสำรองไว้แทน`)) return;
+    applySettings(r); _settingsAt=new Date().toISOString(); saveSettingsLocal();
+    await dbSaveSettings({force:true});
+    initAutoRatesFlags(); renderCfg(); refreshAllSelects(); showToast('↩️ กู้การตั้งค่าแล้ว');
+  }catch(e){alert('กู้ไม่สำเร็จ: '+(e.code||e.message));}
+}
+async function connectFB(){ if(!initFirebase()) return; try{await _authReady;}catch(e){} dbLoad(); }
 
 /* ซิงก์: รวมข้อมูลในเครื่องกับ Database (ไม่ทับกัน)
    - รายการที่มีแค่ฝั่งเดียว → เก็บไว้ และส่งขึ้น/ลงให้ครบทั้งสองฝั่ง
@@ -5820,6 +5852,7 @@ async function dbLoad(quiet){
     if(cfgSnap.exists&&(cfgSnap.data().updatedAt||'')>(_settingsAt||'')){
       applySettings(cfgSnap.data()); _settingsAt=cfgSnap.data().updatedAt||''; initAutoRatesFlags(); syncAutoRates(); renderCfg(); saveSettingsLocal();
     } else if(!cfgSnap.exists||(_settingsAt||'')>(cfgSnap.data().updatedAt||'')) cfgUp=true;
+    if(cfgSnap.exists) _cfgBase=cfgSnap.data().updatedAt||'';
     // เลขที่ใบกำกับภาษี: ใช้ค่าที่มากกว่า (กันเลขซ้ำ)
     const dbNext=ctrSnap.exists?(parseInt(ctrSnap.data().next)||0):0;
     if(dbNext>TAX_INV_COUNTER){ TAX_INV_COUNTER=dbNext; localStorage.setItem('tax_inv_counter',dbNext); }
@@ -5901,7 +5934,18 @@ function plantBill(pk){
   return {name:c.name||'',branch:c.branch||'',branchCode:c.branchCode||'',taxId:c.taxId||'',addr:c.addr||'',tel:c.tel||'',fax:c.fax||'',terms:c.terms||'',due:c.due||''};
 }
 function initPlantBill(){ Object.keys(CFG).forEach(pk=>{ if(!CFG[pk].bill) CFG[pk].bill=JSON.parse(JSON.stringify(plantBill(pk))); }); }
-function setBill(pk,f,v){ initPlantBill(); CFG[pk].bill[f]=v; _billDirty=true; }
+let _autoSaveT=null;
+/* ตั้งค่าบันทึกอัตโนมัติ: หยุดพิมพ์ ~0.8 วินาที → บันทึก (เครื่องนี้ + Database) */
+function autoSaveSettings(label){
+  clearTimeout(_autoSaveT);
+  _autoSaveT=setTimeout(()=>{ initPlantBill(); _billDirty=false; persistSettings(); showToast('✓ บันทึก'+(label||'การตั้งค่า')+'อัตโนมัติแล้ว'); },800);
+}
+function autoSaveCompany(){
+  const g=id=>document.getElementById(id)?.value;
+  CO.nameTh=g('co-name-th'); CO.nameEn=g('co-name-en'); CO.addr=g('co-addr'); CO.tel=g('co-tel'); CO.email=g('co-email'); CO.tax=g('co-tax'); CO.contact=g('co-contact');
+  renderLetterheadPreview(); autoSaveSettings('ข้อมูลบริษัท');
+}
+function setBill(pk,f,v){ initPlantBill(); CFG[pk].bill[f]=v; _billDirty=true; autoSaveSettings('ข้อมูลลูกค้า'); }
 let _billDirty=false;
 function renderCustomers(){
   const wrap=document.getElementById('customers-wrap');
@@ -5938,13 +5982,77 @@ function setTaxLag(pk,v){
   persistSettings(); rerenderTax();
   showToast(`🗓️ ${CFG[pk].name}: ${v?'ออกใบกำกับภาษีย้อนหลัง '+v+' เดือน':'ออกในเดือนเดียวกับ Invoice'}`);
 }
+/* กู้การตั้งค่าโรงงาน/แผนกที่หาย จาก Invoice และใบกำกับภาษีที่บันทึกไว้ (ชื่อ, จำนวนคน, อัตรา, OT, Holiday, ลำดับเลขที่, ที่อยู่ลูกค้า) */
+function planRecoverCfg(refreshAll){
+  const INV=S.invoices.filter(i=>i.plant&&i.dept&&i.type!=='special');
+  const parse=no=>{const m=String(no||'').match(/^CCS-(.+)-([A-Za-z]{3})\.-(\d+)\((\d{2})\)$/);return m?{mid:m[1],seq:+m[3]}:null;};
+  const latest=(a,b)=>((a.dt||'')>(b.dt||'')||((a.dt||'')===(b.dt||'')&&a.id>b.id))?a:b;
+  const plants={};
+  INV.forEach(i=>{(plants[i.plant]=plants[i.plant]||{depts:{},sp:[]}).depts[i.dept]=latest(plants[i.plant].depts[i.dept]||i,i);});
+  S.invoices.filter(i=>i.type==='special'&&i.plant).forEach(i=>{(plants[i.plant]=plants[i.plant]||{depts:{},sp:[]}).sp.push(i.no);});
+  const out={newPlants:[],newDepts:[],updDepts:[],plants:{}};
+  Object.entries(plants).forEach(([pk,pv])=>{
+    let pname=CFG[pk]?.name;
+    if(!pname){
+      const m=pv.sp.map(n=>String(n).match(/^CCS-(.+)-\d{4}-\d{3}$/)).find(Boolean);   // Special: CCS-{ชื่อโรงงาน}-6911-001 → ชื่อโรงงานตรง ๆ
+      if(m) pname=m[1];
+      else{
+        const mids=Object.values(pv.depts).map(i=>(parse(i.no)||{}).mid).filter(Boolean);
+        if(mids.length>1){ const parts=mids.map(x=>x.split('-')); const c=[]; for(let k=0;;k++){const v=parts[0][k]; if(v===undefined||!parts.every(p=>p[k]===v)) break; c.push(v);} pname=c.join('-')||pk; }
+        else pname=pk;
+      }
+      pname=String(pname).replace(/\s+$/,'');
+      out.newPlants.push({pk,name:pname,guess:!pv.sp.length});
+    }
+    // Invoice ที่ชื่อโรงงานในเลขที่ไม่ตรงกับชื่อในตั้งค่าตอนนี้ (เช่น "HOYA OPTICS SLR - PACK") → หาส่วนหน้าที่เหมือนกันทุกใบ ที่เหลือคือชื่อแผนก
+    const odd=Object.values(pv.depts).map(i=>parse(i.no)).filter(x=>x&&!x.mid.startsWith(pname+'-'));
+    let oddPre='';
+    if(odd.length>1){ const parts=odd.map(x=>x.mid.split('-')); const c=[]; for(let k=0;k<parts[0].length-1;k++){const v=parts[0][k]; if(!parts.every(p=>p[k]===v)) break; c.push(v);} oddPre=c.join('-'); }
+    Object.entries(pv.depts).forEach(([dk,inv])=>{
+      const pr=parse(inv.no); let dname=dk;
+      if(pr&&pname&&pr.mid.startsWith(pname+'-')) dname=pr.mid.slice(pname.length+1);
+      else if(pr&&oddPre&&pr.mid.startsWith(oddPre+'-')) dname=pr.mid.slice(oddPre.length+1);
+      const cur=CFG[pk]?.depts?.[dk];
+      const vals={name:dname,workers:+inv.cnt||0,rate:+inv.rate||0,ot_rate:+inv.otr||0,hol_rate:+inv.hr||0,seq:pr?pr.seq:undefined};
+      if(!cur) out.newDepts.push({pk,dk,pname,...vals});
+      else if(cur.workers!==vals.workers||cur.rate!==vals.rate||Math.abs((cur.ot_rate||0)-vals.ot_rate)>=0.005||Math.abs((cur.hol_rate||0)-vals.hol_rate)>=0.005) out.updDepts.push({pk,dk,pname:CFG[pk].name,cur,...vals,name:cur.name});
+    });
+  });
+  return out;
+}
+async function recoverCfgFromData(){
+  const pl=planRecoverCfg();
+  if(!pl.newPlants.length&&!pl.newDepts.length&&!pl.updDepts.length){ alert('ไม่พบโรงงาน/แผนกที่ขาด และค่าในตั้งค่าตรงกับ Invoice ล่าสุดทั้งหมดแล้ว'); return; }
+  const li=a=>a.length?'<ul style="margin:4px 0 8px 18px;padding:0">'+a.join('')+'</ul>':'';
+  const html=`<div style="font-size:13px;max-height:55vh;overflow:auto">
+    ค้นหาจาก Invoice และใบกำกับภาษีที่บันทึกไว้ (ชื่อโรงงาน/แผนกอ่านจากเลขที่ Invoice)
+    ${pl.newPlants.length?'<b>โรงงานที่ขาด</b>'+li(pl.newPlants.map(p=>`<li>${esc(p.name)} <span style="color:var(--muted)">(รหัส ${esc(p.pk)})</span>${p.guess?' <span style="color:#c8060a">— ชื่อเดาจากเลขที่ Invoice ตรวจในตั้งค่าอีกครั้ง</span>':''}</li>`)):''}
+    ${pl.newDepts.length?'<b>แผนกที่ขาด ('+pl.newDepts.length+')</b>'+li(pl.newDepts.map(d=>`<li>${esc(d.pname)} / <b>${esc(d.name)}</b> <span style="color:var(--muted)">— ${d.workers} คน · ${fmtNum(d.rate)} บาท · OT ${d.ot_rate} · Holiday ${d.hol_rate}</span></li>`)):''}
+    ${pl.updDepts.length?'<b>แผนกที่มีอยู่แต่ค่าต่างจาก Invoice ล่าสุด ('+pl.updDepts.length+')</b>'+li(pl.updDepts.map(d=>`<li>${esc(d.pname)} / ${esc(d.name)} <span style="color:var(--muted)">— ตอนนี้ ${d.cur.workers} คน ${fmtNum(d.cur.rate)} → Invoice ล่าสุด ${d.workers} คน ${fmtNum(d.rate)}</span></li>`)):''}
+  </div>`;
+  const btns=[{label:'ยกเลิก',value:'no',cls:'bo'},{label:'เพิ่มเฉพาะที่ขาด',value:'add',cls:'bp'}];
+  if(pl.updDepts.length) btns.push({label:'เพิ่มที่ขาด + ปรับค่าตาม Invoice ล่าสุด',value:'all',cls:'bp'});
+  const v=await askChoice('กู้การตั้งค่าจาก Invoice ที่บันทึกไว้',html,btns);
+  if(v!=='add'&&v!=='all') return;
+  const base=plantBill(Object.keys(CFG)[0]||'');
+  pl.newPlants.forEach(p=>{
+    // ที่อยู่ลูกค้า: ใช้จากใบกำกับภาษีล่าสุดของโรงงานนี้ (ถ้ามี)
+    const tx=S.taxInvoices.filter(t=>t.plant===p.pk&&t.bill).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')))[0];
+    CFG[p.pk]={name:p.name,depts:{},bill:tx?JSON.parse(JSON.stringify(tx.bill)):{name:base.name||'',branch:'',branchCode:'',taxId:base.taxId||'',addr:'',tel:base.tel||'',fax:base.fax||'',terms:base.terms||'',due:base.due||''}};
+  });
+  pl.newDepts.forEach(d=>{ CFG[d.pk].depts[d.dk]={name:d.name,workers:d.workers,rate:d.rate,ot_rate:d.ot_rate,hol_rate:d.hol_rate,...(d.seq?{seq:d.seq}:{})}; });
+  if(v==='all') pl.updDepts.forEach(d=>{ Object.assign(CFG[d.pk].depts[d.dk],{workers:d.workers,rate:d.rate,ot_rate:d.ot_rate,hol_rate:d.hol_rate}); });
+  initAutoRatesFlags();
+  persistSettings(); renderCfg(); renderCustomers(); refreshAllSelects();
+  alert(`✅ กู้การตั้งค่าแล้ว: เพิ่มโรงงาน ${pl.newPlants.length} · แผนก ${pl.newDepts.length}${v==='all'?' · ปรับค่า '+pl.updDepts.length+' แผนก':''}\n\nกรุณาตรวจ ชื่อโรงงาน / ที่อยู่ / จำนวนคน ในตั้งค่าอีกครั้ง (ค่าที่กู้ได้มาจาก Invoice ล่าสุดเท่านั้น)`);
+}
 function renderPlantGroupMap(){}
 function copyBill(pk,from){
   if(!from||!CFG[from]) return;
   initPlantBill();
   CFG[pk].bill=JSON.parse(JSON.stringify(plantBill(from)));
-  _billDirty=true; renderCustomers();
-  showToast('📋 คัดลอกข้อมูลลูกค้าจาก '+CFG[from].name+' แล้ว — กด “💾 บันทึก” ของส่วนข้อมูลลูกค้าเพื่อบันทึก');
+  _billDirty=true; renderCustomers(); autoSaveSettings('ข้อมูลลูกค้า');
+  showToast('📋 คัดลอกข้อมูลลูกค้าจาก '+CFG[from].name+' แล้ว (บันทึกอัตโนมัติ)');
 }
 
 function addCustomerGroup(){
