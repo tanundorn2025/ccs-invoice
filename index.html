@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-21c | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-22a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -318,7 +318,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-21c</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-22a</div>
 </header>
 
 <nav class="tabs">
@@ -777,6 +777,9 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
     <div class="brow">
       <button class="btn bp bsm" onclick="initFirebase()">🔥 เชื่อมต่อ Firebase</button>
       <button class="btn bo bsm" onclick="copyFBLink()" title="เปิดลิงก์นี้ในเบราว์เซอร์/เครื่องอื่น จะเชื่อม Database เดียวกันให้อัตโนมัติ">🔗 ลิงก์สำหรับเบราว์เซอร์อื่น</button>
+      <button class="btn bo bsm" onclick="exportFBConfig()" title="เก็บ API Key / Project ID / App ID เป็นไฟล์ไว้ — เปิดเบราว์เซอร์หรือเครื่องใหม่แล้วกด “โหลดค่าจากไฟล์” ได้เลย">💾 บันทึกค่าเชื่อมต่อเป็นไฟล์</button>
+      <button class="btn bo bsm" onclick="document.getElementById('fb-file').click()">📂 โหลดค่าจากไฟล์</button>
+      <input type="file" id="fb-file" accept=".json,application/json" style="display:none" onchange="importFBConfig(this)">
       <button class="btn bs bsm" onclick="dbLoad()" title="รวมข้อมูลในเครื่องกับ Database ให้ตรงกันทั้งสองฝั่ง">🔄 ซิงก์กับ DB</button>
       <button class="btn bo bsm" onclick="dbBackupAll()">📦 Backup ข้อมูลปัจจุบัน → DB</button>
     </div>
@@ -5667,6 +5670,32 @@ function copyFBLink(){
   if(navigator.clipboard&&window.isSecureContext!==false){ navigator.clipboard.writeText(url).then(done,()=>prompt('คัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์อื่น:',url)); }
   else prompt('คัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์อื่น:',url);
 }
+/* สำรอง/กู้ค่าเชื่อมต่อ Firebase ด้วยไฟล์ — ค่าเก็บในเบราว์เซอร์ (localStorage) จึงหายได้ถ้าเปลี่ยนเบราว์เซอร์/ที่เปิดไฟล์/ล้างข้อมูลเว็บ */
+function exportFBConfig(){
+  const k=localStorage.getItem('fb_apikey')||document.getElementById('fb-apikey')?.value.trim();
+  const p=localStorage.getItem('fb_projectid')||document.getElementById('fb-projectid')?.value.trim();
+  const a=localStorage.getItem('fb_appid')||document.getElementById('fb-appid')?.value.trim()||'';
+  if(!k||!p){ alert('ยังไม่มีค่า API Key / Project ID ให้บันทึก'); return; }
+  const blob=new Blob([JSON.stringify({apiKey:k,projectId:p,appId:a},null,2)],{type:'application/json'});
+  const el=document.createElement('a'); el.href=URL.createObjectURL(blob); el.download='ccs-firebase-config.json';
+  document.body.appendChild(el); el.click(); setTimeout(()=>{URL.revokeObjectURL(el.href);el.remove();},500);
+  showToast('💾 บันทึกไฟล์ค่าเชื่อมต่อแล้ว — เก็บไว้ที่ปลอดภัย (มี API Key อยู่ในไฟล์)');
+}
+function importFBConfig(inp){
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const c=JSON.parse(r.result), k=c.apiKey||c.k, p=c.projectId||c.p, a=c.appId||c.a||'';
+      if(!k||!p) throw new Error('ไม่พบ apiKey / projectId ในไฟล์');
+      localStorage.setItem('fb_apikey',k); localStorage.setItem('fb_projectid',p); if(a) localStorage.setItem('fb_appid',a);
+      document.getElementById('fb-apikey').value=k; document.getElementById('fb-projectid').value=p; document.getElementById('fb-appid').value=a;
+      showToast('📂 โหลดค่าเชื่อมต่อแล้ว — กำลังเชื่อมต่อ'); if(initFirebase()) _authReady.then(()=>dbLoad(true));
+    }catch(e){ alert('อ่านไฟล์ไม่ได้: '+e.message); }
+    inp.value='';
+  };
+  r.readAsText(f);
+}
 async function fbLogin(){
   if(!_db&&!initFirebase()) return;
   if(!firebase.auth){alert('โหลดโมดูล Firebase Auth ไม่สำเร็จ');return;}
@@ -6511,6 +6540,11 @@ checkDraftOnStart();
   if(k&&document.getElementById('fb-apikey')) document.getElementById('fb-apikey').value=k;
   if(p&&document.getElementById('fb-projectid')) document.getElementById('fb-projectid').value=p;
   if(a&&document.getElementById('fb-appid')) document.getElementById('fb-appid').value=a;
+  if(!k||!p){
+    const el=document.getElementById('db-sync-info');
+    if(el) el.innerHTML='<span style="color:#9b1c1c">⚠️ เบราว์เซอร์นี้ยังไม่มีค่าเชื่อมต่อ Firebase — ข้อมูลที่เห็นเป็นของเครื่องนี้เท่านั้น กรอก API Key / Project ID / App ID หรือกด “📂 โหลดค่าจากไฟล์” / เปิดจากลิงก์ที่ได้จากปุ่ม 🔗</span>';
+    setTimeout(()=>{ try{showToast('⚠️ ยังไม่ได้เชื่อม Firebase ในเบราว์เซอร์นี้ (ตั้งค่า → Firebase)');}catch(e){} },1500);
+  }
   if(k&&p){
     // รอให้ Firebase SDK โหลดเสร็จก่อน (สูงสุด 5 วินาที) ป้องกัน error ตอนเปิดหน้าครั้งแรก
     let tries=0;
