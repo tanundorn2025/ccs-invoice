@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-22c | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-23a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -318,7 +318,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-22c</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-23a</div>
 </header>
 
 <nav class="tabs">
@@ -327,6 +327,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
   <button class="tb" onclick="sw('t3',this)">📊 Summary</button>
   <button class="tb" onclick="sw('t5',this)">⭐ Special Invoice</button>
   <button class="tb" onclick="sw('t6',this)">🧾 ใบกำกับภาษี<span id="tax-badge" class="tax-badge" style="display:none"></span></button>
+  <button class="tb" onclick="sw('t8',this)">🏦 กระทบยอด</button>
   <button class="tb" onclick="sw('t4',this)">⚙️ ตั้งค่า</button>
 </nav>
 
@@ -712,6 +713,17 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 </div>
 
 <!-- ========== TAB 6 : ใบกำกับภาษี ========== -->
+<div id="t8" class="panel">
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><div class="ci">🏦</div>กระทบยอดเงินโอน</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12.5px"><label>รอบที่ออกใบกำกับภาษี</label><select id="rc-mon" onchange="renderRecon()" style="padding:5px 8px;border:1px solid var(--bord);border-radius:6px"></select></div>
+    </div>
+    <div class="alert ai" style="font-size:12.5px"><div>💡 <b>ยอดโอน = (มูลค่าสินค้า − หัก ณ ที่จ่าย) + VAT 7%</b> · หัก ณ ที่จ่ายคิดจากมูลค่าสินค้า (เลือก 1% / 3% / ไม่หัก ต่อใบกำกับภาษี ค่าเริ่มต้น 1%) · VAT ตามที่ระบุในใบกำกับภาษี<br>ลูกค้าโอน 2 ยอด: <b>กลุ่ม 1</b> = HEAD · RP · PO · GMO · SLR (ชุดหลัก + Special) · <b>กลุ่ม 2</b> = SLR - PACK — เปลี่ยนกลุ่มของโรงงานได้ที่ ⚙️ ตั้งค่า → ข้อมูลลูกค้า · กรอก “ยอดที่โอนมาจริง” เพื่อเทียบกับยอดที่ควรได้</div></div>
+    <div id="rc-body"></div>
+  </div>
+</div>
+
 <div id="t6" class="panel">
   <div class="card no-print">
     <div class="ch">
@@ -1648,6 +1660,7 @@ function sw(id,btn,force){
   if(id==='t2') loadTStoInv();
   if(id==='t3'){refreshMonthSelects();buildSum();}
   if(id==='t6'){ initTaxMonDropdown(); genTaxInvoices(); }
+  if(id==='t8') renderRecon();
   // ซ่อน/แสดง zoom slider ตาม tab
   const zf=document.getElementById('ts-zoom-fixed');
   if(zf) zf.style.display=(id==='t1'&&document.querySelector('#ts-out .att-outer'))?'flex':'none';
@@ -3610,13 +3623,34 @@ function taxQueue(){
   mons.forEach(m=>taxPlantKeys(m).forEach(pk=>{ const sk=pk+'~S'; if(ok(m,sk)) spL.push(m+'|'+sk); })); // แล้วชุด Special
   def.push(...mainL.sort(byIss),...spL.sort(byIss));
   const pos=new Map(_taxQOrd.map((k,n)=>[k,n]));
-  return def.map((k,n)=>({k,n:pos.has(k)?pos.get(k):1e6+n})).sort((a,b)=>a.n-b.n).map(x=>x.k);
+  return taxQBlocks(def.map((k,n)=>({k,n:pos.has(k)?pos.get(k):1e6+n})).sort((a,b)=>a.n-b.n).map(x=>x.k)).flat();
+}
+/* โรงงานที่ "เรียงต่อท้าย" โรงงานอื่นเสมอ (เช่น SLR - PACK ต่อท้าย SLR) — ตั้งที่ ตั้งค่า → ข้อมูลลูกค้า; ถ้าไม่ได้ตั้ง และชื่อมีคำว่า PACK จะต่อท้าย SLR ให้อัตโนมัติ */
+function taxFollowOf(pk){
+  const f=CFG[pk]?.followPlant;
+  if(f&&f!==pk&&CFG[f]) return f;
+  if(f===undefined&&/PACK/i.test((CFG[pk]?.name||'')+' '+pk)&&CFG.SLR&&pk!=='SLR') return 'SLR';
+  return null;
+}
+/* จัดคิวเป็นบล็อก: ชุดหลักของโรงงานตาม (follower) ต้องอยู่ติดต่อท้ายชุดหลักของโรงงานนำ (leader) ในรอบออกเดียวกันเสมอ */
+function taxQBlocks(q){
+  const isMain=k=>!qSk(k).includes('~'), pkOf=k=>skPlant(qSk(k)), iss=k=>taxIssueMon(qMon(k),pkOf(k));
+  const fol=k=>isMain(k)?taxFollowOf(pkOf(k)):null;
+  const hasLeader=k=>fol(k)&&q.some(x=>isMain(x)&&pkOf(x)===fol(k)&&iss(x)===iss(k));
+  const blocks=[], used=new Set();
+  q.forEach(k=>{
+    if(used.has(k)||hasLeader(k)) return;
+    const b=[k]; used.add(k);
+    if(isMain(k)) q.forEach(x=>{ if(!used.has(x)&&fol(x)===pkOf(k)&&iss(x)===iss(k)){ b.push(x); used.add(x); } });
+    blocks.push(b);
+  });
+  return blocks;
 }
 function moveTaxQ(key,d){
-  const q=taxQueue(), k=q.indexOf(key), j=k+d;
-  if(k<0||j<0||j>=q.length) return;
-  [q[k],q[j]]=[q[j],q[k]];
-  _taxQOrd=q; saveTaxQ(); rerenderTax();
+  const bl=taxQBlocks(taxQueue()), k=bl.findIndex(b=>b.includes(key)), j=k+d;
+  if(k<0||j<0||j>=bl.length) return;
+  [bl[k],bl[j]]=[bl[j],bl[k]];
+  _taxQOrd=bl.flat(); saveTaxQ(); rerenderTax();
 }
 function resetTaxQ(){ _taxQOrd=[]; saveTaxQ(); rerenderTax(); }
 /* ===== ลากวาง (drag & drop) ในคิว: ลากทั้งชุด หรือลาก Invoice ภายในชุด ===== */
@@ -5853,6 +5887,13 @@ async function dbLoad(quiet){
       applySettings(cfgSnap.data()); _settingsAt=cfgSnap.data().updatedAt||''; initAutoRatesFlags(); syncAutoRates(); renderCfg(); saveSettingsLocal();
     } else if(!cfgSnap.exists||(_settingsAt||'')>(cfgSnap.data().updatedAt||'')) cfgUp=true;
     if(cfgSnap.exists) _cfgBase=cfgSnap.data().updatedAt||'';
+    try{ // ยอดที่โอนมาจริง (หน้ากระทบยอด): รวมสองฝั่ง ใครแก้ล่าสุดชนะ
+      const rs=await _db.collection('settings').doc('recon').get(), ra=rs.exists?(rs.data().act||{}):{}; let push=false;
+      Object.entries(ra).forEach(([k,r])=>{ if(!RECON[k]||(r.at||'')>(RECON[k].at||'')) RECON[k]=r; });
+      Object.keys(RECON).forEach(k=>{ if(!ra[k]||(RECON[k].at||'')>(ra[k].at||'')) push=true; });
+      try{localStorage.setItem('ccs_recon',JSON.stringify(RECON));}catch(e){}
+      if(push) dbSaveRecon();
+    }catch(e){ console.warn('recon load',e); }
     // เลขที่ใบกำกับภาษี: ใช้ค่าที่มากกว่า (กันเลขซ้ำ)
     const dbNext=ctrSnap.exists?(parseInt(ctrSnap.data().next)||0):0;
     if(dbNext>TAX_INV_COUNTER){ TAX_INV_COUNTER=dbNext; localStorage.setItem('tax_inv_counter',dbNext); }
@@ -5969,6 +6010,16 @@ function renderCustomers(){
           <option value="1" ${taxLag(pk)===1?'selected':''}>ย้อนหลัง 1 เดือน (Invoice ต.ค. → ออก 25 พ.ย.)</option>
           <option value="2" ${taxLag(pk)===2?'selected':''}>ย้อนหลัง 2 เดือน</option>
         </select>
+        <label style="font-weight:600;color:var(--navy);margin-left:10px">↳ คิวออกใบ</label>
+        <select onchange="setPlantOpt('${pk}','followPlant',this.value)" style="padding:4px 6px;border:1px solid var(--bord);border-radius:6px;font-size:12.5px">
+          <option value="" ${taxFollowOf(pk)?'':'selected'}>เรียงตามปกติ</option>
+          ${Object.entries(CFG).filter(([k])=>k!==pk).map(([k,v])=>`<option value="${esc(k)}" ${taxFollowOf(pk)===k?'selected':''}>ต่อท้าย ${esc(v.name)} เสมอ</option>`).join('')}
+        </select>
+        <label style="font-weight:600;color:var(--navy);margin-left:10px">🏦 ยอดโอน</label>
+        <select onchange="setPlantOpt('${pk}','payGroup',this.value)" style="padding:4px 6px;border:1px solid var(--bord);border-radius:6px;font-size:12.5px">
+          <option value="1" ${payGroup(pk)===1?'selected':''}>กลุ่ม 1 (ยอดโอนรวมโรงงานหลัก)</option>
+          <option value="2" ${payGroup(pk)===2?'selected':''}>กลุ่ม 2 (โอนแยก เช่น SLR - PACK)</option>
+        </select>
       </div>
       <div class="g2" style="gap:.5rem">
         ${BILL_FIELDS.map(([f,l,w])=>`<div class="fg"${w?' style="grid-column:1/-1"':''}><label style="font-size:11px">${l}</label>
@@ -5976,6 +6027,72 @@ function renderCustomers(){
       </div>
     </div>`;}).join('');
   updateTaxCounterPreview();
+}
+/* ===== กระทบยอดเงินโอน ===== */
+function payGroup(pk){
+  const g=parseInt(CFG[pk]?.payGroup); if(g===1||g===2) return g;
+  return /PACK/i.test((CFG[pk]?.name||'')+' '+pk)?2:1;
+}
+let RECON={};   // ยอดที่โอนมาจริง: {'2026-11|1':{v:123.45,at:ISO}}
+try{RECON=JSON.parse(localStorage.getItem('ccs_recon')||'{}')||{};}catch(e){RECON={};}
+function saveRecon(){ try{localStorage.setItem('ccs_recon',JSON.stringify(RECON));}catch(e){} dbSaveRecon(); }
+async function dbSaveRecon(){
+  if(!ensureDB()) return;
+  try{ await _db.collection('settings').doc('recon').set({act:JSON.parse(JSON.stringify(RECON))},{merge:true}); }
+  catch(e){ console.error('dbSaveRecon:',e); }
+}
+function whtOf(rec){ const w=rec.wht; return (w===0||w===1||w===3)?w:1; }
+function reconAmt(rec){ const w=whtOf(rec), wht=r2((rec.up||0)*w/100); return {w,wht,pay:r2((rec.up||0)-wht+(rec.vat||0))}; }
+function setRecWht(id,v){
+  const rec=S.taxInvoices.find(t=>String(t.id)===String(id)); if(!rec) return;
+  rec.wht=parseInt(v); persistLocal(); dbSaveTax(rec); renderRecon();
+}
+function setRecAct(mon,g,v){
+  const k=mon+'|'+g, n=parseFloat(String(v).replace(/,/g,''));
+  if(isNaN(n)) delete RECON[k]; else RECON[k]={v:r2(n),at:new Date().toISOString()};
+  saveRecon(); renderRecon();
+}
+function renderRecon(){
+  const body=document.getElementById('rc-body'); if(!body) return;
+  const issued=S.taxInvoices.filter(t=>t.status!=='cancelled');
+  const mons=[...new Set(issued.map(t=>(t.date||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  const sel=document.getElementById('rc-mon'); const prev=sel.value;
+  sel.innerHTML=mons.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('')||'<option value="">—</option>';
+  sel.value=mons.includes(prev)?prev:(mons[0]||'');
+  const mon=sel.value;
+  if(!mon){ body.innerHTML='<p style="color:var(--light);font-size:13px">ยังไม่มีใบกำกับภาษีที่ออกแล้ว</p>'; return; }
+  const pend=taxQueue().filter(k=>taxIssueMon(qMon(k),skPlant(qSk(k)))===mon).length;
+  const th='style="text-align:right"';
+  const card=(g,title)=>{
+    const rows=issued.filter(t=>(t.date||'').startsWith(mon)&&payGroup(t.plant)===g).sort((a,b)=>String(a.no).localeCompare(String(b.no)));
+    let sUp=0,sVat=0,sW=0,sPay=0;
+    const tr=rows.map(t=>{ const c=reconAmt(t); sUp+=t.up||0; sVat+=t.vat||0; sW+=c.wht; sPay+=c.pay;
+      return `<tr><td>${esc(t.no)}</td><td>${esc(CFG[t.plant]?.name||t.plant||'')}${t.set==='special'?' <span class="badge bg-gold">⭐ Special</span>':''}</td><td>${esc(t.date||'')}</td>
+        <td class="num">${fmtNum(t.up)}</td><td class="num">${fmtNum(t.vat)}</td>
+        <td class="num"><select onchange="setRecWht('${esc(String(t.id))}',this.value)" style="padding:3px 4px;border:1px solid var(--bord);border-radius:6px"><option value="1" ${c.w===1?'selected':''}>1%</option><option value="3" ${c.w===3?'selected':''}>3%</option><option value="0" ${c.w===0?'selected':''}>ไม่หัก</option></select></td>
+        <td class="num">${fmtNum(c.wht)}</td><td class="num" style="font-weight:700;color:var(--navy)">${fmtNum(c.pay)}</td></tr>`; }).join('');
+    sUp=r2(sUp); sVat=r2(sVat); sW=r2(sW); sPay=r2(sPay);
+    const a=RECON[mon+'|'+g], act=a?a.v:null, diff=act==null?null:r2(act-sPay), ok=diff!=null&&Math.abs(diff)<0.005;
+    return `<div style="border:1px solid var(--bord);border-radius:var(--r);padding:10px 12px;margin-bottom:12px">
+      <div style="font-weight:700;color:var(--navy);margin-bottom:6px">${title}</div>
+      ${rows?`<div style="overflow-x:auto"><table class="dt"><thead><tr><th>เลขที่ใบกำกับภาษี</th><th>โรงงาน / ชุด</th><th>วันที่</th><th ${th}>มูลค่าสินค้า</th><th ${th}>VAT 7%</th><th ${th}>หัก ณ ที่จ่าย</th><th ${th}>จำนวนที่หัก</th><th ${th}>ยอดโอนที่ควรได้</th></tr></thead><tbody>${tr}
+        <tr style="background:var(--surf2);font-weight:700"><td colspan="3">รวม ${rows.length} ใบ</td><td class="num">${fmtNum(sUp)}</td><td class="num">${fmtNum(sVat)}</td><td></td><td class="num">${fmtNum(sW)}</td><td class="num" style="color:var(--navy)">${fmtNum(sPay)}</td></tr></tbody></table></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:13px">
+        <label style="font-weight:600">ยอดที่โอนมาจริง (฿)</label>
+        <input type="text" inputmode="decimal" value="${act==null?'':act}" placeholder="กรอกยอดจาก Statement" onchange="setRecAct('${mon}',${g},this.value)" style="padding:6px 8px;border:1px solid var(--bord);border-radius:6px;width:170px;text-align:right">
+        ${act==null?'<span style="color:var(--muted)">ยังไม่ได้กรอก</span>':ok?'<span class="badge bg-green">✅ ตรงกัน</span>':`<span class="badge" style="background:#fde8e8;color:#9b1c1c">❌ ไม่ตรง ต่าง ${diff>0?'+':''}${fmtNum(diff)} (โอนมา${diff>0?'เกิน':'ขาด'})</span>`}
+      </div>`:'<p style="color:var(--light);font-size:13px;margin:0">ไม่มีใบกำกับภาษีของกลุ่มนี้ในรอบนี้</p>'}
+    </div>`;
+  };
+  body.innerHTML=(pend?`<div class="alert aw" style="font-size:12.5px"><div>⚠️ รอบนี้ยังมีชุดที่ยังไม่ได้ออกใบกำกับภาษีอีก ${pend} ชุด (อยู่ในคิว) — ยอดด้านล่างนับเฉพาะใบที่ออกแล้ว</div></div>`:'')
+    +card(1,'ยอดโอนที่ 1 — HEAD · RP · PO · GMO · SLR (ชุดหลัก + Special)')
+    +card(2,'ยอดโอนที่ 2 — SLR - PACK (ชุดหลัก)');
+}
+function setPlantOpt(pk,f,v){
+  if(f==='followPlant'){ if(v) CFG[pk].followPlant=v; else CFG[pk].followPlant=''; }   // '' = ไม่ต่อท้ายใคร (ปิดการเดาอัตโนมัติ)
+  else if(f==='payGroup'){ CFG[pk].payGroup=parseInt(v)===2?2:1; }
+  persistSettings(); renderCustomers(); rerenderTax(); try{renderRecon();}catch(e){}
+  showToast('✓ บันทึกแล้ว');
 }
 function setTaxLag(pk,v){
   v=parseInt(v)||0; if(v) CFG[pk].taxLag=v; else delete CFG[pk].taxLag;
