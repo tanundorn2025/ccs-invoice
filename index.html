@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-23d | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-23e | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -319,7 +319,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-23d</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-23e</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -3643,12 +3643,16 @@ function taxFollowOf(pk){
 function taxQBlocks(q){
   const isMain=k=>!qSk(k).includes('~'), pkOf=k=>skPlant(qSk(k)), iss=k=>taxIssueMon(qMon(k),pkOf(k));
   const fol=k=>isMain(k)?taxFollowOf(pkOf(k)):null;
-  const hasLeader=k=>fol(k)&&q.some(x=>x!==k&&isMain(x)&&pkOf(x)===fol(k)&&!fol(x)&&iss(x)===iss(k));   // leader ต้องไม่ใช่ follower เอง (กันวนลูป/โซ่)
+  // หา leader ของแต่ละ follower: ชุดหลักของโรงงานนำในรอบออกเดียวกัน — ถ้าไม่มี ใช้รอบถัดไปที่ใกล้ที่สุด (เช่น PACK ต.ค. ต่อท้าย SLR พ.ย.)
+  const lead=new Map();
+  q.forEach(k=>{ const f=fol(k); if(!f) return;
+    const c=q.filter(x=>x!==k&&isMain(x)&&pkOf(x)===f&&!fol(x)&&iss(x)>=iss(k)).sort((a,b)=>iss(a).localeCompare(iss(b)));
+    if(c.length) lead.set(k,c[0]); });
   const blocks=[], used=new Set();
   q.forEach(k=>{
-    if(used.has(k)||hasLeader(k)) return;
+    if(used.has(k)||lead.has(k)) return;
     const b=[k]; used.add(k);
-    if(isMain(k)) q.forEach(x=>{ if(!used.has(x)&&fol(x)===pkOf(k)&&iss(x)===iss(k)){ b.push(x); used.add(x); } });
+    q.forEach(x=>{ if(!used.has(x)&&lead.get(x)===k){ b.push(x); used.add(x); } });
     blocks.push(b);
   });
   q.forEach(k=>{ if(!used.has(k)){ used.add(k); blocks.push([k]); } });   // กันรายการหาย: ที่ยังไม่ถูกจัดให้ต่อท้ายตามเดิม
