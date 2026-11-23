@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-23c | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-23d | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -319,7 +319,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-23c</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-23d</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -3630,8 +3630,14 @@ function taxQueue(){
 function taxFollowOf(pk){
   const f=CFG[pk]?.followPlant;
   if(f&&f!==pk&&CFG[f]) return f;
-  if(f===undefined&&/PACK/i.test((CFG[pk]?.name||'')+' '+pk)&&CFG.SLR&&pk!=='SLR') return 'SLR';
-  return null;
+  if(f===''||!/PACK/i.test((CFG[pk]?.name||'')+' '+pk)) return null;
+  // อัตโนมัติ: "HOYA OPTICS SLR - PACK" → ต่อท้ายโรงงานชื่อ "HOYA OPTICS SLR"
+  const nm=x=>String(x||'').toUpperCase().replace(/[^A-Z0-9ก-๙]+/g,' ').trim();
+  const base=nm((CFG[pk]?.name||'').replace(/[-–—\s]*PACK(ING)?\b/ig,''));
+  const hit=Object.keys(CFG).find(k=>k!==pk&&!/PACK/i.test(CFG[k].name||'')&&nm(CFG[k].name)===base);
+  if(hit) return hit;
+  if(CFG.SLR&&pk!=='SLR') return 'SLR';
+  return Object.keys(CFG).find(k=>k!==pk&&/\bSLR\b/i.test(CFG[k].name||'')&&!/PACK/i.test(CFG[k].name||''))||null;
 }
 /* จัดคิวเป็นบล็อก: ชุดหลักของโรงงานตาม (follower) ต้องอยู่ติดต่อท้ายชุดหลักของโรงงานนำ (leader) ในรอบออกเดียวกันเสมอ */
 function taxQBlocks(q){
@@ -3859,7 +3865,7 @@ function renderTaxPending(){
   const custom=_taxQOrd.length>0;
   el.innerHTML=`<div style="border:2px solid var(--navy);border-radius:var(--r);padding:8px 10px;margin-bottom:.75rem;background:#fff">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between">
-      <div style="font-size:13px"><strong>📌 คิวรอออกใบกำกับภาษี (ทุกเดือน)</strong> <span style="color:var(--muted);font-size:12px">— <strong>ลาก ⠿</strong> หรือกด ▲▼ เพื่อเลือกว่าชุดไหนออกเลขก่อน · กด “▸ จัดลำดับ/เลือก” เพื่อติ๊กเลือกและเรียง Invoice ในใบ (ลากได้เหมือนกัน)</span></div>
+      <div style="font-size:13px"><strong>📌 คิวรอออกใบกำกับภาษี (ทุกเดือน)</strong> <span style="color:var(--muted);font-size:12px">— <strong>ลาก ⠿</strong> หรือกด ▲▼ เพื่อเลือกว่าชุดไหนออกเลขก่อน · กด “▸ จัดลำดับ/เลือก” เพื่อติ๊กเลือกและเรียง Invoice ในใบ (ลากได้เหมือนกัน)</span>${(()=>{const f=Object.keys(CFG).map(k=>[k,taxFollowOf(k)]).filter(x=>x[1]);return f.length?`<div style="font-size:12px;color:var(--navy);margin-top:2px">🔗 ${f.map(([k,l])=>esc(CFG[k].name)+' ต่อท้าย '+esc(CFG[l].name)+' เสมอ').join(' · ')}</div>`:'';})()}</div>
       ${custom?`<button class="btn bo bsm" onclick="resetTaxQ()">↺ เรียงค่าเริ่มต้น (ชุดหลัก HEAD→RP→PO→GMO→SLR แล้ว Special)</button>`:''}
     </div>
     <table class="tx-sel" style="margin-bottom:.5rem"><thead><tr><th style="width:40px">คิว</th><th style="width:76px"></th><th style="width:150px">เดือน</th><th>ชุดงาน</th><th class="num" style="width:80px">Invoice</th><th class="num" style="width:110px">รวม (฿)</th><th style="width:120px">เลขที่ (ประมาณ)</th><th style="width:80px"></th></tr></thead>
@@ -5807,7 +5813,23 @@ async function dbSaveTax(rec){
 /* กันการตั้งค่าถูกทับ: เขียนขึ้น DB ได้ก็ต่อเมื่อเครื่องนี้ "เคยซิงก์กับฉบับใน DB ล่าสุดแล้ว" (_cfgBase = เวลาแก้ไขของฉบับใน DB ที่ซิงก์ล่าสุด)
    ถ้าใน DB มีฉบับที่เครื่องนี้ไม่เคยเห็น (เช่น เปิดเบราว์เซอร์ใหม่ที่ยังเป็นค่าเริ่มต้น) → ดึงฉบับใน DB มาใช้แทน ไม่เขียนทับ
    ก่อนเขียนทับทุกครั้งจะเก็บฉบับเดิมไว้ที่ settings/config_prev (กู้คืนได้ที่ ตั้งค่า → Firebase) */
-let _cfgBase=null;
+let _cfgBase=null, _cfgBaseData=null;
+/* รวมการแก้ไข 3 ทาง: เอาเฉพาะค่าที่เครื่องนี้แก้ (เทียบกับฉบับที่โหลดมา) ไปทับฉบับล่าสุดใน Database — ไม่ทิ้งการแก้ของใคร */
+function _flat(o,p,out){ out=out||{}; p=p||'';
+  if(o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).length){ Object.keys(o).forEach(k=>_flat(o[k],p+'\u0001'+k,out)); }
+  else if(p) out[p]=JSON.stringify(o===undefined?null:o);
+  return out; }
+function mergeCfg3(base,local,remote){
+  const ks=['CFG','CO','CUSTOMERS','PLANT_GROUP','taxPrefix'], pick=o=>{const r={};ks.forEach(k=>{if(o&&o[k]!==undefined) r[k]=o[k];});return r;};
+  const B=_flat(pick(base)), L=_flat(pick(local)), R=_flat(pick(remote));
+  let n=0;
+  new Set([...Object.keys(B),...Object.keys(L)]).forEach(k=>{ if(B[k]!==L[k]){ n++; if(k in L) R[k]=L[k]; else delete R[k]; } });
+  const out={};
+  Object.keys(R).sort().forEach(k=>{ const ps=k.split('\u0001').slice(1); let o=out;
+    ps.slice(0,-1).forEach(x=>{ if(!o[x]||typeof o[x]!=='object'||Array.isArray(o[x])) o[x]={}; o=o[x]; });
+    o[ps[ps.length-1]]=JSON.parse(R[k]); });
+  return {out,n};
+}
 async function dbSaveSettings(opts){
   if(!ensureDB()) return;
   const p=JSON.parse(JSON.stringify(settingsPayload()));
@@ -5820,14 +5842,26 @@ async function dbSaveSettings(opts){
     const snap=await ref.get();
     if(snap.exists){
       const r=snap.data();
+      if(!(opts&&opts.force)&&(r.updatedAt||'')!==_cfgBase&&_cfgBaseData){
+        const {out,n}=mergeCfg3(_cfgBaseData,p,r);
+        applySettings(out); initAutoRatesFlags(); renderCfg();
+        p.CFG=CFG; p.CO={...CO}; if(p.CO.logoData&&p.CO.logoData.length>700000) p.CO.logoData=null;
+        p.CUSTOMERS=CUSTOMERS; p.PLANT_GROUP=PLANT_GROUP; p.taxPrefix=TAX_INV_PREFIX;
+        _settingsAt=new Date().toISOString(); p.updatedAt=_settingsAt; saveSettingsLocal();
+        await _db.collection('settings').doc('config_prev').set(JSON.parse(JSON.stringify(r)));
+        await ref.set(JSON.parse(JSON.stringify(p))); _cfgBase=p.updatedAt; _cfgBaseData=JSON.parse(JSON.stringify(p));
+        try{ rerenderTax(); }catch(e){}
+        if(n) showToast('🔀 รวมการแก้ไขของเครื่องนี้เข้ากับการตั้งค่าล่าสุดใน Database แล้ว');
+        return;
+      }
       if(!(opts&&opts.force)&&(r.updatedAt||'')!==_cfgBase){
-        applySettings(r); _settingsAt=r.updatedAt||''; _cfgBase=_settingsAt; initAutoRatesFlags(); renderCfg(); saveSettingsLocal();
+        applySettings(r); _settingsAt=r.updatedAt||''; _cfgBase=_settingsAt; _cfgBaseData=JSON.parse(JSON.stringify(r)); initAutoRatesFlags(); renderCfg(); saveSettingsLocal();
         showToast('⚠️ ใน Database มีการตั้งค่าที่ใหม่กว่า/ต่างจากเครื่องนี้ — ดึงฉบับใน Database มาใช้ ไม่ได้เขียนทับ (ถ้าต้องการแก้ ให้แก้ซ้ำอีกครั้ง)');
         return;
       }
       await _db.collection('settings').doc('config_prev').set(JSON.parse(JSON.stringify(r)));
     }
-    await ref.set(p); _cfgBase=p.updatedAt||'';
+    await ref.set(p); _cfgBase=p.updatedAt||''; _cfgBaseData=JSON.parse(JSON.stringify(p));
   }
   catch(e){ console.error('dbSaveSettings:',e); showToast('⚠️ บันทึกการตั้งค่าขึ้น Firebase ไม่สำเร็จ ('+(e.code||e.message)+')'); }
 }
@@ -5888,7 +5922,7 @@ async function dbLoad(quiet){
     if(cfgSnap.exists&&(cfgSnap.data().updatedAt||'')>(_settingsAt||'')){
       applySettings(cfgSnap.data()); _settingsAt=cfgSnap.data().updatedAt||''; initAutoRatesFlags(); syncAutoRates(); renderCfg(); saveSettingsLocal();
     } else if(!cfgSnap.exists||(_settingsAt||'')>(cfgSnap.data().updatedAt||'')) cfgUp=true;
-    if(cfgSnap.exists) _cfgBase=cfgSnap.data().updatedAt||'';
+    if(cfgSnap.exists){ _cfgBase=cfgSnap.data().updatedAt||''; _cfgBaseData=JSON.parse(JSON.stringify(cfgSnap.data())); }
     try{ // ยอดที่โอนมาจริง (หน้ากระทบยอด): รวมสองฝั่ง ใครแก้ล่าสุดชนะ
       const rs=await _db.collection('settings').doc('recon').get(), ra=rs.exists?(rs.data().act||{}):{}; let push=false;
       Object.entries(ra).forEach(([k,r])=>{ if(!RECON[k]||(r.at||'')>(RECON[k].at||'')) RECON[k]=r; });
