@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-23a | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-23b | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache">
 <title>CCS Invoice System — HOYA OPTICS</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -318,7 +319,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build 2026-11-23a</div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-23b</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -6028,6 +6029,32 @@ function renderCustomers(){
     </div>`;}).join('');
   updateTaxCounterPreview();
 }
+/* ===== อัปเดตแอป (ใช้ได้เมื่อเปิดผ่าน http/https เช่น GitHub Pages / ติดตั้งเป็นแอป) ===== */
+const APP_BUILD=(document.getElementById('app-build')||{}).textContent||'';
+async function hardReload(){
+  try{ if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){}
+  try{ if(navigator.serviceWorker){ const rs=await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r=>r.unregister())); } }catch(e){}
+  try{ persistLocal(); }catch(e){}
+  const u=new URL(location.href); u.searchParams.set('_v',Date.now()); location.replace(u.toString());
+}
+async function checkUpdate(manual){
+  if(!/^https?:$/.test(location.protocol)){ if(manual) showToast('ไฟล์ที่เปิดจากเครื่อง (file://) ให้เปิดไฟล์ใหม่แทน'); return; }
+  try{
+    const u=new URL(location.href); u.searchParams.set('_c',Date.now());
+    const t=await (await fetch(u.toString(),{cache:'no-store'})).text();
+    const m=t.match(/id="app-build">([^<]+)</); const remote=m?m[1].trim():'';
+    if(remote&&remote!==APP_BUILD){
+      if(!document.getElementById('upd-bar')){
+        const d=document.createElement('div'); d.id='upd-bar';
+        d.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;background:#1f3a5f;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.3);font-size:13.5px;display:flex;gap:10px;align-items:center';
+        d.innerHTML='🆕 มีเวอร์ชันใหม่ ('+esc(remote)+') <button onclick="hardReload()" style="padding:5px 12px;border:0;border-radius:8px;background:#f5b700;font-weight:700;cursor:pointer">อัปเดตเลย</button><button onclick="this.parentNode.remove()" style="background:none;border:0;color:#fff;cursor:pointer;font-size:16px">✕</button>';
+        document.body.appendChild(d);
+      }
+    } else if(manual){ showToast('✓ เป็นเวอร์ชันล่าสุดแล้ว ('+APP_BUILD+')'); }
+  }catch(e){ if(manual) showToast('ตรวจสอบไม่ได้ (ออฟไลน์?) — ลองโหลดซ้ำ'); }
+}
+setTimeout(()=>checkUpdate(false),4000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(false); });
 /* ===== กระทบยอดเงินโอน ===== */
 function payGroup(pk){
   const g=parseInt(CFG[pk]?.payGroup); if(g===1||g===2) return g;
