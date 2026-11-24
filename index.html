@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-24g | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-24h | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -245,7 +245,8 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 .inv-title{font-size:19px;font-weight:700;color:var(--navy)}
 .inv-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
 .inv-tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:.75rem 0}
-.inv-tbl th{background:var(--navy);color:#fff;padding:6px 10px;font-weight:600}
+.inv-tbl th{background:var(--navy);color:#fff;padding:6px 10px;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.inv-page,.inv-page *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .inv-tbl td{padding:5px 10px;border-bottom:1px solid #eee}
 .inv-tbl .num{text-align:right;font-family:'Sarabun',sans-serif}
 .totals{margin-top:.75rem}
@@ -261,6 +262,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
    PRINT
    ================================================ */
 @media print{
+  .inv-tbl th{background:#1f3a5f!important;color:#fff!important;font-weight:700!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   /* ไฮไลต์แถว/วันที่ที่กำลังกรอก — ไม่พิมพ์ */
   .att tr.row-act>td,.att tr.row-act>td.nm,.att tr.row-act td.no-col,.att th.col-act,.att td.col-act{box-shadow:none!important;outline:none!important}
   .att tr.row-act td.nm,.att tr.row-act td.no-col{background:var(--surf,#fff)!important}
@@ -344,7 +346,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24g</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24h</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
