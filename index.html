@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-24i | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-25a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -346,7 +346,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24i</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25a</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -3250,7 +3250,7 @@ function saveInv(confirmIt){
   { const same=S.invoices.find(i=>i.type!=='special'&&i.key===key&&i!==old);
     if(same){alert(`${pName} / ${dName} เดือน ${monthLabel(dt.slice(0,7))} มี Invoice ${same.no} อยู่แล้ว\nเลือกวันที่เดือนอื่น หรือลบใบนั้นก่อน`);return;} }
   const dup=S.invoices.find(i=>i.no===no&&i!==old);
-  if(dup){alert(`เลขที่ ${no} ถูกใช้กับ Invoice อื่นแล้ว`);return;}
+  if(dup){alert(`เลขที่ ${no} ถูกใช้กับ Invoice อื่นแล้ว (วันที่ ${dup.dt||'-'})`+(invNoMon(dup.no)&&invNoWithMon(dup.no,dup.dt)!==dup.no?`\n\nใบนั้นวันที่เป็นเดือน ${monthLabel((dup.dt||'').slice(0,7))} แต่เลขที่ระบุเดือนผิด\nกด “🔧 แก้เลขที่ให้ตรงเดือน” ในรายการ Invoice ด้านล่าง แล้วบันทึกใบนี้อีกครั้ง`:''));renderInvList();return;}
   const ts=window._lastTS;
   const sum=window._lastSummary;
   const wasConf=old&&invStatus(old)==='confirmed';
@@ -3292,7 +3292,11 @@ function renderInvList(){
   const list=S.invoices.filter(i=>!mon||(i.dt||'').startsWith(mon))
     .sort((a,b)=>(b.dt||'').localeCompare(a.dt||'')||String(a.no).localeCompare(String(b.no)));
   if(!list.length){el.innerHTML='<p style="color:var(--light);font-size:13px">ยังไม่มี Invoice</p>';return;}
-  el.innerHTML=`<div style="overflow-x:auto"><table class="dt"><thead><tr>
+  const mm=invNoMismatches();
+  const mmHtml=mm.length?`<div class="ovl-box" style="margin:0 0 .75rem"><strong>⚠️ เลขที่ Invoice ไม่ตรงกับเดือนของวันที่ ${mm.length} ใบ</strong> — ทำให้ Invoice เดือนถัดไปได้เลขซ้ำ แล้วบันทึก/ยืนยันไม่ได้
+    <ul>${mm.slice(0,8).map(x=>`<li>${esc(x.i.no)} (วันที่ ${esc(x.i.dt)}) → <strong>${esc(x.to)}</strong>${x.locked?' <span style="color:var(--muted)">— 🔒 อยู่ในใบกำกับภาษี '+esc(x.locked.no)+' แก้ไม่ได้</span>':''}</li>`).join('')}${mm.length>8?`<li>… และอีก ${mm.length-8} ใบ</li>`:''}</ul>
+    ${mm.some(x=>!x.locked)?'<div class="brow"><button class="btn bp bsm" onclick="fixInvNoMonths()">🔧 แก้เลขที่ให้ตรงเดือน</button></div>':''}</div>`:'';
+  el.innerHTML=mmHtml+`<div style="overflow-x:auto"><table class="dt"><thead><tr>
     <th>Invoice No.</th><th>สถานะ</th><th>โรงงาน</th><th>แผนก</th><th>วันที่</th>
     <th class="num">Up Total</th><th class="num">VAT 7%</th><th class="num">Grand Total</th><th></th>
   </tr></thead><tbody>`+
@@ -3384,7 +3388,13 @@ function editInv(id){
 function invDtChanged(){
   if(_editInvId){
     const i=S.invoices.find(x=>x.id===_editInvId), v=document.getElementById('inv-dt').value;
-    if(i&&v&&v.slice(0,7)!==(i.dt||'').slice(0,7)) showToast('📅 เปลี่ยนเป็นคนละเดือน — เลขที่ Invoice ยังเป็นเลขเดิม ถ้าต้องการเลขใหม่กด “สร้างเลขอัตโนมัติ”');
+    if(i&&v&&v.slice(0,7)!==(i.dt||'').slice(0,7)){
+      const n=document.getElementById('inv-no'), cur=n.value.trim();
+      if(invNoMon(cur)&&i.type!=='special'){   // เลขรูปแบบอัตโนมัติ → เปลี่ยนเดือนในเลขที่ให้ตรงวันที่ใหม่
+        const nn=invNoWithMon(cur,v);
+        if(nn&&nn!==cur){ n.value=nn; n.dataset.manual='1'; showToast('📅 เปลี่ยนเลขที่เป็น '+nn+' ให้ตรงกับเดือนของวันที่'); }
+      } else showToast('📅 เปลี่ยนเป็นคนละเดือน — เลขที่ Invoice ยังเป็นเลขเดิม ถ้าต้องการเลขใหม่กด “สร้างเลขอัตโนมัติ”');
+    }
     calcInv(); return;
   }
   _preferTsId=null;loadTStoInv();autoFillInvNo();calcInv();
@@ -6450,6 +6460,28 @@ function genSpNo(plant, dt, excludeId){
   return prefix+String(next).padStart(3,'0');
 }
 
+/* เดือน/ปีในเลขที่ Invoice รูปแบบอัตโนมัติ  …-NOV.-2(26) */
+function invNoMon(no){ const m=String(no||'').match(/-([A-Z]{3})\.-(\d+)\((\d{2})\)$/); return m&&MON_ABBR.includes(m[1])?{mon:m[1],seq:m[2],yy:m[3]}:null; }
+function invNoWithMon(no,dt){
+  const x=invNoMon(no); if(!x||!dt) return null;
+  const d=new Date(dt+'T00:00:00');
+  return String(no).replace(/-([A-Z]{3})\.-(\d+)\((\d{2})\)$/,`-${MON_ABBR[d.getMonth()]}.-${x.seq}(${String(d.getFullYear()).slice(2)})`);
+}
+/* Invoice ที่เลขที่ระบุเดือนไม่ตรงกับวันที่ (เช่น วันที่ ต.ค. แต่เลขเป็น NOV) — ทำให้เดือนถัดไปออกเลขซ้ำแล้วบันทึกไม่ได้ */
+function invNoMismatches(){
+  return S.invoices.filter(i=>i.type!=='special'&&i.dt&&invNoMon(i.no)&&invNoWithMon(i.no,i.dt)!==i.no)
+    .map(i=>({i,to:invNoWithMon(i.no,i.dt),locked:taxRecOfInv(i.id)}));
+}
+function fixInvNoMonths(){
+  const list=invNoMismatches().filter(x=>!x.locked); if(!list.length) return;
+  const used=new Set(S.invoices.map(i=>i.no));
+  const ok=list.filter(x=>!used.has(x.to)||list.some(y=>y.i.no===x.to));
+  if(!confirm('แก้เลขที่ Invoice ให้ตรงกับเดือนของวันที่:\n\n'+ok.map(x=>`• ${x.i.no}\n   → ${x.to}`).join('\n')+(ok.length<list.length?`\n\n(ข้าม ${list.length-ok.length} ใบ เพราะเลขใหม่ซ้ำกับใบอื่น)`:''))) return;
+  ok.forEach(x=>{ x.i.no=x.to; dbSaveInv(x.i,true); });
+  persistLocal(); renderInvList(); buildSum(); autoFillInvNo(); try{updateInvSaveButtons();}catch(e){}
+  if(_editInvId){ const e=S.invoices.find(i=>i.id===_editInvId); if(e) document.getElementById('inv-no').value=e.no; }
+  showToast(`✓ แก้เลขที่ ${ok.length} ใบแล้ว`);
+}
 function resetInvNo(){
   if(_editInvId&&!confirm('กำลังแก้ไข Invoice ที่บันทึกไว้ — ต้องการเปลี่ยนเป็นเลขที่ที่สร้างใหม่หรือไม่?')) return;
   const n=document.getElementById('inv-no'); n.dataset.manual=''; autoFillInvNo(); calcInv();
