@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-24e | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-24f | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -344,7 +344,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24e</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24f</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -1554,7 +1554,25 @@ function linkedPartners(plant,dept){
   return g?g.filter(([p,d])=>!(p===plant&&d===dept)):[];
 }
 /* ctx = {plant,dept,ds,de,holidays,id} ของใบที่กำลังดู ; row = แถวพนักงาน */
+/* โรงงานที่ไม่แสดงตัวอักษรพนักงานแทน (SLR - PACK): ยังนับวันที่พนักงานแทนมาทำแทนเหมือนเดิม
+   → จำลองการใส่ตัวอักษรแบบเดียวกับ rebuildSubFill (ไม่เขียนลงข้อมูล) แล้วใช้นับวันทำงาน/ขาด/สิทธิ์เต็มสัญญา */
+function virtualRegRow(row,ctx){
+  if(!ctx||subFillOn(ctx.plant)) return row;
+  const regs=ctx.regRows||regRows, subs=ctx.subRows||subRows;
+  const idx=regs.indexOf(row); if(idx<0) return row;
+  const hol=new Set(ctx.holidays||[]), days={...(row.days||{})};
+  getDates(ctx.ds,ctx.de).forEach(d=>{
+    const k=dkey(d); if(isSunday(d)||hol.has(k)) return;
+    const active=subs.filter(r=>String(r.days?.[k]||'').trim()!=='');
+    if(!active.length) return;
+    const free=[]; regs.forEach((r,i)=>{ const v=String(r.days?.[k]||'').trim(); if(!(v!==''&&!isNaN(parseFloat(v)))) free.push(i); });
+    const n=free.indexOf(idx);
+    if(n>=0&&n<active.length) days[k]=active[n].letter;
+  });
+  return {...row,days};
+}
 function attendance(row,ctx){
+  row=virtualRegRow(row,ctx);
   const dates=getDates(ctx.ds,ctx.de), hol=new Set(ctx.holidays||[]);
   const normal=dates.filter(d=>!isSunday(d)&&!hol.has(dkey(d))).map(dkey);
   const has=(r,k)=>String(r?.days?.[k]||'').trim()!=='';
@@ -2880,7 +2898,7 @@ function getStaffSummary(ts){
   (ts.regRows||[]).forEach((r,i)=>{
     if(!r.name) return;
     const a=attendance(r,ts);              // GRD SLR+GMO: นับวันรวมทั้งสองโรง
-    const worked=countWorked(r);           // วันที่ทำในโรงนี้ (ใช้คิดรายวันถ้าไม่เต็ม)
+    const worked=countWorked(virtualRegRow(r,ts));   // PACK: นับวันที่พนักงานแทนมาแทนด้วย (แม้ไม่แสดงตัวอักษร)           // วันที่ทำในโรงนี้ (ใช้คิดรายวันถ้าไม่เต็ม)
     const absent=a.absent;
     const note=attNote(a);
     if(a.worked>0&&absent<=3) result.full.push({...r,idx:i,absent,worked,note});
