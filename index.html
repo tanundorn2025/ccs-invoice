@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-24c | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-24d | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -179,6 +179,13 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .ovl-box.compact{padding:6px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 
 /* บันทึกอัตโนมัติ / ถามก่อนออก */
+.att tr.row-act td.nm{background:#ffe27a!important;box-shadow:inset 4px 0 0 #e0a800,2px 0 4px rgba(0,0,0,.08)}
+.att tr.row-act td.nm input.nm-in{background:#fff6cc;border-color:#e0a800;font-weight:700}
+.att tr.row-act td.no-col{background:#ffe27a!important;color:#000}
+.att tr.row-act>td{box-shadow:inset 0 2px 0 #e0a800,inset 0 -2px 0 #e0a800}
+.att tr.row-act>td.nm{box-shadow:inset 4px 0 0 #e0a800,inset 0 2px 0 #e0a800,inset 0 -2px 0 #e0a800}
+.att th.col-act,.att td.col-act{outline:2px solid #e0a800;outline-offset:-2px}
+.att thead th.col-act{background:#ffe27a!important}
 .ts-dept-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:.6rem;padding:8px 10px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--r)}
 .ts-dept-bar:empty{display:none}
 .ts-dept-bar .dlab{font-size:12.5px;font-weight:700;color:var(--navy);margin-right:4px}
@@ -333,7 +340,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24c</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24d</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -1708,6 +1715,22 @@ function onDeptChange(){
   markTsClean(true);
 }
 /* ผู้ใช้เปลี่ยนโรงงาน/แผนก → ถามก่อนถ้ามีข้อมูลที่ยังไม่บันทึก */
+/* ไฮไลต์แถว (ชื่อคน) และวันที่ของช่องที่กำลังกรอก — กันกรอกผิดบรรทัด */
+(function(){
+  const clr=()=>document.querySelectorAll('#ts-out .row-act,#ts-out .col-act').forEach(e=>e.classList.remove('row-act','col-act'));
+  document.addEventListener('focusin',ev=>{
+    const inp=ev.target; if(!inp.closest||!inp.closest('#ts-out')) return;
+    clr();
+    const td=inp.closest('td'), tr=inp.closest('tr'); if(!td||!tr||!inp.classList.contains('dc')&&!inp.classList.contains('nm-in')) return;
+    tr.classList.add('row-act');
+    const key=td.dataset.key; if(!key) return;
+    const tbl=inp.closest('table'); if(!tbl) return;
+    // หัววันที่ของคอลัมน์เดียวกัน (หัวตารางหลัก + หัวส่วนพนักงานแทน)
+    const idx=[...tr.children].indexOf(td);
+    tbl.querySelectorAll('thead tr:first-child, tr.sub-hdr').forEach(h=>{ const c=h.children[idx]; if(c) c.classList.add('col-act'); });
+  });
+  document.addEventListener('focusout',ev=>{ if(ev.target.closest&&ev.target.closest('#ts-out')) setTimeout(()=>{ if(!document.activeElement?.closest?.('#ts-out')) clr(); },0); });
+})();
 /* แถบเลือกแผนกด่วน (โรงงานเดียวกัน) — สลับไปกรอกแผนกอื่นในงวดเดียวกันได้ทันที */
 function renderDeptBar(){
   const el=document.getElementById('ts-dept-bar'); if(!el) return;
