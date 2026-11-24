@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-24d | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-24e | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -261,6 +261,10 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
    PRINT
    ================================================ */
 @media print{
+  /* ไฮไลต์แถว/วันที่ที่กำลังกรอก — ไม่พิมพ์ */
+  .att tr.row-act>td,.att tr.row-act>td.nm,.att tr.row-act td.no-col,.att th.col-act,.att td.col-act{box-shadow:none!important;outline:none!important}
+  .att tr.row-act td.nm,.att tr.row-act td.no-col{background:var(--surf,#fff)!important}
+  .att tr.row-act td.nm input.nm-in{background:#fff!important;border-color:#ccc!important;font-weight:400!important}
   .hdr,.tabs,.no-print{display:none!important}
   .wrap{max-width:100%;padding:2mm}
   body{background:#fff;font-size:9pt}
@@ -340,7 +344,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24d</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24e</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -1729,6 +1733,7 @@ function onDeptChange(){
     const idx=[...tr.children].indexOf(td);
     tbl.querySelectorAll('thead tr:first-child, tr.sub-hdr').forEach(h=>{ const c=h.children[idx]; if(c) c.classList.add('col-act'); });
   });
+  window.addEventListener('beforeprint',clr);   // สั่งพิมพ์หน้าเว็บโดยตรง (Ctrl+P) → ล้างไฮไลต์ก่อน
   document.addEventListener('focusout',ev=>{ if(ev.target.closest&&ev.target.closest('#ts-out')) setTimeout(()=>{ if(!document.activeElement?.closest?.('#ts-out')) clr(); },0); });
 })();
 /* แถบเลือกแผนกด่วน (โรงงานเดียวกัน) — สลับไปกรอกแผนกอื่นในงวดเดียวกันได้ทันที */
