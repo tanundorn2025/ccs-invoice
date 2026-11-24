@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-24f | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-24g | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -104,7 +104,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
   padding:4px 2px;text-align:center;font-weight:600;font-size:10.5px;
   border-right:1px solid rgba(0,0,0,.15);border-bottom:1px solid rgba(0,0,0,.15);white-space:nowrap}
 /* วันอาทิตย์ — เทาเข้มขึ้นเล็กน้อยเพื่อแยกแยะ ตัวอักษรดำ */
-.att thead th.wknd{background:#8c8c8c!important;color:#000000!important;font-weight:700}
+.att thead th.wknd{background:#e05a5a!important;color:#000000!important;font-weight:700}
 /* วันหยุดพิเศษ — เทาอมเหลืองอ่อน ตัวอักษรดำ */
 .att thead th.hday{background:#c8b88c!important;color:#000000!important;font-weight:700}
 
@@ -149,14 +149,14 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .att .sub-hdr td.nm{padding:10px 7px}
 
 /* weekday cell body — วันธรรมดา */
-.att td.wknd-cell{background:#d2d2d2}
+.att td.wknd-cell{background:#f8bcbc}
 /* วันหยุดพิเศษ */
 .att td.hday-cell{background:#ecdcb0}
 /* แถบสีวันอาทิตย์/วันหยุด ลากยาวทั้งคอลัมน์ ตั้งแต่หัววันที่ ผ่านทุกแถวชื่อ ลงถึงแถวรวม — ช่องกรอกโปร่งให้เห็นสีแถบ */
 .att td.wknd-cell input.dc,.att td.hday-cell input.dc{background:rgba(255,255,255,.12)}
 .att td.wknd-cell input.dc.dc-ot-in,.att td.hday-cell input.dc.dc-ot-in{background:rgba(255,245,245,.15)}
 .att td.wknd-cell input.dc:focus,.att td.hday-cell input.dc:focus{background:#e8f0fc}
-.att .tot-row td.wknd-cell{background:#d2d2d2}
+.att .tot-row td.wknd-cell{background:#f8bcbc}
 .att .tot-row td.hday-cell{background:#ecdcb0}
 
 .att input.dc.dc-ot-in{
@@ -344,7 +344,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24f</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24g</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -1999,7 +1999,7 @@ function buildGrid(){
     const mo=d.toLocaleDateString('th-TH',{month:'short'});
     // สีหัวตาราง: วันธรรมดา = เทา 25%, อาทิตย์ = เทาเข้มขึ้น, หยุดพิเศษ = เทาอมเหลือง — ตัวอักษรดำทั้งหมด
     let thBg='#bfbfbf', thColor='#000000';
-    if(isSunday(d)){thBg='#8c8c8c';thColor='#000000';}
+    if(isSunday(d)){thBg='#e05a5a';thColor='#000000';}
     else if(isHoliday(d)){thBg='#c8b88c';thColor='#000000';}
     hdr+=`<th class="${cls}" style="width:28px;min-width:28px;padding:5px 0;line-height:1.3;background:${thBg};color:${thColor};font-size:16px;font-weight:700"${ovlSet.has(dkey(d))?' title="วันนี้อยู่ในงวดที่บันทึกไว้แล้ว"':''}>${fmtDay(d)}<br><span style="font-size:12px;font-weight:500;opacity:.85">${mo}</span>${ovlSet.has(dkey(d))?'<span class="ovl-tag">ซ้ำ</span>':''}</th>`;
   });
@@ -2015,7 +2015,7 @@ function buildGrid(){
     dates.forEach(d=>{
       const tc=tdClass(d);
       let bgColor='#bfbfbf';
-      if(tc.includes('wknd-cell')) bgColor='#8c8c8c';
+      if(tc.includes('wknd-cell')) bgColor='#e05a5a';
       else if(tc.includes('hday-cell')) bgColor='#c8b88c';
       if(tc.includes('ovl-cell')) bgColor='#f2b8b8';
       const mo=d.toLocaleDateString('th-TH',{month:'short'});
@@ -3203,7 +3203,7 @@ function showInvPreview(){
       <tr><td>Monthly Cleaning Charge On Contract (${d.cnt} persons)</td><td class="num">${d.cnt}</td><td class="num">${fmt(d.rate)}</td><td class="num">${fmt(d.contract)}</td></tr>
       ${d.part_amt>0?(window._lastSummary&&window._lastSummary.partial.length&&window._lastSummary.partial.reduce((s,r)=>s+(+r.worked||0),0)===d.abs?window._lastSummary.partial.map(r=>{const dr2=(parseFloat(document.getElementById('i-rate').value)||11900)/30;return `<tr><td>Daily Rate — ${esc(r.name)} (${r.worked} วัน × ${fmt(dr2)}/วัน)</td><td class="num">${r.worked}</td><td class="num">${fmt(dr2)}/วัน</td><td class="num">${fmt(dr2*r.worked)}</td></tr>`;}).join(''):(`<tr><td>Daily Rate (${d.abs} วัน × ${fmt(d.dr)}/วัน)</td><td class="num">${d.abs}</td><td class="num">${fmt(d.dr)}/วัน</td><td class="num">${fmt(d.part_amt)}</td></tr>`)):''}
       ${d.ot_amt>0?`<tr><td>Over Time Fee (${d.oth} hrs${d.othMin%60?` = ${otExact(d.othMin)}`:''})</td><td class="num">${d.oth} ชม.</td><td class="num">${fmt(d.otr)}/ชม.</td><td class="num">${fmt(d.ot_amt)}</td></tr>`:''}
-      ${d.hol_amt>0?`<tr><td>Holiday Work (ทำงานวันหยุด × 2) — ${d.hd} วัน</td><td class="num">${d.hd} วัน</td><td class="num">${fmt(d.hr)}/วัน</td><td class="num">${fmt(d.hol_amt)}</td></tr>`:''}
+      ${d.hol_amt>0?`<tr><td>Holiday Work — ${d.hd} วัน</td><td class="num">${d.hd} วัน</td><td class="num">${fmt(d.hr)}/วัน</td><td class="num">${fmt(d.hol_amt)}</td></tr>`:''}
       ${d.hol_ot>0?`<tr><td>Over Time Holiday — ${d.hot} ชม.${d.hotMin%60?` (${otExact(d.hotMin)})`:''}</td><td class="num">${d.hot} ชม.</td><td class="num">${fmt(d.hotr)}/ชม.</td><td class="num">${fmt(d.hol_ot)}</td></tr>`:''}
     </tbody>
   </table>
