@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-24h | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-24i | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -279,7 +279,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
   .att .nm,.att .no-col,.att thead th:nth-child(2),.att thead th.no-col{position:static!important;box-shadow:none!important}
   .att{font-size:7.5pt;min-width:0;width:100%;table-layout:auto;border-collapse:collapse!important}
   .att thead th{background:#1a3a5c!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:2px 1px}
-  .att thead th.wknd{background:#8fa8c8!important;color:#1a2035!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .att thead th.wknd{background:#e05a5a!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .att thead th.hday{background:#c8a060!important;color:#1a2035!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .att td{padding:1px 1px;font-size:7pt}
   .att .nm{min-width:0;padding:1px 3px;font-size:7.5pt}
@@ -287,7 +287,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
   .att input.nm-in{max-width:none;width:100%}
   .att .tot-row td{background:#1a3a5c!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .att .sub-hdr td{background:#334f70!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .att td.wknd-cell{background:#eef3ff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .att td.wknd-cell{background:#f8bcbc!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .att td.hday-cell{background:#fff3e0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .cell-ot{font-size:6pt}
   #ts-remark{border:none!important;background:transparent!important;font-size:10pt;line-height:1.6;min-height:3.2em;width:100%;resize:none}
@@ -346,7 +346,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24h</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-24i</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -2140,7 +2140,7 @@ function buildGrid(){
   </table>
   </div>
   <div style="font-size:11px;color:var(--muted);margin-top:6px;padding:0 4px">
-    <span style="margin-right:16px">🔵 <em>วันหยุดอาทิตย์</em></span>
+    <span style="margin-right:16px">🔴 <em>วันหยุดอาทิตย์</em></span>
     <span>🟡 <em>วันหยุดพิเศษที่กำหนด</em></span>
   </div>`;
 
@@ -4869,8 +4869,8 @@ async function exportTSExcel(){
   const wb=new ExcelJS.Workbook(); wb.creator=CO.nameEn||'CCS';
   const ws=wb.addWorksheet(String(dName).replace(/[\\/?*[\]:]/g,' ').slice(0,31)||'Timesheet');
   ws.columns=[{width:5},{width:25},{width:3.6},...dates.map(()=>({width:4.1})),{width:6.5},{width:5},{width:6.5},{width:7.5}];
-  const dayFill=d=>isSunday(d)?'FFE8E8E8':isHoliday(d)?'FFF0E8D0':null;
-  const hdrFill=d=>isSunday(d)?'FFA8A8A8':isHoliday(d)?'FFC8B88C':'FFBFBFBF';
+  const dayFill=d=>isSunday(d)?'FFF8BCBC':isHoliday(d)?'FFF0E8D0':null;
+  const hdrFill=d=>isSunday(d)?'FFE05A5A':isHoliday(d)?'FFC8B88C':'FFBFBFBF';
   const sumFill=['FFEEF5E8','FFE8F5EE','FFF5E8F2','FFE8EEF5'];
   const f=(sz,o)=>Object.assign({name:XL.font,size:sz},o||{});
   let r=1;
@@ -5402,7 +5402,7 @@ function tsPrintDoc(){
       const ot=row.otDays?.[k]||'';
       const wv=row.days?.[k]||'';
       const sun=isSunday(d),hol=isHoliday(d);
-      const bg=sun?'#e8e8e8':hol?'#f0e8d0':'#fff';
+      const bg=sun?'#f8bcbc':hol?'#f0e8d0':'#fff';
       cells+=`<td style="background:${bg};border:0.5px solid #aaa;padding:2px 0;width:VAR_W;text-align:center;vertical-align:middle">
         <div style="font-size:VAR_OT;color:#c8060a;font-weight:700;text-align:right;line-height:1;min-height:10px">${ot}</div>
         <div style="font-size:VAR_W_FONT;text-align:center;line-height:1;min-height:11px">${wv}</div>
@@ -5436,7 +5436,7 @@ function tsPrintDoc(){
     const sumMin=rows.reduce((s,r)=>s+(r.totalMin||0),0);
     // เส้นหนาก่อนแถวรวม: กำหนดที่ทุกช่อง (เส้นของ <tr> ไม่ถูกวาดใน PDF)
     const B='border:0.5px solid #aaa;border-top:2px solid #333';
-    const cols=dates.map(()=>`<td style="${B}"></td>`).join('');
+    const cols=dates.map(d=>`<td style="${B}${isSunday(d)?';background:#f8bcbc':isHoliday(d)?';background:#f0e8d0':''}"></td>`).join('');
     return `<tr>
       <td style="${B};font-weight:800;text-align:center;padding:4px 2px;background:#f5f5f5">รวม</td>
       <td style="${B}"></td><td style="${B};background:#222"></td>
@@ -5455,7 +5455,7 @@ function tsPrintDoc(){
     let hcells='';
     dates.forEach(d=>{
       const sun=isSunday(d),hol=isHoliday(d);
-      const bg=sun?'#a8a8a8':hol?'#c8b88c':'#bfbfbf';
+      const bg=sun?'#e05a5a':hol?'#c8b88c':'#bfbfbf';
       const mo=d.toLocaleDateString('th-TH',{month:'short'});
       hcells+=`<td style="background:${bg};border:0.5px solid #888;padding:3px 0;text-align:center;font-weight:700;font-size:VAR_HDR_D;color:#000;width:VAR_W;line-height:1.2">
         ${d.getDate()}<br><span style="font-size:VAR_HDR_M">${mo}</span>
@@ -5550,7 +5550,7 @@ ${resolve(`<table style="${tableStyle}">
   </tbody>
 </table>
 <div style="margin-top:8px;font-size:7.5pt;color:#555">
-  <span style="margin-right:14px">🔵 วันหยุดอาทิตย์</span>
+  <span style="margin-right:14px">🔴 วันหยุดอาทิตย์</span>
   <span>🟡 วันหยุดพิเศษที่กำหนด</span>
 </div>`)}
 </body></html>`;
