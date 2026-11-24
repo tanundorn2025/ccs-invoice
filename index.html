@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-25a | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-25b | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -346,7 +346,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25a</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25b</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -3616,7 +3616,8 @@ function sumPrintDoc(){
 
   const css=`
     *{box-sizing:border-box;margin:0;padding:0}
-    @page{size:A4 portrait;margin:15mm 12mm}
+    @page{size:A4 portrait;margin:0}
+    @media print{body{padding:15mm 12mm}}
     body{font-family:'Sarabun',sans-serif;font-size:10pt;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     table{border-collapse:collapse;width:100%;font-size:9pt}
     th{background:#bfbfbf!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;
@@ -5434,7 +5435,7 @@ function tsPrintDoc(){
       <td style="border:0.5px solid #aaa;padding:2px 3px;text-align:center;font-weight:700;font-size:VAR_SUM;background:#eef5e8">${ot_v||'-'}</td>
       <td style="border:0.5px solid #aaa;padding:2px 3px;text-align:center;font-size:VAR_SUM;background:#e8f5ee">${h_v||'-'}</td>
       <td style="border:0.5px solid #aaa;padding:2px 3px;text-align:center;font-size:VAR_SUM;background:#f5e8f2">${oth_v||'-'}</td>
-      <td style="border:0.5px solid #aaa;padding:2px 3px;text-align:center;font-weight:700;font-size:VAR_SUM;background:#e8eef5">${tot_v||''}</td>
+      <td style="border:0.5px solid #aaa;padding:2px 1px;text-align:center;font-weight:700;font-size:VAR_SUM;background:#e8eef5;white-space:nowrap">${tot_v||''}</td>
     </tr>`;
   }
 
@@ -5454,7 +5455,7 @@ function tsPrintDoc(){
       <td style="${B};text-align:center;font-weight:800;background:#eef5e8">${fmtOT(tOT)||'-'}</td>
       <td style="${B};text-align:center;font-weight:800;background:#e8f5ee">${tH>0?tH:'-'}</td>
       <td style="${B};text-align:center;font-weight:800;background:#f5e8f2">${fmtOT(tOTH)||'-'}</td>
-      <td style="${B};text-align:center;font-weight:800;background:#e8eef5">${(()=>{const v=minToDisplay?minToDisplay(sumMin):'';return v||'-';})()}</td>
+      <td style="${B};text-align:center;font-weight:800;background:#e8eef5;white-space:nowrap;padding:2px 1px">${(()=>{const v=minToDisplay?minToDisplay(sumMin):'';return v||'-';})()}</td>
     </tr>`;
   }
   function renderTotRow(){ return makeTotRow(regRows); }
@@ -5476,10 +5477,10 @@ function tsPrintDoc(){
       <th style="background:#bfbfbf;border:0.5px solid #888;padding:3px 4px;text-align:center;font-size:VAR_HDR_NM;color:#000">${label}</th>
       <th style="background:#bfbfbf;border:0.5px solid #888;width:18px"></th>
       ${hcells}
-      <th style="background:#bfbfbf;border:0.5px solid #888;padding:3px 1px;text-align:center;font-size:6.5pt;color:#000;width:28px">O.T.</th>
+      <th style="background:#bfbfbf;border:0.5px solid #888;padding:3px 1px;text-align:center;font-size:6.5pt;color:#000;width:30px">O.T.</th>
       <th style="background:#bfbfbf;border:0.5px solid #888;padding:3px 1px;text-align:center;font-size:6.5pt;color:#000;width:22px">H</th>
-      <th style="background:#bfbfbf;border:0.5px solid #888;padding:3px 1px;text-align:center;font-size:6.5pt;color:#000;width:28px">O.T.H</th>
-      <th style="background:#bfbfbf;border:0.5px solid #888;padding:3px 1px;text-align:center;font-size:6.5pt;color:#000;width:30px">Total</th>
+      <th style="background:#bfbfbf;border:0.5px solid #888;padding:3px 1px;text-align:center;font-size:6.5pt;color:#000;width:30px">O.T.H</th>
+      <th style="background:#bfbfbf;border:0.5px solid #888;padding:3px 1px;text-align:center;font-size:6.5pt;color:#000;width:44px">Total</th>
     </tr>`;
   }
 
@@ -5532,7 +5533,8 @@ function tsPrintDoc(){
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-@page{size:A4 landscape;margin:6mm 5mm}
+@page{size:A4 landscape;margin:0}
+@media print{body{padding:6mm 5mm}}
 body{font-family:'Sarabun',sans-serif;font-size:8pt;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 
 
@@ -5578,7 +5580,10 @@ async function printDocNow(doc){
   const ifr=document.createElement('iframe');
   ifr.setAttribute('aria-hidden','true');
   ifr.style.cssText='position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';
-  const html=doc.html.replace(/\sonload="[^"]*print\(\)[^"]*"/g,'');
+  const mg=(doc.margin||[10,10,10,10]).map(x=>(+x||0)+'mm').join(' ');
+  // @page margin 0 → เบราว์เซอร์ไม่พิมพ์ วันที่/ชื่อหน้า/URL/เลขหน้า ที่หัว-ท้ายกระดาษ ; ระยะขอบย้ายไปเป็น padding แทน
+  const html=doc.html.replace(/\sonload="[^"]*print\(\)[^"]*"/g,'')
+    .replace('</head>',`<style>@page{margin:0!important}@media print{html,body{margin:0!important}body{padding:${mg}!important}}</style></head>`);
   await new Promise(res=>{ ifr.onload=res; ifr.srcdoc=html; document.body.appendChild(ifr); });
   const w=ifr.contentWindow;
   try{ await Promise.race([w.document.fonts.ready,new Promise(r=>setTimeout(r,3000))]); }catch(e){}
@@ -6799,7 +6804,8 @@ function spPrintDoc(){
   if(SP_ITEMS.length===0){alert('กรุณาเพิ่มรายการก่อน');return null;}
   const no=document.getElementById('sp-no')?.value||'SP';
   const css=`*{box-sizing:border-box;margin:0;padding:0}
-  @page{size:A4 portrait;margin:15mm 12mm}
+  @page{size:A4 portrait;margin:0}
+  @media print{body{padding:15mm 12mm}}
   body{font-family:'Sarabun',sans-serif;font-size:10pt;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   table{width:100%;border-collapse:collapse}
   th{background:#1a3a5c!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
