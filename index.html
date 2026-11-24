@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-25b | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-25c | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -104,7 +104,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
   padding:4px 2px;text-align:center;font-weight:600;font-size:10.5px;
   border-right:1px solid rgba(0,0,0,.15);border-bottom:1px solid rgba(0,0,0,.15);white-space:nowrap}
 /* วันอาทิตย์ — เทาเข้มขึ้นเล็กน้อยเพื่อแยกแยะ ตัวอักษรดำ */
-.att thead th.wknd{background:#e05a5a!important;color:#000000!important;font-weight:700}
+.att thead th.wknd{background:#e05a5a!important;color:#ffffff!important;font-weight:700}
 /* วันหยุดพิเศษ — เทาอมเหลืองอ่อน ตัวอักษรดำ */
 .att thead th.hday{background:#c8b88c!important;color:#000000!important;font-weight:700}
 
@@ -185,7 +185,7 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .att tr.row-act>td{box-shadow:inset 0 2px 0 #e0a800,inset 0 -2px 0 #e0a800}
 .att tr.row-act>td.nm{box-shadow:inset 4px 0 0 #e0a800,inset 0 2px 0 #e0a800,inset 0 -2px 0 #e0a800}
 .att th.col-act,.att td.col-act{outline:2px solid #e0a800;outline-offset:-2px}
-.att thead th.col-act{background:#ffe27a!important}
+.att thead th.col-act{background:#ffe27a!important;color:#000!important}
 .ts-dept-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:.6rem;padding:8px 10px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--r)}
 .ts-dept-bar:empty{display:none}
 .ts-dept-bar .dlab{font-size:12.5px;font-weight:700;color:var(--navy);margin-right:4px}
@@ -279,7 +279,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
   .att .nm,.att .no-col,.att thead th:nth-child(2),.att thead th.no-col{position:static!important;box-shadow:none!important}
   .att{font-size:7.5pt;min-width:0;width:100%;table-layout:auto;border-collapse:collapse!important}
   .att thead th{background:#1a3a5c!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:2px 1px}
-  .att thead th.wknd{background:#e05a5a!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .att thead th.wknd{background:#e05a5a!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .att thead th.hday{background:#c8a060!important;color:#1a2035!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .att td{padding:1px 1px;font-size:7pt}
   .att .nm{min-width:0;padding:1px 3px;font-size:7.5pt}
@@ -346,7 +346,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25b</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25c</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -2001,7 +2001,7 @@ function buildGrid(){
     const mo=d.toLocaleDateString('th-TH',{month:'short'});
     // สีหัวตาราง: วันธรรมดา = เทา 25%, อาทิตย์ = เทาเข้มขึ้น, หยุดพิเศษ = เทาอมเหลือง — ตัวอักษรดำทั้งหมด
     let thBg='#bfbfbf', thColor='#000000';
-    if(isSunday(d)){thBg='#e05a5a';thColor='#000000';}
+    if(isSunday(d)){thBg='#e05a5a';thColor='#ffffff';}
     else if(isHoliday(d)){thBg='#c8b88c';thColor='#000000';}
     hdr+=`<th class="${cls}" style="width:28px;min-width:28px;padding:5px 0;line-height:1.3;background:${thBg};color:${thColor};font-size:16px;font-weight:700"${ovlSet.has(dkey(d))?' title="วันนี้อยู่ในงวดที่บันทึกไว้แล้ว"':''}>${fmtDay(d)}<br><span style="font-size:12px;font-weight:500;opacity:.85">${mo}</span>${ovlSet.has(dkey(d))?'<span class="ovl-tag">ซ้ำ</span>':''}</th>`;
   });
@@ -2020,8 +2020,9 @@ function buildGrid(){
       if(tc.includes('wknd-cell')) bgColor='#e05a5a';
       else if(tc.includes('hday-cell')) bgColor='#c8b88c';
       if(tc.includes('ovl-cell')) bgColor='#f2b8b8';
+      const fg=bgColor==='#e05a5a'?'#ffffff':'#000000';   // หัววันอาทิตย์ (แดงเข้ม) → ตัวอักษรขาว
       const mo=d.toLocaleDateString('th-TH',{month:'short'});
-      h+=`<td class="${tc}" style="font-size:16px;font-weight:700;background:${bgColor}!important;color:#000000!important;line-height:1.3;padding:4px 0;width:38px;min-width:38px">${fmtDay(d)}<br><span style="font-size:12px;font-weight:500;opacity:.85;display:block;text-align:center">${mo}</span></td>`;
+      h+=`<td class="${tc}" style="font-size:16px;font-weight:700;background:${bgColor}!important;color:${fg}!important;line-height:1.3;padding:4px 0;width:38px;min-width:38px">${fmtDay(d)}<br><span style="font-size:12px;font-weight:500;opacity:.85;display:block;text-align:center">${mo}</span></td>`;
     });
     h+=`<td style="min-width:42px;background:#bfbfbf;color:#000000;font-size:13px;font-weight:700">O.T.</td>`;
     h+=`<td style="min-width:30px;background:#bfbfbf;color:#000000;font-size:13px;font-weight:700">H</td>`;
@@ -4898,7 +4899,7 @@ async function exportTSExcel(){
     xlStyleRange(ws,r1,1,r2,L,(c,ri,ci)=>{
       const d=ci>=C0&&ci<cOT?dates[ci-C0]:null;
       c.fill=XL.fill(d?hdrFill(d):'FFBFBFBF'); c.border=XL.box('FF888888');
-      c.font=f(ri===r1?(d?8:8):6.5,{bold:true}); c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+      c.font=f(ri===r1?(d?8:8):6.5,{bold:true,...(d&&isSunday(d)?{color:{argb:'FFFFFFFF'}}:{})}); c.alignment={horizontal:'center',vertical:'middle',wrapText:true};
     });
     ws.getRow(r1).height=15; ws.getRow(r2).height=11; r+=2;
   };
@@ -5468,7 +5469,7 @@ function tsPrintDoc(){
       const sun=isSunday(d),hol=isHoliday(d);
       const bg=sun?'#e05a5a':hol?'#c8b88c':'#bfbfbf';
       const mo=d.toLocaleDateString('th-TH',{month:'short'});
-      hcells+=`<td style="background:${bg};border:0.5px solid #888;padding:3px 0;text-align:center;font-weight:700;font-size:VAR_HDR_D;color:#000;width:VAR_W;line-height:1.2">
+      hcells+=`<td style="background:${bg};border:0.5px solid #888;padding:3px 0;text-align:center;font-weight:700;font-size:VAR_HDR_D;color:${sun?'#fff':'#000'};width:VAR_W;line-height:1.2">
         ${d.getDate()}<br><span style="font-size:VAR_HDR_M">${mo}</span>
       </td>`;
     });
