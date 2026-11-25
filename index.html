@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-25g | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-25h | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -362,7 +362,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25g</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25h</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -2828,6 +2828,12 @@ function lfToolbar(el,key,months,monLabel,plants,fn){
   const q=bar.querySelector('.lf-q'); if(document.activeElement!==q) q.value=st.q;
   return {body,cnt:bar.querySelector('.lf-cnt')};
 }
+/* วันที่ภาษาอังกฤษ: NOVEMBER 25th 2026. */
+function engDate(iso){
+  const d=new Date((iso||todayISO())+'T00:00:00'); if(isNaN(d)) return '';
+  const n=d.getDate(), sf=(n%100>=11&&n%100<=13)?'th':({1:'st',2:'nd',3:'rd'}[n%10]||'th');
+  return `${d.toLocaleDateString('en-US',{month:'long'}).toUpperCase()} ${n}${sf} ${d.getFullYear()}.`;
+}
 function lfMatch(q,parts){ q=String(q||'').trim().toLowerCase(); if(!q) return true; const t=parts.join(' ').toLowerCase(); return q.split(/\s+/).every(w=>t.includes(w)); }
 function lfPlantOrder(){ return Object.keys(CFG); }
 function lfToggle(key,pk){ const c=LF[key].closed; c.has(pk)?c.delete(pk):c.add(pk); ({ts:renderSavedTS,inv:renderInvList,sp:renderSpSaved})[key](); }
@@ -3673,9 +3679,12 @@ function buildSum(){
   <div style="font-size:12px;color:var(--navy);padding:6px 12px;background:#f0f7ff;border-radius:8px;margin-bottom:8px;font-style:italic">
     ( ${numToEng(tG)} )
   </div>
-  <div style="font-size:12px;color:var(--muted);margin-bottom:.5rem;display:flex;justify-content:space-between">
+  <div style="font-size:12.5px;color:#000;margin-bottom:.35rem;display:flex;justify-content:space-between;align-items:baseline">
+    <span><strong>MESSRS:</strong>&nbsp; HOYA OPTICS (THAILAND) LTD.</span>
+    <span><strong>DATE :</strong> ${engDate(todayISO())}</span>
+  </div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:.5rem">
     <strong>DEBIT NOTE SUMMARY ON ${mon}</strong>
-    <span>DATE: ${new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'})}</span>
   </div>
   <div style="overflow-x:auto">
   <table class="dt"><thead><tr>
@@ -4908,7 +4917,7 @@ async function exportXlsx(){
   const title=(t,sz)=>{ws.mergeCells(r,1,r,L);const c=ws.getCell(r,1);c.value=t;c.font={name:XL.font,size:sz,bold:sz>11,color:{argb:XL.navy}};c.alignment={horizontal:'center'};r++;};
   title('DEBIT NOTE SUMMARY',14); title('ON '+mon,10); r++;
   ws.getCell(r,1).value='MESSRS: HOYA OPTICS (THAILAND) LTD.'; ws.mergeCells(r,1,r,3);
-  ws.mergeCells(r,4,r,5); ws.getCell(r,4).value='DATE: '+new Date().toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+  ws.mergeCells(r,4,r,5); ws.getCell(r,4).value='DATE : '+engDate(todayISO());
   ws.getCell(r,4).alignment={horizontal:'right'};
   [1,4].forEach(c=>ws.getCell(r,c).font={name:XL.font,size:9,bold:true});
   r+=2;
