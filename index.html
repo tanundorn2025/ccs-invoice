@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-25e | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-25g | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -235,6 +235,22 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 .dt td{padding:8px 10px;border-bottom:1px solid var(--bord);vertical-align:middle}
 .dt tr:last-child td{border-bottom:none}
 .dt tr:hover td{background:var(--surf2)}
+/* รายการที่บันทึกไว้: แถบกรอง + จัดกลุ่มตามโรงงาน */
+.lf-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--r);margin-bottom:10px;font-size:12.5px}
+.lf-bar select,.lf-bar input{padding:5px 9px;font-size:12.5px;border:1px solid var(--bord);border-radius:6px;width:auto;background:#fff}
+.lf-bar input{min-width:200px}
+.lf-bar .lf-cnt{margin-left:auto;color:var(--muted)}
+.lf-grp{border:1px solid var(--bord);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.lf-gh{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#eef3fa;cursor:pointer;user-select:none;font-weight:700;color:var(--navy);font-size:13.5px}
+.lf-gh .lf-gs{margin-left:auto;font-weight:600;font-size:12.5px;color:var(--muted)}
+.lf-gh .car{transition:transform .15s;display:inline-block}
+.lf-grp.closed .car{transform:rotate(-90deg)}
+.lf-grp.closed .lf-gb{display:none}
+.lf-gb .dt{margin:0}
+.lf-gb .dt tr.lf-cur td{background:#e7f6ec!important}
+.lf-gb .dt tr.lf-cur td:first-child{box-shadow:inset 4px 0 0 #1a8a4a}
+.lf-del{background:none;border:1px solid transparent;color:#b42318;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:6px}
+.lf-del:hover{border-color:#f1b8b4;background:#fdecea}
 .dt .num{font-family:'Sarabun',sans-serif;text-align:right}
 .dt .tr-tot td{background:var(--navy);color:#fff;font-weight:700}
 .dt .tr-sub td{background:var(--goldbg);font-weight:600;color:var(--navy)}
@@ -346,7 +362,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25e</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25g</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -612,7 +628,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
     <div class="ch" style="flex-wrap:wrap;gap:8px">
       <div class="ct">📁 Invoice ที่บันทึกไว้</div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <select id="inv-list-mon" onchange="renderInvList()" style="width:auto;padding:5px 9px;font-size:12.5px"></select>
+        <select id="inv-list-mon" onchange="this.dataset.userAll=this.value===''?'1':'';renderInvList()" style="width:auto;padding:5px 9px;font-size:12.5px"></select>
         <button class="btn bs bsm" onclick="confirmMonth()">✅ ยืนยันทั้งเดือน</button>
       </div>
     </div>
@@ -914,13 +930,19 @@ service cloud.firestore {
         </div>
         <div class="alert ai" style="font-size:11.5px;padding:8px 10px">💡 รองรับ PNG, JPG, SVG<br>แนะนำขนาด 200×200px</div>
         <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:.5rem">✍️ ลายเซ็นผู้ลงนาม (CCS)</label>
-        <div id="co-sign-preview" style="width:210px;height:90px;border:2px dashed var(--bord);border-radius:var(--r);display:flex;align-items:center;justify-content:center;background:#fff"></div>
+        <div id="co-sign-preview" style="width:auto;min-width:210px;max-width:100%;min-height:90px;padding:4px;border:2px dashed var(--bord);border-radius:var(--r);display:flex;align-items:center;justify-content:center;background:#fff"></div>
         <div>
           <label class="btn bo bsm" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px">✍️ เลือกรูปลายเซ็น
             <input type="file" id="co-sign-file" accept="image/*" style="display:none" onchange="loadSign(this)"></label>
           <button class="btn bo bsm" onclick="resetSign()" style="margin-top:4px">ลบ</button>
         </div>
         <label style="font-size:12px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="co-sign-show" onchange="setSignShow(this.checked)"> แสดงลายเซ็นใน Invoice / Summary / Special</label>
+        <div style="font-size:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">📏 ขนาดลายเซ็น
+          <button class="btn bo bsm" type="button" onclick="setSignScale(signScale()-10)">−</button>
+          <input type="range" id="co-sign-scale" min="40" max="200" step="5" oninput="setSignScale(this.value,true)" onchange="setSignScale(this.value)" style="width:140px">
+          <button class="btn bo bsm" type="button" onclick="setSignScale(signScale()+10)">+</button>
+          <span id="co-sign-scale-v" style="min-width:42px;font-weight:700">100%</span>
+          <button class="btn bo bsm" type="button" onclick="setSignScale(100)">รีเซ็ต</button></div>
         <div class="alert ai" style="font-size:11.5px;padding:8px 10px">💡 ใช้รูป PNG พื้นใสหรือพื้นขาว สแกน/ถ่ายลายเซ็นบนกระดาษขาว</div>
       </div>
     </div>
@@ -1106,9 +1128,18 @@ function resetLogo(){
 }
 
 /* ช่องลงนามท้าย Invoice / Summary / Special — สูงขึ้น และแสดงรูปลายเซ็น (ตั้งค่า → ข้อมูลบริษัท) */
+function signScale(){ const v=parseInt(CO.signScale); return v>=40&&v<=200?v:100; }
+function setSignScale(v,live){
+  v=Math.max(40,Math.min(200,Math.round(+v||100))); CO.signScale=v;
+  const r=document.getElementById('co-sign-scale'); if(r&&+r.value!==v) r.value=v;
+  const t=document.getElementById('co-sign-scale-v'); if(t) t.textContent=v+'%';
+  renderSignPreview();
+  if(!live){ persistSettings(); try{ if(document.getElementById('inv-html')?.innerHTML) showInvPreview(); }catch(e){} try{buildSum();}catch(e){} }
+}
 function signBlockHTML(){
-  const img=(CO.signData&&CO.signShow!==false)?`<img src="${CO.signData}" alt="signature" style="max-height:64px;max-width:200px;object-fit:contain">`:'';
-  const box='height:72px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px';
+  const k=signScale()/100, ih=Math.round(64*k), iw=Math.round(200*k);
+  const img=(CO.signData&&CO.signShow!==false)?`<img src="${CO.signData}" alt="signature" style="max-height:${ih}px;max-width:${iw}px;object-fit:contain">`:'';
+  const box=`height:${Math.max(72,ih+8)}px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:2px`;
   return `<div class="sign-blk" style="display:flex;justify-content:space-between;margin-top:1.75rem;font-size:12px;padding-top:.75rem;border-top:1px solid #ddd;page-break-inside:avoid">
     <div style="text-align:center;width:220px"><div style="${box}"></div><div style="border-top:1px solid #333;padding-top:4px">HOYA OPTICS (THAILAND) LTD.</div></div>
     <div style="text-align:center;width:250px"><div style="${box}">${img}</div><div style="border-top:1px solid #333;padding-top:4px">${CO.nameEn}<br>${CO.contact}</div></div>
@@ -1136,7 +1167,8 @@ function resetSign(){ if(CO.signData&&!confirm('ลบรูปลายเซ�
 function setSignShow(v){ CO.signShow=!!v; persistSettings(); renderSignPreview(); }
 function renderSignPreview(){
   const el=document.getElementById('co-sign-preview'); if(!el) return;
-  el.innerHTML=CO.signData?`<img src="${CO.signData}" style="max-width:200px;max-height:80px;object-fit:contain">`:'<span style="font-size:12px;color:var(--light)">ยังไม่มีลายเซ็น</span>';
+  { const r=document.getElementById('co-sign-scale'), t=document.getElementById('co-sign-scale-v'); if(r) r.value=signScale(); if(t) t.textContent=signScale()+'%'; }
+  el.innerHTML=CO.signData?`<img src="${CO.signData}" style="max-width:${Math.round(200*signScale()/100)}px;max-height:${Math.round(64*signScale()/100)}px;object-fit:contain">`:'<span style="font-size:12px;color:var(--light)">ยังไม่มีลายเซ็น</span>';
   const cb=document.getElementById('co-sign-show'); if(cb){ cb.checked=CO.signShow!==false; cb.disabled=!CO.signData; }
 }
 /* สร้าง HTML letterhead สำหรับใส่ใน Invoice/Summary */
@@ -2771,35 +2803,86 @@ function saveTS(opts){
   return true;
 }
 
+/* ===== ส่วนกลางของ "รายการที่บันทึกไว้" (ใบบันทึกเวลา / Invoice / Special Invoice)
+   กรองตามเดือน + โรงงาน + ค้นหา · จัดกลุ่มตามโรงงาน (ย่อ/ขยายได้) · ไฮไลต์ใบที่กำลังเปิด ===== */
+const LF={ts:{mon:null,plant:'',q:'',closed:new Set()},inv:{mon:null,plant:'',q:'',closed:new Set()},sp:{mon:null,plant:'',q:'',closed:new Set()}};
+function lfToolbar(el,key,months,monLabel,plants,fn){
+  const st=LF[key];
+  let bar=el.querySelector(':scope > .lf-bar'), body=el.querySelector(':scope > .lf-body');
+  if(!bar){
+    el.innerHTML=`<div class="lf-bar">
+      <label>📅</label><select class="lf-mon" onchange="LF.${key}.mon=this.value;${fn}()"></select>
+      <label>🏭</label><select class="lf-plant" onchange="LF.${key}.plant=this.value;${fn}()"></select>
+      <input type="search" class="lf-q" placeholder="🔍 ค้นหา แผนก / เลขที่ / ชื่อพนักงาน" oninput="LF.${key}.q=this.value;${fn}()">
+      <span class="lf-cnt"></span></div><div class="lf-body"></div>`;
+    bar=el.querySelector('.lf-bar'); body=el.querySelector('.lf-body');
+  }
+  if(st.mon===null||(st.mon&&!months.includes(st.mon))) st.mon=months[0]||'';
+  const ms=bar.querySelector('.lf-mon');
+  ms.innerHTML=months.map(m=>`<option value="${m}">${esc(monLabel(m))}</option>`).join('')+'<option value="">ทุกเดือน</option>';
+  ms.value=st.mon;
+  if(st.plant&&!plants.includes(st.plant)) st.plant='';
+  const ps=bar.querySelector('.lf-plant');
+  ps.innerHTML='<option value="">ทุกโรงงาน</option>'+plants.map(p=>`<option value="${esc(p)}">${esc(CFG[p]?.name||p)}</option>`).join('');
+  ps.value=st.plant;
+  const q=bar.querySelector('.lf-q'); if(document.activeElement!==q) q.value=st.q;
+  return {body,cnt:bar.querySelector('.lf-cnt')};
+}
+function lfMatch(q,parts){ q=String(q||'').trim().toLowerCase(); if(!q) return true; const t=parts.join(' ').toLowerCase(); return q.split(/\s+/).every(w=>t.includes(w)); }
+function lfPlantOrder(){ return Object.keys(CFG); }
+function lfToggle(key,pk){ const c=LF[key].closed; c.has(pk)?c.delete(pk):c.add(pk); ({ts:renderSavedTS,inv:renderInvList,sp:renderSpSaved})[key](); }
+/* กลุ่มตามโรงงาน: rows = [{pk, html, grand?}] */
+function lfGroups(key,rows,thead,sumFn){
+  const COLS={ts:[20,24,8,6,8,7,13,14],inv:[26,13,11,9,9,7,9,16],sp:[32,16,11,16,11,14]}[key];
+  const cg=COLS?'<colgroup>'+COLS.map(w=>`<col style="width:${w}%">`).join('')+'</colgroup>':'';
+  const by={}; rows.forEach(r=>(by[r.pk]=by[r.pk]||[]).push(r));
+  const order=[...lfPlantOrder().filter(k=>by[k]),...Object.keys(by).filter(k=>!CFG[k])];
+  return order.map(pk=>{
+    const g=by[pk], closed=LF[key].closed.has(pk);
+    return `<div class="lf-grp${closed?' closed':''}">
+      <div class="lf-gh" onclick="lfToggle('${key}','${esc(pk)}')"><span class="car">▾</span>🏭 ${esc(CFG[pk]?.name||pk)} <span class="badge bg-navy">${g.length} รายการ</span><span class="lf-gs">${sumFn?sumFn(g):''}</span></div>
+      <div class="lf-gb" style="overflow-x:auto"><table class="dt" style="table-layout:fixed;min-width:900px">${cg}<thead>${thead}</thead><tbody>${g.map(r=>r.html).join('')}</tbody></table></div>
+    </div>`;
+  }).join('');
+}
+const lfEmpty=t=>`<p style="color:var(--light);font-size:13px;text-align:center;padding:.75rem">${t}</p>`;
+function lfMonFromId(key,mon){ if(mon&&LF[key]) LF[key].mon=mon; }
 function renderSavedTS(){
   refreshNameList();
   const el=document.getElementById('saved-ts');
   if(!el) return;
-  if(!S.timesheets.length){el.innerHTML='<p style="color:var(--light);font-size:13px;text-align:center;padding:.75rem">ยังไม่มีข้อมูล</p>';return;}
-  const list=[...S.timesheets].sort((a,b)=>(a.plant+a.dept).localeCompare(b.plant+b.dept)||b.ds.localeCompare(a.ds));
-  el.innerHTML=`<table class="dt"><thead><tr>
-    <th>โรงงาน</th><th>แผนก</th><th>ช่วงวันที่</th>
-    <th class="num">OT รวม</th><th class="num">H รวม</th><th class="num">OT.H รวม</th><th class="num">Total</th><th>บันทึกเมื่อ</th><th></th>
-  </tr></thead><tbody>`+
-  list.map(t=>{
+  if(!S.timesheets.length){el.innerHTML=lfEmpty('ยังไม่มีข้อมูล');return;}
+  // จัดตาม "เดือนที่งวดสิ้นสุด" เช่น งวด 6 ต.ค.–5 พ.ย. และ 21 ต.ค.–20 พ.ย. อยู่ในรอบ NOVEMBER ด้วยกัน
+  const months=[...new Set(S.timesheets.map(t=>(t.de||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  const plants=[...new Set(S.timesheets.map(t=>t.plant))];
+  if(_loadedTsId&&LF.ts.cur!==_loadedTsId){ const c=S.timesheets.find(t=>t.id===_loadedTsId); if(c){ LF.ts.mon=(c.de||'').slice(0,7); if(LF.ts.plant&&LF.ts.plant!==c.plant) LF.ts.plant=''; LF.ts.closed.delete(c.plant);} }
+  LF.ts.cur=_loadedTsId;   // ใบที่เปิด/บันทึกล่าสุด → เลื่อนตัวกรองไปที่เดือนของใบนั้นให้เห็นเสมอ
+  const {body,cnt}=lfToolbar(el,'ts',months,m=>'งวดสิ้นสุด '+monthLabel(m),plants,'renderSavedTS');
+  const st=LF.ts;
+  const list=S.timesheets.filter(t=>(!st.mon||(t.de||'').startsWith(st.mon))&&(!st.plant||t.plant===st.plant)
+      &&lfMatch(st.q,[CFG[t.plant]?.name||t.plant,CFG[t.plant]?.depts?.[t.dept]?.name||t.dept,rangeText(t.ds,t.de),...[...(t.regRows||[]),...(t.subRows||[])].map(r=>r.name||'')]))
+    .sort((a,b)=>deptSeq(a.plant,a.dept)-deptSeq(b.plant,b.dept)||String(a.dept).localeCompare(String(b.dept))||b.ds.localeCompare(a.ds));
+  cnt.textContent=`แสดง ${list.length} จาก ${S.timesheets.length} ใบ`;
+  if(!list.length){body.innerHTML=lfEmpty('ไม่พบใบบันทึกเวลาตามที่กรอง');return;}
+  const thead=`<tr><th>แผนก</th><th>ช่วงวันที่</th><th class="num">OT รวม</th><th class="num">H รวม</th><th class="num">OT.H รวม</th><th class="num">Total</th><th>บันทึกเมื่อ</th><th></th></tr>`;
+  body.innerHTML=lfGroups('ts',list.map(t=>{
     const ov=findOverlaps(t.plant,t.dept,t.ds,t.de,x=>x.id===t.id);
     const ovDays=new Set(ov.flatMap(o=>o.keys)).size;
     const nIss=tsIssues(t).length;
     const issBadge=nIss?` <span class="badge" style="background:#c8060a;color:#fff" title="${esc(tsIssues(t).slice(0,5).map(x=>x.who+': '+x.txt).join('\n'))}">⚠️ ผิด ${nIss} จุด</span>`:'';
     const ovBadge=ovDays?` <span class="badge" style="background:var(--redbg);color:var(--red)" title="ซ้ำกับงวด ${ov.map(o=>rangeText(o.ts.ds,o.ts.de)).join(', ')}">⚠️ ซ้ำ ${ovDays} วัน</span>`:'';
-    const cur=t.id===_loadedTsId?' <span class="badge bg-green">กำลังแก้ไข</span>':'';
-    return `<tr>
-    <td><span class="badge bg-navy">${esc(CFG[t.plant]?.name||t.plant)}</span></td>
-    <td><span class="badge bg-gold">${esc(CFG[t.plant]?.depts?.[t.dept]?.name||t.dept)}</span></td>
-    <td style="font-size:12px;white-space:nowrap">${rangeText(t.ds,t.de)}${issBadge}${ovBadge}${cur}</td>
+    const isCur=t.id===_loadedTsId;
+    return {pk:t.plant,html:`<tr${isCur?' class="lf-cur"':''}>
+    <td><span class="badge bg-gold">${esc(CFG[t.plant]?.depts?.[t.dept]?.name||t.dept)}</span>${isCur?' <span class="badge bg-green">📌 กำลังเปิดอยู่</span>':''}</td>
+    <td style="font-size:12px;white-space:nowrap">${rangeText(t.ds,t.de)}${issBadge}${ovBadge}</td>
     <td class="num">${fmtOT(tsOtMin(t).ot)}</td>
     <td class="num">${t.totalH||0}</td>
     <td class="num">${fmtOT(tsOtMin(t).oth)}</td>
     <td class="num" style="font-weight:700">${tsTotalText(t)}</td>
     <td style="font-size:11.5px;color:var(--muted)">${esc(t.savedAt||'')}</td>
-    <td style="white-space:nowrap"><button class="btn ba bsm" onclick="useTS(${t.id})">เปิด →</button>
-      <button class="btn bd bsm" onclick="delTS(${t.id})">ลบ</button></td>
-  </tr>`;}).join('')+'</tbody></table>';
+    <td style="white-space:nowrap;text-align:right">${isCur?'':`<button class="btn ba bsm" onclick="useTS(${t.id})">📂 เปิด</button>`}
+      <button class="lf-del" onclick="delTS(${t.id})" title="ลบใบนี้">🗑️</button></td>
+  </tr>`};}),thead,g=>g.length+' แผนก/งวด');
 }
 
 function delTS(id){
@@ -3295,41 +3378,52 @@ function renderInvList(){
     const months=[...new Set(S.invoices.map(i=>(i.dt||'').slice(0,7)).filter(Boolean))].sort().reverse();
     const cur=monSel.value;
     monSel.innerHTML='<option value="">ทุกเดือน</option>'+months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
-    monSel.value=months.includes(cur)?cur:(cur===''&&monSel.dataset.init?'':(months[0]||''));
+    monSel.value=months.includes(cur)?cur:(cur===''&&monSel.dataset.userAll==='1'?'':(months[0]||''));
     monSel.dataset.init='1';
   }
+  if(_editInvId&&LF.inv.cur!==_editInvId&&monSel){ const c=S.invoices.find(i=>i.id===_editInvId); if(c&&monSel.value&&!(c.dt||'').startsWith(monSel.value)) monSel.value=(c.dt||'').slice(0,7); if(c){ if(LF.inv.plant&&LF.inv.plant!==c.plant) LF.inv.plant=''; LF.inv.closed.delete(c.plant);} }
+  LF.inv.cur=_editInvId;
   const mon=monSel?monSel.value:'';
-  const list=S.invoices.filter(i=>!mon||(i.dt||'').startsWith(mon))
-    .sort((a,b)=>(b.dt||'').localeCompare(a.dt||'')||String(a.no).localeCompare(String(b.no)));
-  if(!list.length){el.innerHTML='<p style="color:var(--light);font-size:13px">ยังไม่มี Invoice</p>';return;}
+  const all=S.invoices.filter(i=>!mon||(i.dt||'').startsWith(mon));
+  const plants=[...new Set(all.map(i=>i.plant))];
   const mm=invNoMismatches();
   const mmHtml=mm.length?`<div class="ovl-box" style="margin:0 0 .75rem"><strong>⚠️ เลขที่ Invoice ต้องแก้ ${mm.length} ใบ</strong> — ${mm.some(x=>x.fmt)?'SLR - PACK เปลี่ยนเป็นเลขรูปแบบใหม่ (HOYA-PACK DAY-…)':''}${mm.some(x=>x.fmt)&&mm.some(x=>!x.fmt)?' · ':''}${mm.some(x=>!x.fmt)?'เดือนในเลขที่ไม่ตรงกับวันที่ ทำให้เดือนถัดไปได้เลขซ้ำ แล้วบันทึก/ยืนยันไม่ได้':''}
     <ul>${mm.slice(0,8).map(x=>`<li>${esc(x.i.no)} (วันที่ ${esc(x.i.dt)}) → <strong>${esc(x.to)}</strong>${x.locked?' <span style="color:var(--muted)">— 🔒 อยู่ในใบกำกับภาษี '+esc(x.locked.no)+' แก้ไม่ได้</span>':''}</li>`).join('')}${mm.length>8?`<li>… และอีก ${mm.length-8} ใบ</li>`:''}</ul>
     ${mm.some(x=>!x.locked)?'<div class="brow"><button class="btn bp bsm" onclick="fixInvNoMonths()">🔧 แก้เลขที่ให้ถูกต้อง</button></div>':''}</div>`:'';
-  el.innerHTML=mmHtml+`<div style="overflow-x:auto"><table class="dt"><thead><tr>
-    <th>Invoice No.</th><th>สถานะ</th><th>โรงงาน</th><th>แผนก</th><th>วันที่</th>
-    <th class="num">Up Total</th><th class="num">VAT 7%</th><th class="num">Grand Total</th><th></th>
-  </tr></thead><tbody>`+
-  list.map(i=>{
+  let warn=el.querySelector(':scope > .lf-warn');
+  if(!warn){ el.innerHTML='<div class="lf-warn"></div><div class="lf-wrap"></div>'; warn=el.querySelector('.lf-warn'); }
+  warn.innerHTML=mmHtml;
+  const wrap=el.querySelector(':scope > .lf-wrap');
+  if(!S.invoices.length){wrap.innerHTML=lfEmpty('ยังไม่มี Invoice');return;}
+  // ใช้แถบกรอง (โรงงาน + ค้นหา) — เดือนใช้ตัวเลือกด้านบนของการ์ด
+  const {body,cnt}=lfToolbar(wrap,'inv',[''],()=>'',plants,'renderInvList');
+  wrap.querySelector('.lf-mon').style.display='none'; wrap.querySelector('.lf-mon').previousElementSibling.style.display='none';
+  const st=LF.inv;
+  const list=all.filter(i=>(!st.plant||i.plant===st.plant)&&lfMatch(st.q,[i.no,CFG[i.plant]?.name||i.plant,CFG[i.plant]?.depts?.[i.dept]?.name||i.dept,i.dt||'',i.type==='special'?'special':'']))
+    .sort((a,b)=>(a.type==='special')-(b.type==='special')||deptSeq(a.plant,a.dept)-deptSeq(b.plant,b.dept)||(b.dt||'').localeCompare(a.dt||'')||String(a.no).localeCompare(String(b.no)));
+  cnt.textContent=`แสดง ${list.length} จาก ${all.length} ใบ${mon?' ('+monthLabel(mon)+')':''}`;
+  if(!list.length){body.innerHTML=lfEmpty('ไม่พบ Invoice ตามที่กรอง');return;}
+  const thead=`<tr><th>Invoice No.</th><th>แผนก</th><th>สถานะ</th><th>วันที่</th><th class="num">Up Total</th><th class="num">VAT 7%</th><th class="num">Grand Total</th><th></th></tr>`;
+  body.innerHTML=lfGroups('inv',list.map(i=>{
     const r=taxRecOfInv(i.id);
     const conf=invStatus(i)==='confirmed';
     const st=r?`<span class="badge bg-navy" title="อยู่ในใบกำกับภาษีที่ออกแล้ว">🔒 ${esc(r.no)}</span>`
       :conf?`<span class="badge bg-green" title="${i.confirmedAt?'ยืนยันเมื่อ '+new Date(i.confirmedAt).toLocaleString('th-TH'):''}">✅ ยืนยันแล้ว</span>`
       :'<span class="badge bg-gold">ร่าง</span>';
     const ed=(i.edits||[]).length?` <span class="badge" style="background:#eef0f4;color:var(--muted)" title="${(i.edits||[]).map(e=>new Date(e.at).toLocaleString('th-TH')+': '+fmtNum(e.grandBefore)+' → '+fmtNum(e.grandAfter)).join('\n')}">แก้ไข ${(i.edits||[]).length} ครั้ง</span>`:'';
-    const btns=r?'':`<button class="btn bo bsm" onclick="editInv(${i.id})" title="แก้ไขแบบ manual">✏️</button>
+    const isCur=i.id===_editInvId;
+    const btns=r?'':`${isCur?'':`<button class="btn bo bsm" onclick="editInv(${i.id})" title="เปิดมาแก้ไข">✏️ แก้ไข</button>`}
       ${conf?`<button class="btn bo bsm" onclick="unconfirmInv(${i.id})" title="กลับเป็นร่าง">↩ ร่าง</button>`:`<button class="btn bs bsm" onclick="confirmInv(${i.id})">✅ ยืนยัน</button>`}
-      <button class="btn bd bsm" onclick="delInv(${i.id})">ลบ</button>`;
-    return `<tr${i.id===_editInvId?' style="background:#eef4ff"':''}>
-    <td style="font-family:'Sarabun',sans-serif;font-size:11.5px">${esc(i.no)}${i.type==='special'?' <span class="badge bg-gold">⭐ Special</span>':''}</td>
-    <td style="white-space:nowrap">${st}${ed}</td>
-    <td><span class="badge bg-navy">${esc((CFG[i.plant]||{}).name||i.plant)}</span></td>
+      <button class="lf-del" onclick="delInv(${i.id})" title="ลบใบนี้">🗑️</button>`;
+    return {pk:i.plant,grand:i.grand||0,html:`<tr${isCur?' class="lf-cur"':''}>
+    <td style="font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600">${esc(i.no)}${i.type==='special'?' <span class="badge bg-gold">⭐ Special</span>':''}${isCur?' <span class="badge bg-green">📌 กำลังแก้ไข</span>':''}</td>
     <td><span class="badge bg-gold">${esc(CFG[i.plant]?.depts?.[i.dept]?.name||i.dept)}</span></td>
-    <td style="font-size:11.5px">${esc(i.dt||'')}</td>
+    <td style="white-space:nowrap">${st}${ed}</td>
+    <td style="font-size:11.5px;white-space:nowrap">${esc(i.dt||'')}</td>
     <td class="num">${fmt(i.up)}</td><td class="num">${fmt(i.vat)}</td>
     <td class="num" style="font-weight:700;color:var(--navy)">${fmt(i.grand)}</td>
-    <td style="white-space:nowrap">${btns}</td>
-  </tr>`;}).join('')+'</tbody></table></div>';
+    <td style="white-space:nowrap;text-align:right;overflow:visible">${btns}</td>
+  </tr>`};}),thead,g=>'รวม '+fmtNum(g.reduce((a,r)=>a+r.grand,0))+' ฿');
 }
 
 function setInvStatus(list,status){
@@ -4856,12 +4950,13 @@ async function exportXlsx(){
   w.font={name:XL.font,size:9,italic:true,color:{argb:XL.navy}}; w.alignment={horizontal:'center',vertical:'middle',wrapText:true};
   w.fill=XL.fill('FFF0F7FF'); xlStyleRange(ws,r,1,r,L,c=>c.border=XL.box()); ws.getRow(r).height=22;
   r+=2;
-  ws.getRow(r).height=58; // ช่องเซ็น
+  const sk=signScale()/100;
+  ws.getRow(r).height=Math.max(58,Math.round(58*sk)); // ช่องเซ็น (ปรับตามขนาดลายเซ็น)
   if(CO.signData&&CO.signShow!==false){
     try{ const imgId=wb.addImage({base64:CO.signData,extension:'png'});
       const im=await new Promise(res=>{const x=new Image();x.onload=()=>res(x);x.onerror=()=>res(null);x.src=CO.signData;});
-      const k=im?Math.min(1,150/im.width,70/im.height):1, w=im?im.width*k:150, h=im?im.height*k:60;
-      ws.addImage(imgId,{tl:{col:3.3,row:(r-1)+Math.max(0.02,(74-h)/78)},ext:{width:w,height:h},editAs:'oneCell'}); }catch(e){console.warn('sign img',e);}
+      const k=im?Math.min(3,150*sk/im.width,70*sk/im.height):sk, w=im?im.width*k:150*sk, h=im?im.height*k:60*sk, rowPx=ws.getRow(r).height*4/3;
+      ws.addImage(imgId,{tl:{col:3.3,row:(r-1)+Math.max(0.02,(rowPx-4-h)/rowPx)},ext:{width:w,height:h},editAs:'oneCell'}); }catch(e){console.warn('sign img',e);}
   }
   r++;
   ws.getCell(r,2).value='HOYA OPTICS (THAILAND) LTD.'; ws.getCell(r,2).border={top:XL.thin('FF333333')};
@@ -6895,25 +6990,31 @@ async function saveSpInv(){
 function renderSpSaved(){
   const el=document.getElementById('sp-saved-list');
   if(!el) return;
-  const list=spList().sort((a,b)=>(b.dt||'').localeCompare(a.dt||''));
-  if(!list.length){el.innerHTML='<p style="color:var(--light);font-size:13px;text-align:center;padding:.75rem">ยังไม่มีข้อมูล</p>';return;}
-  el.innerHTML=list.map(inv=>{
-    const r=taxRecOfInv(inv.id);
-    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border:1px solid ${inv.id===_loadedSpId?'var(--navy2)':'var(--bord)'};border-radius:var(--r);margin-bottom:6px;flex-wrap:wrap">
-      <div>
-        <span class="badge bg-navy">${esc(CFG[inv.plant]?.name||inv.plant)}</span>
-        <span class="badge bg-gold" style="margin-left:4px">${esc(CFG[inv.plant]?.depts?.[inv.dept]?.name||inv.dept)}</span>
-        <strong style="margin-left:8px;font-size:13px">${esc(inv.no)}</strong>
-        <span style="font-size:12px;color:var(--muted);margin-left:6px">${esc(inv.dt||'')}</span>
-        <span style="font-size:12px;color:var(--navy);margin-left:8px;font-weight:600">${fmtNum(inv.grand)} ฿</span>
-        ${r?`<span class="badge bg-navy" style="margin-left:6px">🔒 ${esc(r.no)}</span>`:'<span class="badge bg-green" style="margin-left:6px">✅ บันทึกแล้ว · รอออกใบกำกับภาษี</span>'}
-        ${inv.id===_loadedSpId?'<span class="badge bg-green" style="margin-left:6px">กำลังแก้ไข</span>':''}
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="btn bs bsm" onclick="loadSpInv(${inv.id},true)">📂 โหลด</button>
-        ${r?'':`<button class="btn bd bsm" onclick="delSpInv(${inv.id})">🗑️ ลบ</button>`}
-      </div>
-    </div>`;}).join('');
+  const all=spList();
+  if(!all.length){el.innerHTML=lfEmpty('ยังไม่มีข้อมูล');return;}
+  const months=[...new Set(all.map(i=>(i.dt||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  const plants=[...new Set(all.map(i=>i.plant))];
+  if(_loadedSpId&&LF.sp.cur!==_loadedSpId){ const c=all.find(t=>t.id===_loadedSpId); if(c){ LF.sp.mon=(c.dt||'').slice(0,7); if(LF.sp.plant&&LF.sp.plant!==c.plant) LF.sp.plant=''; LF.sp.closed.delete(c.plant);} }
+  LF.sp.cur=_loadedSpId;
+  const {body,cnt}=lfToolbar(el,'sp',months,monthLabel,plants,'renderSpSaved');
+  const st=LF.sp;
+  const list=all.filter(i=>(!st.mon||(i.dt||'').startsWith(st.mon))&&(!st.plant||i.plant===st.plant)
+      &&lfMatch(st.q,[i.no,i.title||'',CFG[i.plant]?.name||i.plant,CFG[i.plant]?.depts?.[i.dept]?.name||i.dept,i.dt||'',...(i.items||[]).map(x=>x.desc||x.name||'')]))
+    .sort((a,b)=>(b.dt||'').localeCompare(a.dt||'')||String(b.no).localeCompare(String(a.no)));
+  cnt.textContent=`แสดง ${list.length} จาก ${all.length} ใบ`;
+  if(!list.length){body.innerHTML=lfEmpty('ไม่พบ Special Invoice ตามที่กรอง');return;}
+  const thead=`<tr><th>เลขที่</th><th>แผนก</th><th>วันที่</th><th>สถานะ</th><th class="num">Grand Total</th><th></th></tr>`;
+  body.innerHTML=lfGroups('sp',list.map(inv=>{
+    const r=taxRecOfInv(inv.id), isCur=inv.id===_loadedSpId;
+    return {pk:inv.plant,grand:inv.grand||0,html:`<tr${isCur?' class="lf-cur"':''}>
+      <td style="font-size:12px;font-weight:600">${esc(inv.no)}${isCur?' <span class="badge bg-green">📌 กำลังแก้ไข</span>':''}${inv.title?`<div style="font-size:11px;color:var(--muted);font-weight:400">${esc(inv.title)}</div>`:''}</td>
+      <td><span class="badge bg-gold">${esc(CFG[inv.plant]?.depts?.[inv.dept]?.name||inv.dept)}</span></td>
+      <td style="font-size:11.5px;white-space:nowrap">${esc(inv.dt||'')}</td>
+      <td>${r?`<span class="badge bg-navy">🔒 ${esc(r.no)}</span>`:'<span class="badge bg-green">✅ รอออกใบกำกับภาษี</span>'}</td>
+      <td class="num" style="font-weight:700;color:var(--navy)">${fmtNum(inv.grand)}</td>
+      <td style="white-space:nowrap;text-align:right">${isCur?'':`<button class="btn bs bsm" onclick="loadSpInv(${inv.id},true)">📂 เปิด</button>`}
+        ${r?'':`<button class="lf-del" onclick="delSpInv(${inv.id})" title="ลบใบนี้">🗑️</button>`}</td>
+    </tr>`};}),thead,g=>'รวม '+fmtNum(g.reduce((a,r)=>a+r.grand,0))+' ฿');
 }
 
 function loadSpInv(id,ask){
