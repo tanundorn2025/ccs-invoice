@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-25c | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-25d | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -346,7 +346,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25c</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25d</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -3198,7 +3198,8 @@ function showInvPreview(){
       <div><strong>Date:</strong> ${dt}</div>
     </div>
   </div>
-  <div style="font-size:13px;margin-bottom:.25rem"><strong>MESSRS:</strong> HOYA OPTICS (THAILAND) LTD. &nbsp;|&nbsp; <strong>แผนก:</strong> ${plantName} — ${deptName}</div>
+  ${invCustHTML(plant,'')}
+  <div style="font-size:13px;margin-bottom:.25rem"><strong>แผนก:</strong> ${plantName} — ${deptName}</div>
   <div style="font-weight:700;font-size:13.5px;color:var(--navy);margin:.5rem 0;letter-spacing:.05em">${svc}</div>
   <table class="inv-tbl">
     <thead><tr><th style="text-align:left">รายการ</th><th style="text-align:right">จำนวน</th><th style="text-align:right">อัตรา (฿)</th><th style="text-align:right">จำนวนเงิน (฿)</th></tr></thead>
@@ -3251,7 +3252,7 @@ function saveInv(confirmIt){
   { const same=S.invoices.find(i=>i.type!=='special'&&i.key===key&&i!==old);
     if(same){alert(`${pName} / ${dName} เดือน ${monthLabel(dt.slice(0,7))} มี Invoice ${same.no} อยู่แล้ว\nเลือกวันที่เดือนอื่น หรือลบใบนั้นก่อน`);return;} }
   const dup=S.invoices.find(i=>i.no===no&&i!==old);
-  if(dup){alert(`เลขที่ ${no} ถูกใช้กับ Invoice อื่นแล้ว (วันที่ ${dup.dt||'-'})`+(invNoMon(dup.no)&&invNoWithMon(dup.no,dup.dt)!==dup.no?`\n\nใบนั้นวันที่เป็นเดือน ${monthLabel((dup.dt||'').slice(0,7))} แต่เลขที่ระบุเดือนผิด\nกด “🔧 แก้เลขที่ให้ตรงเดือน” ในรายการ Invoice ด้านล่าง แล้วบันทึกใบนี้อีกครั้ง`:''));renderInvList();return;}
+  if(dup){alert(`เลขที่ ${no} ถูกใช้กับ Invoice อื่นแล้ว (วันที่ ${dup.dt||'-'})`+(invNoMon(dup.no)&&invNoWithMon(dup.no,dup.dt)!==dup.no?`\n\nใบนั้นวันที่เป็นเดือน ${monthLabel((dup.dt||'').slice(0,7))} แต่เลขที่ระบุเดือนผิด\nกด “🔧 แก้เลขที่ให้ถูกต้อง” ในรายการ Invoice ด้านล่าง แล้วบันทึกใบนี้อีกครั้ง`:''));renderInvList();return;}
   const ts=window._lastTS;
   const sum=window._lastSummary;
   const wasConf=old&&invStatus(old)==='confirmed';
@@ -3294,9 +3295,9 @@ function renderInvList(){
     .sort((a,b)=>(b.dt||'').localeCompare(a.dt||'')||String(a.no).localeCompare(String(b.no)));
   if(!list.length){el.innerHTML='<p style="color:var(--light);font-size:13px">ยังไม่มี Invoice</p>';return;}
   const mm=invNoMismatches();
-  const mmHtml=mm.length?`<div class="ovl-box" style="margin:0 0 .75rem"><strong>⚠️ เลขที่ Invoice ไม่ตรงกับเดือนของวันที่ ${mm.length} ใบ</strong> — ทำให้ Invoice เดือนถัดไปได้เลขซ้ำ แล้วบันทึก/ยืนยันไม่ได้
+  const mmHtml=mm.length?`<div class="ovl-box" style="margin:0 0 .75rem"><strong>⚠️ เลขที่ Invoice ต้องแก้ ${mm.length} ใบ</strong> — ${mm.some(x=>x.fmt)?'SLR - PACK เปลี่ยนเป็นเลขรูปแบบใหม่ (HOYA-PACK DAY-…)':''}${mm.some(x=>x.fmt)&&mm.some(x=>!x.fmt)?' · ':''}${mm.some(x=>!x.fmt)?'เดือนในเลขที่ไม่ตรงกับวันที่ ทำให้เดือนถัดไปได้เลขซ้ำ แล้วบันทึก/ยืนยันไม่ได้':''}
     <ul>${mm.slice(0,8).map(x=>`<li>${esc(x.i.no)} (วันที่ ${esc(x.i.dt)}) → <strong>${esc(x.to)}</strong>${x.locked?' <span style="color:var(--muted)">— 🔒 อยู่ในใบกำกับภาษี '+esc(x.locked.no)+' แก้ไม่ได้</span>':''}</li>`).join('')}${mm.length>8?`<li>… และอีก ${mm.length-8} ใบ</li>`:''}</ul>
-    ${mm.some(x=>!x.locked)?'<div class="brow"><button class="btn bp bsm" onclick="fixInvNoMonths()">🔧 แก้เลขที่ให้ตรงเดือน</button></div>':''}</div>`:'';
+    ${mm.some(x=>!x.locked)?'<div class="brow"><button class="btn bp bsm" onclick="fixInvNoMonths()">🔧 แก้เลขที่ให้ถูกต้อง</button></div>':''}</div>`:'';
   el.innerHTML=mmHtml+`<div style="overflow-x:auto"><table class="dt"><thead><tr>
     <th>Invoice No.</th><th>สถานะ</th><th>โรงงาน</th><th>แผนก</th><th>วันที่</th>
     <th class="num">Up Total</th><th class="num">VAT 7%</th><th class="num">Grand Total</th><th></th>
@@ -6448,8 +6449,21 @@ function genInvNo(plant, dept, dt, isSpecial){
   const pName=String(CFG[plant]?.name||plant).trim();
   const dName=String(CFG[plant]?.depts?.[dept]?.name||dept).trim();
   const seq=deptSeq(plant,dept);
+  if(invNoIsPack(plant)) return `HOYA-PACK DAY-${seq}-${String(d.getMonth()+1).padStart(2,'0')}(${yy})`;   // SLR - PACK: HOYA-PACK DAY-{ลำดับแผนก}-{เดือน}({ปี})
   return `CCS-${pName}-${dName}-${mon}.-${seq}(${yy})`;
 }
+/* ข้อมูลลูกค้าบน Invoice: MESSRS / ADDRESS / TAX ID สาขา — จาก ⚙️ ตั้งค่า → ข้อมูลลูกค้า ของโรงงาน */
+function invCustHTML(pk,messrs){
+  const b=plantBill(pk)||{}, name=String(messrs||b.name||'HOYA OPTICS (THAILAND) LTD.').trim();
+  const br=b.branchCode?('สาขา '+b.branchCode):(b.branch||'');
+  const L='display:inline-block;min-width:78px;text-align:right;font-weight:700;margin-right:6px;vertical-align:top';
+  return `<div class="inv-cust" style="font-size:13px;line-height:1.55;margin-bottom:.35rem">
+    <div><span style="${L}">MESSRS :</span>${esc(name)}</div>
+    ${b.addr?`<div style="display:flex"><span style="${L};flex:0 0 auto">ADDRESS :</span><span style="white-space:pre-line">${esc(b.addr)}</span></div>`:''}
+    ${b.taxId?`<div><span style="${L}">TAX ID :</span>${esc(b.taxId)}${br?' &nbsp;'+esc(br):''}</div>`:''}
+  </div>`;
+}
+function invNoIsPack(pk){ return /PACK/i.test((CFG[pk]?.name||'')+' '+pk); }
 /* Special Invoice: CCS-{ชื่อโรงงาน}-{ปี พ.ศ. 2 หลัก}{เดือน 2 หลัก}-{001}
    นับแยกโรงงาน และเริ่ม 001 ใหม่ทุกเดือน เช่น CCS-HOYA OPTICS SLR-6911-001 */
 function spNoPrefix(plant, dt){
@@ -6467,22 +6481,32 @@ function genSpNo(plant, dt, excludeId){
 }
 
 /* เดือน/ปีในเลขที่ Invoice รูปแบบอัตโนมัติ  …-NOV.-2(26) */
-function invNoMon(no){ const m=String(no||'').match(/-([A-Z]{3})\.-(\d+)\((\d{2})\)$/); return m&&MON_ABBR.includes(m[1])?{mon:m[1],seq:m[2],yy:m[3]}:null; }
+function invNoMon(no){
+  no=String(no||'');
+  let m=no.match(/-([A-Z]{3})\.-(\d+)\((\d{2})\)$/); if(m&&MON_ABBR.includes(m[1])) return {mon:m[1],seq:m[2],yy:m[3]};
+  m=no.match(/^HOYA-PACK DAY-(\d+)-(\d{2})\((\d{2})\)$/); if(m) return {num:true,seq:m[1],mm:m[2],yy:m[3]};
+  return null;
+}
 function invNoWithMon(no,dt){
   const x=invNoMon(no); if(!x||!dt) return null;
   const d=new Date(dt+'T00:00:00');
+  if(x.num) return `HOYA-PACK DAY-${x.seq}-${String(d.getMonth()+1).padStart(2,'0')}(${String(d.getFullYear()).slice(2)})`;
   return String(no).replace(/-([A-Z]{3})\.-(\d+)\((\d{2})\)$/,`-${MON_ABBR[d.getMonth()]}.-${x.seq}(${String(d.getFullYear()).slice(2)})`);
 }
 /* Invoice ที่เลขที่ระบุเดือนไม่ตรงกับวันที่ (เช่น วันที่ ต.ค. แต่เลขเป็น NOV) — ทำให้เดือนถัดไปออกเลขซ้ำแล้วบันทึกไม่ได้ */
 function invNoMismatches(){
-  return S.invoices.filter(i=>i.type!=='special'&&i.dt&&invNoMon(i.no)&&invNoWithMon(i.no,i.dt)!==i.no)
-    .map(i=>({i,to:invNoWithMon(i.no,i.dt),locked:taxRecOfInv(i.id)}));
+  return S.invoices.filter(i=>i.type!=='special'&&i.dt).map(i=>{
+    // SLR - PACK: เลขรูปแบบเก่า (CCS-…) → เปลี่ยนเป็น HOYA-PACK DAY-{ลำดับ}-{เดือน}({ปี})
+    if(invNoIsPack(i.plant)&&!invNoMon(i.no)?.num){ const x=invNoMon(i.no); if(!x) return null;
+      return {i,to:`HOYA-PACK DAY-${x.seq}-${i.dt.slice(5,7)}(${i.dt.slice(2,4)})`,locked:taxRecOfInv(i.id),fmt:true}; }
+    return invNoMon(i.no)&&invNoWithMon(i.no,i.dt)!==i.no?{i,to:invNoWithMon(i.no,i.dt),locked:taxRecOfInv(i.id)}:null;
+  }).filter(Boolean);
 }
 function fixInvNoMonths(){
   const list=invNoMismatches().filter(x=>!x.locked); if(!list.length) return;
   const used=new Set(S.invoices.map(i=>i.no));
   const ok=list.filter(x=>!used.has(x.to)||list.some(y=>y.i.no===x.to));
-  if(!confirm('แก้เลขที่ Invoice ให้ตรงกับเดือนของวันที่:\n\n'+ok.map(x=>`• ${x.i.no}\n   → ${x.to}`).join('\n')+(ok.length<list.length?`\n\n(ข้าม ${list.length-ok.length} ใบ เพราะเลขใหม่ซ้ำกับใบอื่น)`:''))) return;
+  if(!confirm('แก้เลขที่ Invoice:\n\n'+ok.map(x=>`• ${x.i.no}\n   → ${x.to}`).join('\n')+(ok.length<list.length?`\n\n(ข้าม ${list.length-ok.length} ใบ เพราะเลขใหม่ซ้ำกับใบอื่น)`:''))) return;
   ok.forEach(x=>{ x.i.no=x.to; dbSaveInv(x.i,true); });
   persistLocal(); renderInvList(); buildSum(); autoFillInvNo(); try{updateInvSaveButtons();}catch(e){}
   if(_editInvId){ const e=S.invoices.find(i=>i.id===_editInvId); if(e) document.getElementById('inv-no').value=e.no; }
@@ -6756,9 +6780,8 @@ function getSpInvHTML(forPrint=false){
         <div><strong>Date:</strong> ${dtFmt}</div>
       </div>
     </div>
-    <div style="font-size:13px;margin-bottom:.5rem">
-      <strong>MESSRS:</strong> ${esc(messrs)} &nbsp;|&nbsp; <strong>แผนก:</strong> ${pName} — ${dName}
-    </div>
+    ${invCustHTML(plant,messrs)}
+    <div style="font-size:13px;margin-bottom:.5rem"><strong>แผนก:</strong> ${pName} — ${dName}</div>
     <div style="font-weight:700;font-size:13.5px;color:var(--navy,#1a3a5c);margin:.5rem 0;letter-spacing:.04em">${esc(title)}</div>
 
     <table class="sp-doc-tbl" style="width:100%;border-collapse:collapse;font-size:13px;margin-top:1rem;border:1px solid #555">
