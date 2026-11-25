@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-25d | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-25e | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -346,7 +346,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25d</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25e</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -434,6 +434,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
       <button class="btn ba" onclick="goInv()">➡️ ต่อสร้าง Invoice</button>
     </div>
     <div id="ts-dept-bar" class="ts-dept-bar"></div>
+    <label class="ts-sub-tgl" style="display:inline-flex;align-items:center;gap:6px;margin-top:.5rem;font-size:13px;cursor:pointer"><input type="checkbox" id="ts-showsub" onchange="setTsShowSub(this.checked)"> แสดงตัวอักษรพนักงานแทน (A, B, C…) ในแถวพนักงานประจำ <span style="color:var(--muted);font-size:12px">— เลือกรายใบ · ไม่ติ๊กก็ยังนับวันที่มาทำแทน/คำนวณเงินเหมือนเดิม</span></label>
     <div class="ts-save-bar">
       <label title="บันทึกงวดให้เองหลังหยุดพิมพ์ 2–3 วินาที (ยกเว้นกรณีช่วงวันที่ซ้ำ ซึ่งต้องยืนยันเอง)"><input type="checkbox" id="ts-autosave" onchange="setAutoSave(this.checked)"> บันทึกอัตโนมัติ</label>
       <span id="ts-save-status"></span>
@@ -1457,6 +1458,7 @@ let regRows = [];
 let subRows = [];
 let holidays = []; // Array of 'YYYY-MM-DD' strings
 let tsRemark = '';        // หมายเหตุใบบันทึกเวลา
+let tsShowSub = false;    // แสดงตัวอักษรพนักงานแทนในแถวพนักงานประจำ (เลือกรายใบ, ค่าเริ่มต้น = ไม่แสดง)
 let _loadedTsId = null;   // id ของงวดที่เปิดแก้ไขอยู่
 let _ovlAckSig = '';      // ผู้ใช้ยืนยันว่าตั้งใจให้ช่วงวันที่ซ้ำ
 let _preferTsId = null;   // งวดที่เลือกใช้ทำ Invoice
@@ -1559,14 +1561,15 @@ function linkedPartners(plant,dept){
 /* โรงงานที่ไม่แสดงตัวอักษรพนักงานแทน (SLR - PACK): ยังนับวันที่พนักงานแทนมาทำแทนเหมือนเดิม
    → จำลองการใส่ตัวอักษรแบบเดียวกับ rebuildSubFill (ไม่เขียนลงข้อมูล) แล้วใช้นับวันทำงาน/ขาด/สิทธิ์เต็มสัญญา */
 function virtualRegRow(row,ctx){
-  if(!ctx||subFillOn(ctx.plant)) return row;
+  if(!ctx) return row;
   const regs=ctx.regRows||regRows, subs=ctx.subRows||subRows;
   const idx=regs.indexOf(row); if(idx<0) return row;
-  const hol=new Set(ctx.holidays||[]), days={...(row.days||{})};
+  const hol=new Set(ctx.holidays||[]), days={...(row.days||{})}, L=new Set(subs.map(r=>r.letter));
   getDates(ctx.ds,ctx.de).forEach(d=>{
     const k=dkey(d); if(isSunday(d)||hol.has(k)) return;
     const active=subs.filter(r=>String(r.days?.[k]||'').trim()!=='');
     if(!active.length) return;
+    if(regs.some(r=>L.has(String(r.days?.[k]||'').trim()))) return;   // วันนั้นมีตัวอักษรในข้อมูลแล้ว (เปิดแสดงตัวอักษร) → ใช้ตามข้อมูล
     const free=[]; regs.forEach((r,i)=>{ const v=String(r.days?.[k]||'').trim(); if(!(v!==''&&!isNaN(parseFloat(v)))) free.push(i); });
     const n=free.indexOf(idx);
     if(n>=0&&n<active.length) days[k]=active[n].letter;
@@ -1729,7 +1732,7 @@ function onPlantChange(){
 }
 
 function onDeptChange(){
-  _loadedTsId=null; tsRemark=''; _ovlAckSig='';
+  _loadedTsId=null; tsRemark=''; tsShowSub=false; _ovlAckSig='';
   const plant=document.getElementById('tf-plant').value;
   const dept=document.getElementById('tf-dept').value;
   _curPlant=plant; _curDept=dept;
@@ -1957,7 +1960,7 @@ function buildGrid(){
     //  - ถ้าเปิดงวดที่บันทึกแล้วอยู่ แล้วเปลี่ยนวันเริ่ม = เริ่มงวดใหม่ → ล้างข้อมูลวัน เก็บไว้แค่ชื่อ
     //  - ถ้าเป็นร่างที่ยังไม่บันทึก (หรือแค่แก้วันสิ้นสุด) → เก็บข้อมูลของวันที่ยังอยู่ในช่วงใหม่
     const startNew=_tsStartNew; _tsStartNew=false;
-    if(startNew){_loadedTsId=null;tsRemark='';}
+    if(startNew){_loadedTsId=null;tsRemark='';tsShowSub=false;}
     [...regRows,...subRows].forEach(r=>{
       if(startNew){r.days={};r.otDays={};}
       ['days','otDays'].forEach(f=>{const o=r[f]||{};Object.keys(o).forEach(k=>{if(k<ds||k>de) delete o[k];});r[f]=o;});
@@ -2123,7 +2126,7 @@ function buildGrid(){
     <div style="font-size:20px;font-weight:700">HOYA OPTICS (THAILAND) LTD.</div>
     <div style="font-size:17px;font-weight:600">ใบบันทึกเวลาทำงานของพนักงาน CCS</div>
     <div style="font-size:14px;margin-top:4px">
-      <strong>${plantName} — ${deptName}</strong>
+      <strong>${esc(tsPlantTitle(plant))} — ${deptName}</strong>
       &nbsp;|&nbsp; ประจำวันที่ ${ds_full} ถึง ${de_full}
     </div>
   </div>
@@ -2196,11 +2199,16 @@ function setOtDayOrig(arr,idx,key,val){ if(!arr[idx].otDays) arr[idx].otDays={};
 
 /* rebuildSubFill: rebuild ตัวอักษรพนักงานแทนใน reg rows สำหรับวันนั้น */
 /* ใส่ตัวอักษรพนักงานแทนลงในแถวพนักงานประจำหรือไม่ — SLR - PACK ไม่ใส่ (ตั้งเองได้ด้วย CFG[plant].subFill) */
-function subFillOn(plant){
-  plant=plant||document.getElementById('tf-plant')?.value;
-  const c=CFG[plant]; if(!c) return true;
-  if(c.subFill===true||c.subFill===false) return c.subFill;
-  return !/PACK/i.test((c.name||'')+' '+plant);
+function subFillOn(){ return !!tsShowSub; }
+/* ชื่อโรงงานบนหัวใบบันทึกเวลา: SLR - PACK แสดงเป็น GMO - PACK */
+function tsPlantTitle(pk){ const n=String(CFG[pk]?.name||pk); return /PACK/i.test(n+' '+pk)?n.replace(/\bSLR\b/,'GMO'):n; }
+function setTsShowSub(on){
+  tsShowSub=!!on;
+  if(tsShowSub){ const ds=document.getElementById('tf-ds').value, de=document.getElementById('tf-de').value;
+    if(ds&&de) getDates(ds,de).forEach(d=>rebuildSubFill(dkey(d))); }
+  else clearSubLetters();
+  _lastDS=''; buildGrid(); _lastDS=document.getElementById('tf-ds').value; _lastDE=document.getElementById('tf-de').value;
+  markTsDirty&&markTsDirty();
 }
 /* โรงงานที่ไม่ใส่ตัวอักษร: ล้างตัวอักษรพนักงานแทน (A, B, C…) ที่เคยถูกใส่ไว้ในแถวพนักงานประจำ */
 function clearSubLetters(){
@@ -2509,7 +2517,7 @@ function hasTsContent(){
 function tsSnapshot(){
   return {plant:document.getElementById('tf-plant').value,dept:document.getElementById('tf-dept').value,
     ds:document.getElementById('tf-ds').value,de:document.getElementById('tf-de').value,
-    regRows,subRows,holidays,remark:tsRemark,loadedTsId:_loadedTsId,at:new Date().toISOString()};
+    regRows,subRows,holidays,remark:tsRemark,showSub:tsShowSub,loadedTsId:_loadedTsId,at:new Date().toISOString()};
 }
 function writeDraft(){
   clearTimeout(_tsDraftTimer);
@@ -2562,6 +2570,7 @@ function autoSaveTS(){
   saveTS({silent:true});
 }
 function updateTsStatus(){
+  { const cb=document.getElementById('ts-showsub'); if(cb) cb.checked=!!tsShowSub; }
   try{renderDeptBar();}catch(e){}
   const el=document.getElementById('ts-save-status');
   const cb=document.getElementById('ts-autosave');
@@ -2676,7 +2685,7 @@ function restoreDraft(){
   document.getElementById('tf-de').value=d.de;
   _curPlant=d.plant; _curDept=d.dept;
   regRows=d.regRows||[]; subRows=d.subRows||[];
-  holidays=d.holidays||[]; tsRemark=d.remark||'';
+  holidays=d.holidays||[]; tsRemark=d.remark||''; tsShowSub=!!d.showSub;
   _loadedTsId=S.timesheets.some(t=>t.id===d.loadedTsId)?d.loadedTsId:null;
   _lastDS=d.ds; _lastDE=d.de; _ovlAckSig='';
   renderHolidays();
@@ -2740,7 +2749,7 @@ function saveTS(opts){
     regRows:JSON.parse(JSON.stringify(regRows)),
     subRows:JSON.parse(JSON.stringify(subRows)),
     holidays:[...holidays],
-    remark:tsRemark||'',
+    remark:tsRemark||'', showSub:!!tsShowSub,
     totalOT:fmtOT(tOT), totalH:tH, totalOTH:fmtOT(tOTH), totalOTMin:tOT, totalOTHMin:tOTH,
     savedAt:new Date().toLocaleString('th-TH')
   };
@@ -2858,7 +2867,7 @@ function useTS(id,force){
   regRows=JSON.parse(JSON.stringify(t.regRows||[]));
   subRows=JSON.parse(JSON.stringify(t.subRows||[]));
   holidays=[...(t.holidays||[])];
-  tsRemark=t.remark||'';
+  tsRemark=t.remark||''; tsShowSub=!!t.showSub;
   _loadedTsId=t.id; _ovlAckSig=''; _lastDS=t.ds; _lastDE=t.de;
   { const _inf=document.getElementById('ts-info'); if(_inf) _inf.innerHTML=''; }
   _curPlant=t.plant; _curDept=t.dept;
@@ -3191,7 +3200,7 @@ function showInvPreview(){
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.5rem">
     <div>
       <div style="font-size:18px;font-weight:700;letter-spacing:.08em;color:var(--navy)">INVOICE</div>
-      <div style="font-size:12px;color:var(--muted)">( TAX No. ${CO.tax} )</div>
+      <div style="font-size:12.5px;color:#000;font-weight:600">( TAX No. ${CO.tax} )</div>
     </div>
     <div style="text-align:right;font-size:13px">
       <div><strong>INVOICE No.:</strong> ${no}</div>
@@ -3199,7 +3208,6 @@ function showInvPreview(){
     </div>
   </div>
   ${invCustHTML(plant,'')}
-  <div style="font-size:13px;margin-bottom:.25rem"><strong>แผนก:</strong> ${plantName} — ${deptName}</div>
   <div style="font-weight:700;font-size:13.5px;color:var(--navy);margin:.5rem 0;letter-spacing:.05em">${svc}</div>
   <table class="inv-tbl">
     <thead><tr><th style="text-align:left">รายการ</th><th style="text-align:right">จำนวน</th><th style="text-align:right">อัตรา (฿)</th><th style="text-align:right">จำนวนเงิน (฿)</th></tr></thead>
@@ -4890,7 +4898,7 @@ async function exportTSExcel(){
   const title=(t,sz,b)=>{ws.mergeCells(r,1,r,L);const c=ws.getCell(r,1);c.value=t;c.font=f(sz,{bold:b});c.alignment={horizontal:'center',vertical:'middle'};ws.getRow(r).height=sz+8;r++;};
   title('HOYA OPTICS (THAILAND) LTD.',14,true);
   title('ใบบันทึกเวลาทำงานของพนักงาน CCS',12,true);
-  title(`${pName} — ${dName}  |  ประจำวันที่ ${fmtD(ds)} ถึง ${fmtD(de)}`,10,false);
+  title(`${tsPlantTitle(plant)} — ${dName}  |  ประจำวันที่ ${fmtD(ds)} ถึง ${fmtD(de)}`,10,false);
   r++;
   const firstHdr=r;
   const header=label=>{
@@ -5546,7 +5554,7 @@ body{font-family:'Sarabun',sans-serif;font-size:8pt;color:#000;-webkit-print-col
 <div style="text-align:center;margin-bottom:8px;font-family:'Sarabun',sans-serif">
   <div style="font-size:14pt;font-weight:700">HOYA OPTICS (THAILAND) LTD.</div>
   <div style="font-size:12pt;font-weight:600">ใบบันทึกเวลาทำงานของพนักงาน CCS</div>
-  <div style="font-size:9.5pt;margin-top:3px"><strong>${pName} — ${dName}</strong> | ประจำวันที่ ${fmtD(ds)} ถึง ${fmtD(de)}</div>
+  <div style="font-size:9.5pt;margin-top:3px"><strong>${esc(tsPlantTitle(plant))} — ${dName}</strong> | ประจำวันที่ ${fmtD(ds)} ถึง ${fmtD(de)}</div>
 </div>
 ${resolve(`<table style="${tableStyle}">
   <thead>${hdrReg}</thead>
@@ -6772,7 +6780,7 @@ function getSpInvHTML(forPrint=false){
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem">
       <div>
         <div style="font-size:20px;font-weight:700;letter-spacing:.05em;color:var(--navy,#1a3a5c)">INVOICE</div>
-        <div style="font-size:12px;color:#777">( TAX No. ${CO.tax} )</div>
+        <div style="font-size:12.5px;color:#000;font-weight:600">( TAX No. ${CO.tax} )</div>
         <div style="font-size:12px;color:#777">⭐ Special Invoice</div>
       </div>
       <div style="text-align:right;font-size:13px">
@@ -6781,7 +6789,6 @@ function getSpInvHTML(forPrint=false){
       </div>
     </div>
     ${invCustHTML(plant,messrs)}
-    <div style="font-size:13px;margin-bottom:.5rem"><strong>แผนก:</strong> ${pName} — ${dName}</div>
     <div style="font-weight:700;font-size:13.5px;color:var(--navy,#1a3a5c);margin:.5rem 0;letter-spacing:.04em">${esc(title)}</div>
 
     <table class="sp-doc-tbl" style="width:100%;border-collapse:collapse;font-size:13px;margin-top:1rem;border:1px solid #555">
