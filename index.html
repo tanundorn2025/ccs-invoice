@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-25h | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-25j | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -362,7 +362,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25h</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25j</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -1172,13 +1172,19 @@ function renderSignPreview(){
   const cb=document.getElementById('co-sign-show'); if(cb){ cb.checked=CO.signShow!==false; cb.disabled=!CO.signData; }
 }
 /* สร้าง HTML letterhead สำหรับใส่ใน Invoice/Summary */
+/* โลโก้หัวกระดาษ: คงสัดส่วนจริงของรูป (กำหนดกว้าง×สูงตามสัดส่วน ไม่ใช้กล่องสี่เหลี่ยมจัตุรัส — PDF/html2canvas ไม่รองรับ object-fit จึงเคยถูกบีบ) */
+function lhLogoStyle(src,forPrint){
+  const H=forPrint?55:70, U=forPrint?'pt':'px', d=(typeof imgDims==='function')?imgDims(src):null;
+  const w=d&&d.w&&d.h?Math.min(H*d.w/d.h,H*3):H;
+  return `width:${w.toFixed(1)}${U};height:${H}${U};flex-shrink:0;display:block`;
+}
 function getLetterheadHTML(forPrint=false){
   const logoSrc = CO.logoData || `data:image/svg+xml,${encodeURIComponent('<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="60" r="55" fill="%23c8006a" opacity=".15"/><circle cx="60" cy="60" r="42" fill="none" stroke="%23c8006a" stroke-width="3"/><text x="60" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="36" font-weight="900" fill="%23c8006a">CCS</text></svg>')}`;
   const fs = forPrint ? '9pt' : '13px';
   const fsLg = forPrint ? '11pt' : '15px';
   const fsSm = forPrint ? '8pt' : '11.5px';
   return `<div style="display:flex;align-items:center;gap:14px;padding-bottom:10px;margin-bottom:10px;border-bottom:2px solid #c8006a;font-family:'Sarabun',sans-serif">
-    <img src="${logoSrc}" style="width:${forPrint?'55pt':'70px'};height:${forPrint?'55pt':'70px'};object-fit:contain;flex-shrink:0">
+    <img src="${logoSrc}" style="${lhLogoStyle(logoSrc,forPrint)}">
     <div style="flex:1">
       <div style="font-size:${fsLg};font-weight:700;color:#c8006a;line-height:1.3">${CO.nameTh}</div>
       <div style="font-size:${fsSm};color:#555;margin-top:2px">${CO.addr}</div>
@@ -3730,7 +3736,7 @@ function sumPrintDoc(){
   const css=`
     *{box-sizing:border-box;margin:0;padding:0}
     @page{size:A4 portrait;margin:0}
-    @media print{body{padding:15mm 12mm}}
+    @media print{body{padding:7mm 12mm 12mm}}
     body{font-family:'Sarabun',sans-serif;font-size:10pt;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     table{border-collapse:collapse;width:100%;font-size:9pt}
     th{background:#bfbfbf!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;
@@ -3747,7 +3753,7 @@ function sumPrintDoc(){
     .badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:8pt}
     .bg-navy{background:#1a3a5c;color:#fff}
     .bg-gold{background:#c8a030;color:#1a2035}
-    .sum-letterhead img{max-height:50pt}
+    .sum-letterhead img{max-height:none}
   `;
 
   const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Summary '+mon+'</title>'+'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">'
@@ -3756,7 +3762,7 @@ function sumPrintDoc(){
     +clone.innerHTML
     +'</body></html>';
 
-  return {html, name:'SUMMARY-'+plant+'-'+mon, orient:'portrait', margin:[15,12,15,12]};
+  return {html, name:'SUMMARY-'+plant+'-'+mon, orient:'portrait', margin:[7,12,12,12]};
 }
 
 /* ============================================================
@@ -5766,19 +5772,13 @@ function invPrintDoc(){
     +'<style>'+styles+'\nhtml,body{background:#fff!important;margin:0;padding:0}.inv-page{box-shadow:none!important;border:none!important;margin:0!important;max-width:none!important;background:#fff!important}</style>'
     +'</head><body>'+el.outerHTML+'</body></html>';
   const no=(document.getElementById('inv-no').value||'Invoice').trim();
-  return {html, name:'Invoice-'+no, orient:'portrait', margin:[10,10,10,10]};
+  return {html, name:'Invoice-'+no, orient:'portrait', margin:[6,10,10,10]};
 }
 function exportInvPdf(){ const d=invPrintDoc(); if(d) exportPDF(d); }
 
 function printInv(){
-  showInvPreview();
-  setPrintPage('portrait');
-  setPrintTarget('t2');
-  document.querySelectorAll('#t2 .no-print').forEach(el=>el.style.display='none');
-  setTimeout(()=>{
-    window.print();
-    setTimeout(()=>document.querySelectorAll('#t2 .no-print').forEach(el=>el.style.display=''),500);
-  },400);
+  // พิมพ์จากเอกสารแยก (เหมือน PDF): ขอบบนแคบลง และไม่มีวันที่/URL ของเบราว์เซอร์ที่หัว-ท้ายกระดาษ
+  const d=invPrintDoc(); if(d) printDocNow(d);
 }
 /* Invoice ร่างในเดือน/โรงงานที่เลือกใน Summary → ต้องยืนยันก่อน
    คืนค่า true = ไปต่อได้ ; allowView = ให้เลือก "ดูก่อน (ยังไม่ยืนยัน)" ได้ */
@@ -6940,7 +6940,7 @@ function spPrintDoc(){
   const no=document.getElementById('sp-no')?.value||'SP';
   const css=`*{box-sizing:border-box;margin:0;padding:0}
   @page{size:A4 portrait;margin:0}
-  @media print{body{padding:15mm 12mm}}
+  @media print{body{padding:7mm 12mm 12mm}}
   body{font-family:'Sarabun',sans-serif;font-size:10pt;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   table{width:100%;border-collapse:collapse}
   th{background:#1a3a5c!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -6948,7 +6948,7 @@ function spPrintDoc(){
   const body='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+esc(no)+'</title>'+'<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">'
     +'<style>'+css+'</style></head>'
     +'<body onload="setTimeout(function(){window.print();},400)">'+getSpInvHTML(true)+'</body></html>';
-  return {html:body, name:'Special-Invoice-'+no, orient:'portrait', margin:[15,12,15,12]};
+  return {html:body, name:'Special-Invoice-'+no, orient:'portrait', margin:[7,12,12,12]};
 }
 function downloadSpInv(){ const d=spPrintDoc(); if(d) downloadText(d.html, d.name+'.html', 'text/html'); }
 function exportSpPdf(){ const d=spPrintDoc(); if(d) exportPDF(d); }
