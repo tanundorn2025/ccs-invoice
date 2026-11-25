@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-25k | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-25l | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -362,7 +362,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25k</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25l</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -1319,7 +1319,8 @@ function taxRecOfInv(id){return S.taxInvoices.find(t=>t.status==='issued'&&(t.in
 function sumInvoices(plant,monKey){
   const po=(typeof taxPlantOrder==='function')?taxPlantOrder():Object.keys(CFG);
   const pr=p=>{const k=po.indexOf(p);return k<0?999:k;};
-  return S.invoices.filter(i=>(plant==='ALL'||i.plant===plant)&&(!monKey||(i.dt||'').startsWith(monKey)))
+  // Summary ส่งลูกค้าเฉพาะ Invoice ปกติ — Special Invoice ไม่รวมใน Summary (ใบกำกับภาษียังรวมตามเดิม)
+  return S.invoices.filter(i=>i.type!=='special'&&(plant==='ALL'||i.plant===plant)&&(!monKey||(i.dt||'').startsWith(monKey)))
     .sort((a,b)=>(pr(a.plant)-pr(b.plant))
       ||((a.type==='special'?1:0)-(b.type==='special'?1:0))
       ||(a.type==='special'?0:deptSeq(a.plant,a.dept)-deptSeq(b.plant,b.dept))
