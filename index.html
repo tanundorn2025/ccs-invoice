@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-25l | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-25o | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -186,6 +186,8 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .att tr.row-act>td.nm{box-shadow:inset 4px 0 0 #e0a800,inset 0 2px 0 #e0a800,inset 0 -2px 0 #e0a800}
 .att th.col-act,.att td.col-act{outline:2px solid #e0a800;outline-offset:-2px}
 .att thead th.col-act{background:#ffe27a!important;color:#000!important}
+.att input.dc.dc-miss{outline:3px solid #f59e0b!important;background:#fff4d6!important;animation:dcMiss 1s ease-in-out 3}
+@keyframes dcMiss{50%{outline-color:#dc2626}}
 .ts-dept-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:.6rem;padding:8px 10px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--r)}
 .ts-dept-bar:empty{display:none}
 .ts-dept-bar .dlab{font-size:12.5px;font-weight:700;color:var(--navy);margin-right:4px}
@@ -362,7 +364,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25l</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25o</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -678,7 +680,8 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
         <button class="btn bo bsm" onclick="addSpHead()">+ หัวข้อ</button>
         <button class="btn bs bsm" onclick="addSpItem()">+ เพิ่มรายการ</button>
         <button class="btn bp bsm" onclick="showSpPreview()">👁️ Preview</button>
-        <button class="btn ba bsm" onclick="saveSpInv()">💾 บันทึก</button>
+        <button class="btn ba bsm" onclick="saveSpInv(false)" title="บันทึกเป็นร่าง (ยังไม่ยืนยัน)">💾 บันทึก (ร่าง)</button>
+        <button class="btn bs bsm" onclick="saveSpInv(true)">✅ บันทึกและยืนยัน</button>
       </div>
     </div>
 
@@ -1563,6 +1566,34 @@ function tsIssues(t){
   return out;
 }
 /* เปิดใบบันทึกเวลาที่มีปัญหา และพาไปที่ช่องแรกที่ผิด */
+/* ===== เตือน "ยังไม่เต็มสัญญา" — พนักงานประจำที่จะถูกคิดรายวัน (ขาดเกิน 3 วัน และไม่มีตัวสำรองมาแทน)
+   เตือนตอนบันทึกใบบันทึกเวลา และตอนยืนยัน Invoice · กด "ขาดจริง" แล้วจะไม่ถามซ้ำจนกว่าข้อมูลจะเปลี่ยน ===== */
+function tsShortfall(ts){
+  if(!ts) return {list:[],sig:''};
+  const sm=getStaffSummary(ts); if(!sm) return {list:[],sig:''};
+  const hol=new Set(ts.holidays||[]);
+  const normal=getDates(ts.ds,ts.de).filter(d=>!isSunday(d)&&!hol.has(dkey(d))).map(dkey);
+  const list=sm.partial.map(p=>{
+    const row=(ts.regRows||[])[p.idx], v=virtualRegRow(row,ts);
+    const miss=normal.filter(k=>String(v.days?.[k]||'').trim()==='');
+    return {idx:p.idx,name:p.name,absent:p.absent,worked:p.worked,miss,linked:!!p.note};
+  });
+  return {list,sig:list.map(x=>x.idx+':'+x.name+':'+x.absent+':'+x.miss.join(',')).join('|')};
+}
+function shortfallHTML(sf){
+  const fmtK=k=>{ const d=new Date(k+'T00:00:00'); return d.getDate()+' '+d.toLocaleDateString('th-TH',{month:'short'}); };
+  return `<div style="font-size:13px;line-height:1.6">พนักงานประจำ <strong>${sf.list.length} คน</strong> ยังไม่เต็มสัญญา — จะถูกคิดเงิน<strong>รายวัน</strong>แทนเต็มเดือน:
+    <ul style="margin:.4rem 0 .4rem 1.1rem;max-height:200px;overflow:auto">${sf.list.map(x=>`<li><strong>${esc(x.name)}</strong> — ขาด ${x.absent} วัน${x.miss.length&&x.miss.length<=12?` <span style="color:var(--muted)">(${x.miss.map(fmtK).join(', ')})</span>`:''}${x.worked===0?' <span style="color:#b42318">— ไม่มีวันทำงานเลย</span>':''}</li>`).join('')}</ul>
+    <span style="color:var(--muted);font-size:12px">ถ้าลืมกรอก หรือมีตัวสำรองมาแทนแต่ยังไม่ได้ลง ให้กลับไปตรวจก่อน · ถ้าขาดจริง กด “ขาดจริง” ระบบจะไม่ถามซ้ำจนกว่าข้อมูลจะเปลี่ยน</span></div>`;
+}
+function flashShortCells(sf){
+  let first=null;
+  sf.list.forEach(x=>x.miss.forEach(k=>{
+    const el=document.querySelector(`#ts-out input.dc:not(.dc-ot-in)[oninput*="setDay(regRows,${x.idx},'${k}'"]`);
+    if(el){ el.classList.add('dc-miss'); first=first||el; setTimeout(()=>el.classList.remove('dc-miss'),8000); }
+  }));
+  if(first){ first.scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(()=>first.focus(),400); }
+}
 function goFixTS(id){
   const b=[...document.querySelectorAll('.tb')].find(x=>(x.getAttribute('onclick')||'').includes("'t1'"));
   sw('t1',b,2);
@@ -2775,6 +2806,16 @@ function saveTS(opts){
     if(!confirm(`⚠️ ช่วงวันที่นี้ทับกับงวดที่บันทึกไว้แล้ว:\n${lines}\n\nวันที่ซ้ำจะถูกนับในทั้งสองงวด และอาจถูกคิดเงินซ้ำใน Invoice\n\nกด OK = บันทึกต่อ (ตั้งใจให้ซ้ำ)\nกด Cancel = กลับไปแก้ช่วงวันที่`)) return false;
   }
 
+  // ยังไม่เต็มสัญญา → ถามก่อนบันทึก (ไม่บังคับ)
+  const _prevRec=S.timesheets.find(t=>t.key===key)||(_loadedTsId?S.timesheets.find(t=>t.id===_loadedTsId):null);
+  const _sf=tsShortfall({plant,dept,ds,de,holidays,regRows,subRows,id:_loadedTsId});
+  const _ack=(opts&&opts.ackShort)||(_sf.list.length&&_prevRec&&_prevRec.shortAck===_sf.sig)?_sf.sig:'';
+  if(!silent&&_sf.list.length&&!_ack){
+    askChoice('⚠️ ยังไม่เต็มสัญญา',shortfallHTML(_sf),[{label:'🔍 กลับไปตรวจ',value:'fix',cls:'bp'},{label:'บันทึกต่อ (ขาดจริง)',value:'ok',cls:'bo'}])
+      .then(v=>{ if(v==='ok'){ if(saveTS({...(opts||{}),ackShort:true,after:null})&&opts&&opts.after) opts.after(); } else if(v==='fix') flashShortCells(_sf); });
+    return false;
+  }
+
   const tOT=regRows.reduce((s,r)=>s+rowOtMin(r).ot,0)+subRows.reduce((s,r)=>s+rowOtMin(r).ot,0);
   const tH=regRows.reduce((s,r)=>s+(parseInt(r.h)||0),0)+subRows.reduce((s,r)=>s+(parseInt(r.h)||0),0);
   const tOTH=regRows.reduce((s,r)=>s+rowOtMin(r).oth,0)+subRows.reduce((s,r)=>s+rowOtMin(r).oth,0);
@@ -2787,7 +2828,7 @@ function saveTS(opts){
     regRows:JSON.parse(JSON.stringify(regRows)),
     subRows:JSON.parse(JSON.stringify(subRows)),
     holidays:[...holidays],
-    remark:tsRemark||'', showSub:!!tsShowSub,
+    remark:tsRemark||'', showSub:!!tsShowSub, shortAck:_ack||'',
     totalOT:fmtOT(tOT), totalH:tH, totalOTH:fmtOT(tOTH), totalOTMin:tOT, totalOTHMin:tOTH,
     savedAt:new Date().toLocaleString('th-TH')
   };
@@ -2845,7 +2886,7 @@ function lfPlantOrder(){ return Object.keys(CFG); }
 function lfToggle(key,pk){ const c=LF[key].closed; c.has(pk)?c.delete(pk):c.add(pk); ({ts:renderSavedTS,inv:renderInvList,sp:renderSpSaved})[key](); }
 /* กลุ่มตามโรงงาน: rows = [{pk, html, grand?}] */
 function lfGroups(key,rows,thead,sumFn){
-  const COLS={ts:[20,24,8,6,8,7,13,14],inv:[26,13,11,9,9,7,9,16],sp:[32,16,11,16,11,14]}[key];
+  const COLS={ts:[20,24,8,6,8,7,13,14],inv:[26,13,11,9,9,7,9,16],sp:[28,14,10,14,11,23]}[key];
   const cg=COLS?'<colgroup>'+COLS.map(w=>`<col style="width:${w}%">`).join('')+'</colgroup>':'';
   const by={}; rows.forEach(r=>(by[r.pk]=by[r.pk]||[]).push(r));
   const order=[...lfPlantOrder().filter(k=>by[k]),...Object.keys(by).filter(k=>!CFG[k])];
@@ -2884,9 +2925,11 @@ function renderSavedTS(){
     const issBadge=nIss?` <span class="badge" style="background:#c8060a;color:#fff" title="${esc(tsIssues(t).slice(0,5).map(x=>x.who+': '+x.txt).join('\n'))}">⚠️ ผิด ${nIss} จุด</span>`:'';
     const ovBadge=ovDays?` <span class="badge" style="background:var(--redbg);color:var(--red)" title="ซ้ำกับงวด ${ov.map(o=>rangeText(o.ts.ds,o.ts.de)).join(', ')}">⚠️ ซ้ำ ${ovDays} วัน</span>`:'';
     const isCur=t.id===_loadedTsId;
+    const sf=tsShortfall(t);
+    const sfBadge=sf.list.length?` <span class="badge" style="background:${t.shortAck===sf.sig?'#eef0f4;color:var(--muted)':'#fff4d6;color:#8a5a00'}" title="${esc(sf.list.map(x=>x.name+' ขาด '+x.absent+' วัน').join('\n'))}${t.shortAck===sf.sig?'\n(ยืนยันแล้วว่าขาดจริง)':''}">${t.shortAck===sf.sig?'ขาดจริง':'⚠️ ไม่เต็ม'} ${sf.list.length} คน</span>`:'';
     return {pk:t.plant,html:`<tr${isCur?' class="lf-cur"':''}>
     <td><span class="badge bg-gold">${esc(CFG[t.plant]?.depts?.[t.dept]?.name||t.dept)}</span>${isCur?' <span class="badge bg-green">📌 กำลังเปิดอยู่</span>':''}</td>
-    <td style="font-size:12px;white-space:nowrap">${rangeText(t.ds,t.de)}${issBadge}${ovBadge}</td>
+    <td style="font-size:12px;white-space:nowrap">${rangeText(t.ds,t.de)}${issBadge}${ovBadge}${sfBadge}</td>
     <td class="num">${fmtOT(tsOtMin(t).ot)}</td>
     <td class="num">${t.totalH||0}</td>
     <td class="num">${fmtOT(tsOtMin(t).oth)}</td>
@@ -2977,7 +3020,7 @@ function useTS(id,force){
 }
 
 function goInv(){
-  if(!saveTS()) return;
+  if(!saveTS({after:goInv})) return;   // ถ้าถาม "ยังไม่เต็มสัญญา" แล้วกดบันทึกต่อ → ไปหน้า Invoice ต่อให้
   _preferTsId=_loadedTsId;
   if(_editInvId) exitEditInv();
   document.querySelectorAll('.tb')[1].click();
@@ -3327,7 +3370,18 @@ function showInvPreview(){
   if(!wasOpen) pvEl.scrollIntoView({behavior:'smooth'});
 }
 
-function saveInv(confirmIt){
+async function saveInv(confirmIt,ackShort){
+  if(confirmIt&&!ackShort&&!_editInvId){
+    const t=window._lastTS?(S.timesheets.find(x=>x.id===window._lastTS.id)||null):null;
+    const sf=tsShortfall(t);
+    if(t&&sf.list.length&&t.shortAck!==sf.sig){
+      const v=await askChoice('⚠️ ยืนยัน Invoice — ยังไม่เต็มสัญญา',shortfallHTML(sf)+`<div style="margin-top:6px;font-size:12.5px">ใบบันทึกเวลา: <strong>${esc(CFG[t.plant]?.depts?.[t.dept]?.name||t.dept)}</strong> งวด ${rangeText(t.ds,t.de)}</div>`,
+        [{label:'ยกเลิก',value:''},{label:'📂 ไปตรวจใบบันทึกเวลา',value:'fix',cls:'bp'},{label:'ยืนยันต่อ (ขาดจริง)',value:'ok',cls:'bo'}]);
+      if(v==='fix'){ goFixTS(t.id); setTimeout(()=>flashShortCells(sf),700); return; }
+      if(v!=='ok') return;
+      t.shortAck=sf.sig; persistLocal(); dbSaveTS(t,true);
+    }
+  }
   { const {list}=invTsIssues(); if(list.length){ alert(`ใบบันทึกเวลาของ Invoice นี้มีข้อมูลผิด ${list.length} จุด\nกรุณากด "📂 ไปแก้ในใบบันทึกเวลา" แล้วแก้ให้เรียบร้อยก่อน`); return; } }
   const d=calcInv();
   const plant=document.getElementById('inv-plant').value;
@@ -3381,13 +3435,13 @@ function saveInv(confirmIt){
   alert(`✅ บันทึก Invoice "${no}" เป็น${status==='confirmed'?' “ยืนยันแล้ว”':' “ร่าง”'} เรียบร้อย\n(ยอดยังตามอัตราในตั้งค่า จนกว่าจะออกใบกำกับภาษี)`);
 }
 
-function invStatus(i){ return i.type==='special'?'confirmed':(i.status||'confirmed'); }   // Special: บันทึกแล้ว = พร้อมออกใบกำกับภาษี   // ข้อมูลเก่าก่อนมีสถานะ = ถือว่ายืนยันแล้ว
+function invStatus(i){ return i.status||'confirmed'; }   // Special ใช้ร่าง/ยืนยันเหมือน Invoice ปกติ ;   // Special: บันทึกแล้ว = พร้อมออกใบกำกับภาษี   // ข้อมูลเก่าก่อนมีสถานะ = ถือว่ายืนยันแล้ว
 function renderInvList(){
   const el=document.getElementById('inv-list');
   if(!el) return;
   const monSel=document.getElementById('inv-list-mon');
   if(monSel){
-    const months=[...new Set(S.invoices.map(i=>(i.dt||'').slice(0,7)).filter(Boolean))].sort().reverse();
+    const months=[...new Set(S.invoices.filter(i=>i.type!=='special').map(i=>(i.dt||'').slice(0,7)).filter(Boolean))].sort().reverse();
     const cur=monSel.value;
     monSel.innerHTML='<option value="">ทุกเดือน</option>'+months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
     monSel.value=months.includes(cur)?cur:(cur===''&&monSel.dataset.userAll==='1'?'':(months[0]||''));
@@ -3396,17 +3450,17 @@ function renderInvList(){
   if(_editInvId&&LF.inv.cur!==_editInvId&&monSel){ const c=S.invoices.find(i=>i.id===_editInvId); if(c&&monSel.value&&!(c.dt||'').startsWith(monSel.value)) monSel.value=(c.dt||'').slice(0,7); if(c){ if(LF.inv.plant&&LF.inv.plant!==c.plant) LF.inv.plant=''; LF.inv.closed.delete(c.plant);} }
   LF.inv.cur=_editInvId;
   const mon=monSel?monSel.value:'';
-  const all=S.invoices.filter(i=>!mon||(i.dt||'').startsWith(mon));
+  const all=S.invoices.filter(i=>i.type!=='special'&&(!mon||(i.dt||'').startsWith(mon)));   // Special Invoice แยกไปอยู่แท็บ Special Invoice
   const plants=[...new Set(all.map(i=>i.plant))];
   const mm=invNoMismatches();
-  const mmHtml=mm.length?`<div class="ovl-box" style="margin:0 0 .75rem"><strong>⚠️ เลขที่ Invoice ต้องแก้ ${mm.length} ใบ</strong> — ${mm.some(x=>x.fmt)?'SLR - PACK เปลี่ยนเป็นเลขรูปแบบใหม่ (HOYA-PACK DAY-…)':''}${mm.some(x=>x.fmt)&&mm.some(x=>!x.fmt)?' · ':''}${mm.some(x=>!x.fmt)?'เดือนในเลขที่ไม่ตรงกับวันที่ ทำให้เดือนถัดไปได้เลขซ้ำ แล้วบันทึก/ยืนยันไม่ได้':''}
+  const mmHtml=mm.length?`<div class="ovl-box" style="margin:0 0 .75rem"><strong>⚠️ เลขที่ Invoice ต้องแก้ ${mm.length} ใบ</strong> — ${mm.some(x=>x.fmt)?'SLR - PACK เปลี่ยนเป็นเลขรูปแบบใหม่ (HOYA-PACK DAY-…)':''}${mm.some(x=>x.fmt)&&mm.some(x=>!x.fmt)?' · ':''}${mm.some(x=>!x.fmt)?'เลขที่ไม่ตรงกับชื่อโรงงาน/แผนก/ลำดับเลขที่ หรือเดือน ในการตั้งค่าปัจจุบัน':''}
     <ul>${mm.slice(0,8).map(x=>`<li>${esc(x.i.no)} (วันที่ ${esc(x.i.dt)}) → <strong>${esc(x.to)}</strong>${x.locked?' <span style="color:var(--muted)">— 🔒 อยู่ในใบกำกับภาษี '+esc(x.locked.no)+' แก้ไม่ได้</span>':''}</li>`).join('')}${mm.length>8?`<li>… และอีก ${mm.length-8} ใบ</li>`:''}</ul>
     ${mm.some(x=>!x.locked)?'<div class="brow"><button class="btn bp bsm" onclick="fixInvNoMonths()">🔧 แก้เลขที่ให้ถูกต้อง</button></div>':''}</div>`:'';
   let warn=el.querySelector(':scope > .lf-warn');
   if(!warn){ el.innerHTML='<div class="lf-warn"></div><div class="lf-wrap"></div>'; warn=el.querySelector('.lf-warn'); }
   warn.innerHTML=mmHtml;
   const wrap=el.querySelector(':scope > .lf-wrap');
-  if(!S.invoices.length){wrap.innerHTML=lfEmpty('ยังไม่มี Invoice');return;}
+  if(!S.invoices.some(i=>i.type!=='special')){wrap.innerHTML=lfEmpty('ยังไม่มี Invoice');return;}
   // ใช้แถบกรอง (โรงงาน + ค้นหา) — เดือนใช้ตัวเลือกด้านบนของการ์ด
   const {body,cnt}=lfToolbar(wrap,'inv',[''],()=>'',plants,'renderInvList');
   wrap.querySelector('.lf-mon').style.display='none'; wrap.querySelector('.lf-mon').previousElementSibling.style.display='none';
@@ -3447,7 +3501,7 @@ function setInvStatus(list,status){
 }
 function confirmInv(id){
   const i=S.invoices.find(x=>x.id===id); if(!i) return;
-  if(!confirm(`ยืนยัน Invoice ${i.no}?\nยอด ${fmtNum(i.grand)} บาท\n(ยอดยังตามอัตราในตั้งค่า จนกว่าจะออกใบกำกับภาษี)`)) return;
+  if(!confirm(`ยืนยัน ${i.type==='special'?'Special ':''}Invoice ${i.no}?\nยอด ${fmtNum(i.grand)} บาท`+(i.type==='special'?'':'\n(ยอดยังตามอัตราในตั้งค่า จนกว่าจะออกใบกำกับภาษี)'))) return;
   setInvStatus([i],'confirmed');
   showToast('✅ ยืนยัน '+i.no+' แล้ว');
 }
@@ -3460,7 +3514,7 @@ function unconfirmInv(id){
 function confirmMonth(){
   const mon=document.getElementById('inv-list-mon')?.value;
   if(!mon){alert('กรุณาเลือกเดือนก่อน');return;}
-  const list=S.invoices.filter(i=>(i.dt||'').startsWith(mon)&&invStatus(i)!=='confirmed');
+  const list=S.invoices.filter(i=>i.type!=='special'&&(i.dt||'').startsWith(mon)&&invStatus(i)!=='confirmed');
   if(!list.length){alert(`Invoice ทุกใบของ ${monthLabel(mon)} ยืนยันแล้ว`);return;}
   const tot=list.reduce((s,i)=>s+(i.grand||0),0);
   if(!confirm(`ยืนยัน Invoice ร่างของ ${monthLabel(mon)} ทั้งหมด ${list.length} ใบ (รวม ${fmtNum(tot)} บาท)?\n\nยอดยังตามอัตราในตั้งค่า จนกว่าจะออกใบกำกับภาษี`)) return;
@@ -6613,7 +6667,11 @@ function invNoMismatches(){
     // SLR - PACK: เลขรูปแบบเก่า (CCS-…) → เปลี่ยนเป็น HOYA-PACK DAY-{ลำดับ}-{เดือน}({ปี})
     if(invNoIsPack(i.plant)&&!invNoMon(i.no)?.num){ const x=invNoMon(i.no); if(!x) return null;
       return {i,to:`HOYA-PACK DAY-${x.seq}-${i.dt.slice(5,7)}(${i.dt.slice(2,4)})`,locked:taxRecOfInv(i.id),fmt:true}; }
-    return invNoMon(i.no)&&invNoWithMon(i.no,i.dt)!==i.no?{i,to:invNoWithMon(i.no,i.dt),locked:taxRecOfInv(i.id)}:null;
+    if(!invNoMon(i.no)) return null;   // เลขที่กรอกเองรูปแบบอื่น → ไม่แตะ
+    // เลขรูปแบบอัตโนมัติ: ให้ตรงกับชื่อโรงงาน/แผนก/ลำดับเลขที่/เดือน ปัจจุบัน (เช่น เปลี่ยนชื่อแผนก MAIN (Cleaning) → MAIN)
+    const to=genInvNo(i.plant,i.dept,i.dt);
+    if(to===i.no) return null;
+    return {i,to,locked:taxRecOfInv(i.id),mon:invNoWithMon(i.no,i.dt)===to};
   }).filter(Boolean);
 }
 function fixInvNoMonths(){
@@ -6955,7 +7013,7 @@ function spPrintDoc(){
 function downloadSpInv(){ const d=spPrintDoc(); if(d) downloadText(d.html, d.name+'.html', 'text/html'); }
 function exportSpPdf(){ const d=spPrintDoc(); if(d) exportPDF(d); }
 
-async function saveSpInv(){
+async function saveSpInv(conf){
   if(SP_ITEMS.length===0){alert('กรุณาเพิ่มรายการก่อน');return;}
   let no=(document.getElementById('sp-no')?.value||'').trim();
   if(!no){alert('กรุณากรอกเลขที่ Invoice');return;}
@@ -6986,7 +7044,7 @@ async function saveSpInv(){
     title:document.getElementById('sp-title')?.value,
     messrs:document.getElementById('sp-messrs')?.value,
     items:JSON.parse(JSON.stringify(SP_ITEMS)), up, vat, grand,
-    status:'confirmed', confirmedAt:old?.confirmedAt||new Date().toISOString()
+    status:conf?'confirmed':'draft', confirmedAt:conf?(old&&invStatus(old)==='confirmed'?old.confirmedAt:new Date().toISOString()):null
   };
   S.invoices=S.invoices.filter(i=>i!==old);
   S.invoices.push(inv);
@@ -6995,7 +7053,7 @@ async function saveSpInv(){
   persistLocal();
   renderSpSaved();renderInvList();refreshMonthSelects();buildSum();
   dbSaveInv(inv);
-  showToast('✅ บันทึก Special Invoice "'+no+'" แล้ว');
+  showToast((conf?'✅ บันทึกและยืนยัน':'💾 บันทึกร่าง')+' Special Invoice "'+no+'" แล้ว');
 }
 
 function renderSpSaved(){
@@ -7021,9 +7079,10 @@ function renderSpSaved(){
       <td style="font-size:12px;font-weight:600">${esc(inv.no)}${isCur?' <span class="badge bg-green">📌 กำลังแก้ไข</span>':''}${inv.title?`<div style="font-size:11px;color:var(--muted);font-weight:400">${esc(inv.title)}</div>`:''}</td>
       <td><span class="badge bg-gold">${esc(CFG[inv.plant]?.depts?.[inv.dept]?.name||inv.dept)}</span></td>
       <td style="font-size:11.5px;white-space:nowrap">${esc(inv.dt||'')}</td>
-      <td>${r?`<span class="badge bg-navy">🔒 ${esc(r.no)}</span>`:'<span class="badge bg-green">✅ รอออกใบกำกับภาษี</span>'}</td>
+      <td>${r?`<span class="badge bg-navy">🔒 ${esc(r.no)}</span>`:invStatus(inv)==='confirmed'?'<span class="badge bg-green">✅ ยืนยันแล้ว</span>':'<span class="badge bg-gold">ร่าง</span>'}</td>
       <td class="num" style="font-weight:700;color:var(--navy)">${fmtNum(inv.grand)}</td>
-      <td style="white-space:nowrap;text-align:right">${isCur?'':`<button class="btn bs bsm" onclick="loadSpInv(${inv.id},true)">📂 เปิด</button>`}
+      <td style="white-space:nowrap;text-align:right">${isCur?'':`<button class="btn bo bsm" onclick="loadSpInv(${inv.id},true)">📂 เปิด</button>`}
+        ${r?'':invStatus(inv)==='confirmed'?`<button class="btn bo bsm" onclick="unconfirmInv(${inv.id})" title="กลับเป็นร่าง">↩ ร่าง</button>`:`<button class="btn bs bsm" onclick="confirmInv(${inv.id})">✅ ยืนยัน</button>`}
         ${r?'':`<button class="lf-del" onclick="delSpInv(${inv.id})" title="ลบใบนี้">🗑️</button>`}</td>
     </tr>`};}),thead,g=>'รวม '+fmtNum(g.reduce((a,r)=>a+r.grand,0))+' ฿');
 }
