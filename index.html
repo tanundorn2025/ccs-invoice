@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-26a | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-26b | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -193,6 +193,17 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .dmy-wrap>.dmy-txt{flex:1;min-width:0;padding-right:34px!important}
 .dmy-wrap>.dmy-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;font-size:15px;padding:2px 4px;line-height:1}
 .dmy-txt.dmy-bad{border-color:#dc2626!important;background:#fff1f1!important}
+.db-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.db-k{border:1px solid var(--bord);border-radius:var(--r);padding:10px 12px;background:#fff}
+.db-k .l{font-size:12px;color:var(--muted)}
+.db-k .v{font-size:21px;font-weight:800;color:var(--navy);margin-top:2px;font-variant-numeric:tabular-nums}
+.db-k .s{font-size:11.5px;color:var(--muted);margin-top:2px}
+.db-up{color:#1a7f37!important}.db-dn{color:#b42318!important}
+.db-cols{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-start}
+.db-al{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:var(--r);margin-bottom:8px;font-size:13px;border-left:4px solid}
+.db-al.red{background:#fdecea;border-color:#d92d20}.db-al.amber{background:#fff6e0;border-color:#e0a800}.db-al.info{background:#e9f0fb;border-color:#3b6fb6}.db-al.ok{background:#e8f6ee;border-color:#1a8a4a}
+.db-al .t{flex:1}.db-al .t small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.db-bar{cursor:pointer}.db-bar:hover rect{opacity:.85}
 .ts-dept-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:.6rem;padding:8px 10px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--r)}
 .ts-dept-bar:empty{display:none}
 .ts-dept-bar .dlab{font-size:12.5px;font-weight:700;color:var(--navy);margin-right:4px}
@@ -369,10 +380,11 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-26a</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-26b</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
+  <button class="tb" onclick="sw('t9',this)">📈 Dashboard<span id="dash-badge" class="tax-badge" style="display:none"></span></button>
   <button class="tb on" onclick="sw('t1',this)">📋 ใบบันทึกเวลา</button>
   <button class="tb" onclick="sw('t2',this)">📄 Invoice</button>
   <button class="tb" onclick="sw('t3',this)">📊 Summary</button>
@@ -767,6 +779,21 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 </div>
 
 <!-- ========== TAB 6 : ใบกำกับภาษี ========== -->
+<div id="t9" class="panel">
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><div class="ci">📈</div>Dashboard — ภาพรวมและการแจ้งเตือน</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12.5px"><label>เดือน (ตามวันที่ Invoice)</label><select id="db-mon" onchange="renderDash()" style="padding:5px 8px;border:1px solid var(--bord);border-radius:6px"></select></div>
+    </div>
+    <div id="db-kpi" class="db-kpi"></div>
+  </div>
+  <div class="db-cols">
+    <div class="card" style="flex:1 1 380px"><div class="ch"><div class="ct"><div class="ci">🔔</div>การแจ้งเตือน</div></div><div id="db-alerts"></div></div>
+    <div class="card" style="flex:2 1 560px"><div class="ch"><div class="ct"><div class="ci">📊</div>ยอดขาย 12 เดือนล่าสุด (Grand Total)</div><span style="font-size:12px;color:var(--muted)">คลิกแท่งเพื่อดูเดือนนั้น</span></div><div id="db-trend"></div></div>
+  </div>
+  <div class="card"><div class="ch"><div class="ct"><div class="ci">🏭</div>แยกตามโรงงาน</div><span id="db-plant-sub" style="font-size:12px;color:var(--muted)"></span></div><div id="db-plants"></div></div>
+</div>
+
 <div id="t8" class="panel">
   <div class="card">
     <div class="ch">
@@ -1787,6 +1814,7 @@ function sw(id,btn,force){
   if(id==='t3'){refreshMonthSelects();buildSum();}
   if(id==='t6'){ initTaxMonDropdown(); genTaxInvoices(); }
   if(id==='t8') renderRecon();
+  if(id==='t9') renderDash();
   // ซ่อน/แสดง zoom slider ตาม tab
   const zf=document.getElementById('ts-zoom-fixed');
   if(zf) zf.style.display=(id==='t1'&&document.querySelector('#ts-out .att-outer'))?'flex':'none';
@@ -2926,6 +2954,119 @@ function enhanceDateInput(inp){
 function enhanceDateInputs(root){ (root||document).querySelectorAll('input[type="date"]').forEach(enhanceDateInput); }
 document.addEventListener('DOMContentLoaded',()=>enhanceDateInputs());
 if(document.readyState!=='loading') setTimeout(()=>enhanceDateInputs(),0);
+/* ===================== Dashboard ===================== */
+function dashMonths(){
+  const now=todayISO().slice(0,7), set=new Set([now]);
+  S.invoices.forEach(i=>i.dt&&set.add(i.dt.slice(0,7)));
+  return [...set].sort().reverse();
+}
+function dashAgg(mon){
+  const inv=S.invoices.filter(i=>(i.dt||'').startsWith(mon));
+  const sum=(a,f)=>r2(a.reduce((s,x)=>s+(+x[f]||0),0));
+  const byPlant={};
+  inv.forEach(i=>{ const b=byPlant[i.plant]=byPlant[i.plant]||{n:0,conf:0,up:0,vat:0,grand:0,sp:0}; b.n++; if(invStatus(i)==='confirmed') b.conf++; b.up+=+i.up||0; b.vat+=+i.vat||0; b.grand+=+i.grand||0; if(i.type==='special') b.sp+=+i.grand||0; });
+  const ts=S.timesheets.filter(t=>(t.de||'').startsWith(mon));
+  const ot={}; ts.forEach(t=>{ const x=tsOtMin(t); ot[t.plant]=(ot[t.plant]||0)+x.ot+x.oth; });
+  return {inv,n:inv.length,conf:inv.filter(i=>invStatus(i)==='confirmed').length,draft:inv.filter(i=>invStatus(i)!=='confirmed').length,
+    up:sum(inv,'up'),vat:sum(inv,'vat'),grand:sum(inv,'grand'),sp:sum(inv.filter(i=>i.type==='special'),'grand'),byPlant,ot,ts};
+}
+function prevMon(m){ const [y,mo]=m.split('-').map(Number); const d=new Date(y,mo-2,1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+/* รายการแจ้งเตือน: {sev:'red'|'amber'|'info', title, detail, go:{tab,label}} */
+function dashAlerts(mon){
+  const A=[], go=(tab,label)=>({tab,label});
+  const drafts=S.invoices.filter(i=>invStatus(i)!=='confirmed'&&!taxRecOfInv(i.id));
+  if(drafts.length) A.push({sev:'red',title:`Invoice ยังเป็นร่าง ${drafts.length} ใบ`,detail:'ต้องยืนยันก่อนออก Summary / ใบกำกับภาษี — '+[...new Set(drafts.map(i=>monthLabel((i.dt||'').slice(0,7))))].join(', '),go:go('t2','ไปยืนยัน')});
+  const bad=S.timesheets.filter(t=>tsIssues(t).length);
+  if(bad.length) A.push({sev:'red',title:`ใบบันทึกเวลามีข้อมูลผิด ${bad.length} ใบ`,detail:bad.slice(0,4).map(t=>(CFG[t.plant]?.depts?.[t.dept]?.name||t.dept)+' '+rangeText(t.ds,t.de)).join(' · '),go:go('t1','ไปแก้')});
+  // แผนกที่ยังไม่มี Invoice ในเดือนที่เลือก (เฉพาะเดือนปัจจุบันหรือก่อนหน้า)
+  if(mon<=todayISO().slice(0,7)){
+    const miss=[]; Object.entries(CFG).forEach(([pk,pv])=>deptEntries(pk).forEach(([dk,dv])=>{ if(!S.invoices.some(i=>i.type!=='special'&&i.plant===pk&&i.dept===dk&&(i.dt||'').startsWith(mon))) miss.push((pv.name||pk)+' – '+(dv.name||dk)); }));
+    const early=mon===todayISO().slice(0,7)&&+todayISO().slice(8,10)<25;   // ต้นเดือนปัจจุบัน ยังไม่ถึงรอบออก → แค่แจ้งให้ทราบ
+    if(miss.length) A.push({sev:early?'info':'amber',title:`ยังไม่มี Invoice เดือน ${monthLabel(mon)} ${miss.length} แผนก`,detail:miss.slice(0,8).join(' · ')+(miss.length>8?` … และอีก ${miss.length-8}`:''),go:go('t1','ไปทำใบบันทึกเวลา')});
+  }
+  const since=prevMon(prevMon(todayISO().slice(0,7)));   // เฉพาะงวดล่าสุด ~3 เดือน
+  const sf=S.timesheets.filter(t=>{ if((t.de||'').slice(0,7)<since) return false; const x=tsShortfall(t); return x.list.length&&t.shortAck!==x.sig; });
+  if(sf.length) A.push({sev:'amber',title:`ใบบันทึกเวลายังไม่เต็มสัญญา (ยังไม่ได้ยืนยันว่าขาดจริง) ${sf.length} ใบ`,detail:sf.slice(0,4).map(t=>(CFG[t.plant]?.depts?.[t.dept]?.name||t.dept)+' '+rangeText(t.ds,t.de)).join(' · '),go:go('t1','ไปตรวจ')});
+  const ov=S.timesheets.filter(t=>findOverlaps(t.plant,t.dept,t.ds,t.de,x=>x.id===t.id).length);
+  if(ov.length) A.push({sev:'amber',title:`ใบบันทึกเวลาช่วงวันที่ซ้ำกัน ${ov.length} ใบ`,detail:'ตรวจในรายการใบบันทึกเวลาที่บันทึกไว้ (ป้าย ⚠️ ซ้ำ)',go:go('t1','ไปดู')});
+  const q=taxQueue().filter(k=>!taxHold(qMon(k),skPlant(qSk(k))));
+  if(q.length) A.push({sev:'amber',title:`รอออกใบกำกับภาษี ${q.length} ชุด`,detail:[...new Set(q.map(k=>monthLabel(taxIssueMon(qMon(k),skPlant(qSk(k))))))].map(m=>'รอบ '+m).join(', '),go:go('t6','ไปออกใบกำกับภาษี')});
+  const mm=invNoMismatches().filter(x=>!x.locked);
+  if(mm.length) A.push({sev:'amber',title:`เลขที่ Invoice ไม่ตรงกับการตั้งค่า ${mm.length} ใบ`,detail:'กด “🔧 แก้เลขที่ให้ถูกต้อง” ในรายการ Invoice',go:go('t2','ไปแก้')});
+  const dup=[]; Object.entries(CFG).forEach(([pk,pv])=>{ const c={}; Object.keys(pv.depts||{}).forEach(dk=>{ const n=deptSeq(pk,dk); (c[n]=c[n]||[]).push(pv.depts[dk].name||dk); }); Object.entries(c).forEach(([n,a])=>{ if(a.length>1) dup.push(`${pv.name||pk}: ${a.join(', ')} (ลำดับ ${n})`); }); });
+  if(dup.length) A.push({sev:'amber',title:`ลำดับเลขที่แผนกซ้ำ ${dup.length} จุด`,detail:dup.join(' · ')+' — Invoice จะได้เลขที่ซ้ำกัน',go:go('t4','ไปตั้งค่า')});
+  // กระทบยอด: 3 รอบล่าสุดที่ออกใบกำกับภาษีแล้ว
+  const iss=S.taxInvoices.filter(t=>t.status!=='cancelled');
+  const tm=[...new Set(iss.map(t=>(t.date||'').slice(0,7)).filter(Boolean))].sort().reverse().slice(0,3);
+  tm.forEach(m=>[1,2].forEach(g=>{
+    const rows=iss.filter(t=>(t.date||'').startsWith(m)&&payGroup(t.plant)===g); if(!rows.length) return;
+    const exp=r2(rows.reduce((s,t)=>s+reconAmt(t).pay,0)), a=RECON[m+'|'+g];
+    if(!a) A.push({sev:'info',title:`ยังไม่ได้กรอกยอดโอน กลุ่ม ${g} รอบ ${monthLabel(m)}`,detail:'ยอดที่ควรได้ '+fmtNum(exp)+' ฿',go:go('t8','ไปกระทบยอด')});
+    else if(Math.abs(a.v-exp)>=0.005) A.push({sev:'red',title:`ยอดโอนไม่ตรง กลุ่ม ${g} รอบ ${monthLabel(m)}`,detail:`ควรได้ ${fmtNum(exp)} · โอนมา ${fmtNum(a.v)} · ต่าง ${fmtNum(r2(a.v-exp))} ฿`,go:go('t8','ไปตรวจ')});
+  }));
+  if(!_db) A.push({sev:'info',title:'ยังไม่ได้เชื่อมต่อ Firebase',detail:'ข้อมูลอยู่ในเครื่องนี้เท่านั้น — เชื่อมต่อที่ ⚙️ ตั้งค่า เพื่อสำรองและใช้หลายเครื่อง',go:go('t4','ไปตั้งค่า')});
+  const rank={red:0,amber:1,info:2}; return A.sort((a,b)=>rank[a.sev]-rank[b.sev]);
+}
+function refreshDashBadge(){
+  const el=document.getElementById('dash-badge'); if(!el) return;
+  const a=dashAlerts(todayISO().slice(0,7)).filter(x=>x.sev!=='info');
+  el.textContent=a.length; el.style.display=a.length?'':'none';
+  el.style.background=a.some(x=>x.sev==='red')?'#c8060a':'#d08700';
+  el.title=a.map(x=>'• '+x.title).join('\n');
+}
+function dashGo(tab){ const b=[...document.querySelectorAll('nav.tabs .tb')].find(x=>(x.getAttribute('onclick')||'').includes(`'${tab}'`)); sw(tab,b); window.scrollTo({top:0,behavior:'smooth'}); }
+function renderDash(){
+  const sel=document.getElementById('db-mon'); if(!sel) return;
+  const months=dashMonths(), prev=sel.value;
+  sel.innerHTML=months.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+  sel.value=months.includes(prev)?prev:months[0];
+  const mon=sel.value, A=dashAgg(mon), P=dashAgg(prevMon(mon));
+  const chg=(a,b)=>{ if(!b) return '<span class="s">— ไม่มีข้อมูลเดือนก่อน</span>'; const d=(a-b)/b*100; return `<span class="s ${d>=0?'db-up':'db-dn'}">${d>=0?'▲':'▼'} ${Math.abs(d).toFixed(1)}% จากเดือนก่อน (${fmtNum(b)})</span>`; };
+  const tax=S.taxInvoices.filter(t=>t.status!=='cancelled'&&(t.date||'').startsWith(mon));
+  const q=taxQueue().filter(k=>!taxHold(qMon(k),skPlant(qSk(k))));
+  const otMin=Object.values(A.ot).reduce((s,x)=>s+x,0), otPrev=Object.values(P.ot).reduce((s,x)=>s+x,0);
+  const rc=[1,2].map(g=>{ const rows=tax.filter(t=>payGroup(t.plant)===g); if(!rows.length) return null; const exp=r2(rows.reduce((s,t)=>s+reconAmt(t).pay,0)), a=RECON[mon+'|'+g]; return {g,exp,ok:a&&Math.abs(a.v-exp)<0.005,has:!!a}; }).filter(Boolean);
+  document.getElementById('db-kpi').innerHTML=`
+    <div class="db-k"><div class="l">💰 Grand Total (Invoice ทั้งหมด)</div><div class="v">${fmtNum(A.grand)}</div>${chg(A.grand,P.grand)}</div>
+    <div class="db-k"><div class="l">Up Total / VAT 7%</div><div class="v" style="font-size:17px">${fmtNum(A.up)}</div><span class="s">VAT ${fmtNum(A.vat)}${A.sp?` · Special ${fmtNum(A.sp)}`:''}</span></div>
+    <div class="db-k"><div class="l">📄 Invoice</div><div class="v">${A.n} <span style="font-size:13px;font-weight:600;color:var(--muted)">ใบ</span></div><span class="s">✅ ยืนยัน ${A.conf}${A.draft?` · <b style="color:#b42318">ร่าง ${A.draft}</b>`:''}</span></div>
+    <div class="db-k"><div class="l">🧾 ใบกำกับภาษีออกในเดือนนี้</div><div class="v">${tax.length} <span style="font-size:13px;font-weight:600;color:var(--muted)">ใบ</span></div><span class="s">${fmtNum(r2(tax.reduce((s,t)=>s+(+t.grand||0),0)))} ฿ · รอออก ${q.length} ชุด</span></div>
+    <div class="db-k"><div class="l">⏱️ OT รวม (ชม.) — ใบบันทึกเวลา</div><div class="v">${fmtOT(otMin)}</div>${otPrev?`<span class="s ${otMin<=otPrev?'db-up':'db-dn'}">${otMin>=otPrev?'▲':'▼'} ${fmtOT(Math.abs(otMin-otPrev))} ชม. จากเดือนก่อน</span>`:'<span class="s">งวดที่สิ้นสุดในเดือนนี้</span>'}</div>
+    <div class="db-k"><div class="l">🏦 กระทบยอดเงินโอน</div><div class="v" style="font-size:16px">${rc.length?rc.map(x=>`กลุ่ม ${x.g} ${x.ok?'✅':x.has?'❌':'⏳'}`).join(' · '):'—'}</div><span class="s">${rc.length?'✅ ตรง · ❌ ไม่ตรง · ⏳ ยังไม่กรอก':'ยังไม่มีใบกำกับภาษีในเดือนนี้'}</span></div>`;
+  // แจ้งเตือน
+  const al=dashAlerts(mon);
+  document.getElementById('db-alerts').innerHTML=al.length?al.map(a=>`<div class="db-al ${a.sev}"><span>${a.sev==='red'?'⛔':a.sev==='amber'?'⚠️':'ℹ️'}</span><div class="t"><b>${esc(a.title)}</b><small>${esc(a.detail||'')}</small></div>${a.go?`<button class="btn bo bsm" onclick="dashGo('${a.go.tab}')">${esc(a.go.label)} →</button>`:''}</div>`).join('')
+    :'<div class="db-al ok"><span>✅</span><div class="t"><b>เรียบร้อยทั้งหมด</b><small>ไม่มีรายการที่ต้องดำเนินการ</small></div></div>';
+  refreshDashBadge();
+  // กราฟ 12 เดือน
+  const end=mon>todayISO().slice(0,7)?mon:todayISO().slice(0,7); const ms=[]; let m=end; for(let k=0;k<12;k++){ ms.unshift(m); m=prevMon(m); }
+  const vals=ms.map(x=>dashAgg(x).grand), mx=Math.max(1,...vals);
+  const W=720,H=230,pl=8,pb=34,pt=22,bw=(W-pl*2)/12;
+  const short=x=>{ const [y,mo]=x.split('-'); return new Date(+y,+mo-1,1).toLocaleDateString('th-TH',{month:'short'})+' '+String(+y+543).slice(2); };
+  document.getElementById('db-trend').innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;font-family:inherit">
+    <line x1="${pl}" x2="${W-pl}" y1="${H-pb}" y2="${H-pb}" stroke="#cfd6e0"/>
+    ${ms.map((x,k)=>{ const h=Math.round((H-pb-pt)*vals[k]/mx), X=pl+k*bw+bw*0.18, w=bw*0.64, Y=H-pb-h, on=x===mon;
+      return `<g class="db-bar" onclick="document.getElementById('db-mon').value='${x}';renderDash()"><title>${monthLabel(x)}: ${fmtNum(vals[k])} ฿</title>
+        <rect x="${pl+k*bw}" y="${pt}" width="${bw}" height="${H-pb-pt}" fill="transparent"/>
+        <rect x="${X}" y="${Y}" width="${w}" height="${Math.max(h,vals[k]?2:0)}" rx="3" fill="${on?'#e0a800':'#2f5d8a'}"/>
+        ${vals[k]?`<text x="${X+w/2}" y="${Y-5}" text-anchor="middle" font-size="10.5" fill="#334">${vals[k]>=1e6?(vals[k]/1e6).toFixed(2)+'M':Math.round(vals[k]/1000)+'k'}</text>`:''}
+        <text x="${X+w/2}" y="${H-pb+16}" text-anchor="middle" font-size="11" fill="${on?'#000':'#667'}" font-weight="${on?700:400}">${short(x)}</text></g>`; }).join('')}
+  </svg>`;
+  // ตารางแยกโรงงาน
+  const pks=[...new Set([...Object.keys(CFG),...Object.keys(A.byPlant)])].filter(pk=>A.byPlant[pk]||P.byPlant[pk]||A.ot[pk]);
+  document.getElementById('db-plant-sub').textContent=monthLabel(mon)+' เทียบกับ '+monthLabel(prevMon(mon));
+  const maxG=Math.max(1,...pks.map(pk=>A.byPlant[pk]?.grand||0));
+  document.getElementById('db-plants').innerHTML=pks.length?`<div style="overflow-x:auto"><table class="dt"><thead><tr><th>โรงงาน</th><th class="num">Invoice</th><th class="num">Grand Total</th><th style="width:28%"></th><th class="num">เดือนก่อน</th><th class="num">เปลี่ยนแปลง</th><th class="num">OT (ชม.)</th></tr></thead><tbody>
+    ${pks.map(pk=>{ const a=A.byPlant[pk]||{n:0,conf:0,grand:0}, b=P.byPlant[pk]||{grand:0}, d=b.grand?(a.grand-b.grand)/b.grand*100:null;
+      return `<tr><td><b>${esc(CFG[pk]?.name||pk)}</b></td><td class="num">${a.n}${a.n&&a.conf<a.n?` <span class="badge bg-gold" title="ร่าง">${a.n-a.conf} ร่าง</span>`:''}</td>
+        <td class="num" style="font-weight:700;color:var(--navy)">${fmtNum(r2(a.grand))}</td>
+        <td><div style="height:10px;border-radius:5px;background:#e8edf4"><div style="height:10px;border-radius:5px;background:#2f5d8a;width:${(a.grand/maxG*100).toFixed(1)}%"></div></div></td>
+        <td class="num" style="color:var(--muted)">${fmtNum(r2(b.grand))}</td>
+        <td class="num ${d==null?'':d>=0?'db-up':'db-dn'}">${d==null?'—':(d>=0?'▲ ':'▼ ')+Math.abs(d).toFixed(1)+'%'}</td>
+        <td class="num">${A.ot[pk]?fmtOT(A.ot[pk]):'-'}</td></tr>`; }).join('')}
+    <tr style="background:var(--surf2);font-weight:700"><td>รวม</td><td class="num">${A.n}</td><td class="num">${fmtNum(A.grand)}</td><td></td><td class="num">${fmtNum(P.grand)}</td><td class="num ${P.grand?(A.grand>=P.grand?'db-up':'db-dn'):''}">${P.grand?((A.grand>=P.grand?'▲ ':'▼ ')+Math.abs((A.grand-P.grand)/P.grand*100).toFixed(1)+'%'):'—'}</td><td class="num">${fmtOT(otMin)}</td></tr>
+  </tbody></table></div>`:lfEmpty('ยังไม่มีข้อมูลในเดือนนี้');
+}
 function lfMatch(q,parts){ q=String(q||'').trim().toLowerCase(); if(!q) return true; const t=parts.join(' ').toLowerCase(); return q.split(/\s+/).every(w=>t.includes(w)); }
 function lfPlantOrder(){ return Object.keys(CFG); }
 function lfToggle(key,pk){ const c=LF[key].closed; c.has(pk)?c.delete(pk):c.add(pk); ({ts:renderSavedTS,inv:renderInvList,sp:renderSpSaved})[key](); }
@@ -4169,6 +4310,7 @@ function taxPendingSummary(){
   return m;
 }
 function refreshTaxBadge(){
+  clearTimeout(window._dashT); window._dashT=setTimeout(()=>{ try{ refreshDashBadge(); if(document.getElementById('t9')?.classList.contains('on')) renderDash(); }catch(e){console.warn(e);} },400);
   const el=document.getElementById('tax-badge'); if(!el) return;
   const n=taxPending().filter(i=>!taxHold((i.dt||'').slice(0,7),i.plant)).length;
   el.textContent=n; el.style.display=n?'':'none';
@@ -6435,6 +6577,7 @@ async function checkUpdate(manual){
   }catch(e){ if(manual) showToast('ตรวจสอบไม่ได้ (ออฟไลน์?) — ลองโหลดซ้ำ'); }
 }
 setTimeout(()=>checkUpdate(false),4000);
+setTimeout(()=>{ try{refreshDashBadge();}catch(e){} },2500);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkUpdate(false); });
 /* ===== กระทบยอดเงินโอน ===== */
 function payGroup(pk){
