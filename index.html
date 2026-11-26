@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-25o | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-26a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -188,6 +188,11 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .att thead th.col-act{background:#ffe27a!important;color:#000!important}
 .att input.dc.dc-miss{outline:3px solid #f59e0b!important;background:#fff4d6!important;animation:dcMiss 1s ease-in-out 3}
 @keyframes dcMiss{50%{outline-color:#dc2626}}
+.dmy-wrap{position:relative;display:flex;align-items:stretch;width:100%}
+.dmy-wrap>input[type=date]{position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
+.dmy-wrap>.dmy-txt{flex:1;min-width:0;padding-right:34px!important}
+.dmy-wrap>.dmy-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;font-size:15px;padding:2px 4px;line-height:1}
+.dmy-txt.dmy-bad{border-color:#dc2626!important;background:#fff1f1!important}
 .ts-dept-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:.6rem;padding:8px 10px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--r)}
 .ts-dept-bar:empty{display:none}
 .ts-dept-bar .dlab{font-size:12.5px;font-weight:700;color:var(--navy);margin-right:4px}
@@ -364,7 +369,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-25o</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-26a</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -2881,6 +2886,46 @@ function engDate(iso){
   const n=d.getDate(), sf=(n%100>=11&&n%100<=13)?'th':({1:'st',2:'nd',3:'rd'}[n%10]||'th');
   return `${d.toLocaleDateString('en-US',{month:'long'}).toUpperCase()} ${n}${sf} ${d.getFullYear()}.`;
 }
+/* ===== วันที่แบบ วัน/เดือน/ปี (dd/mm/yyyy) ทุกจุด =====
+   ช่องเลือกวันที่ของเบราว์เซอร์แสดงตามภาษาเครื่อง (เช่น mm/dd/yyyy) จึงครอบด้วยช่องข้อความ dd/mm/yyyy + ปุ่มปฏิทิน
+   ช่องจริง (type=date) ยังอยู่และเก็บค่า yyyy-mm-dd เหมือนเดิม โค้ดเดิมไม่ต้องเปลี่ยน */
+function dmy(iso){ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m?`${m[3]}/${m[2]}/${m[1]}`:(iso||''); }
+function parseDmy(t){
+  t=String(t||'').trim(); if(!t) return '';
+  let m=t.match(/^(\d{1,2})[\/.\-\s](\d{1,2})[\/.\-\s](\d{2,4})$/); if(!m) m=t.match(/^(\d{2})(\d{2})(\d{4})$/);
+  if(!m) return null;
+  let d=+m[1], mo=+m[2], y=+m[3]; if(y<100) y+=2000; if(y>2400) y-=543;   // รับ พ.ศ. ได้ (2569 → 2026)
+  const dt=new Date(y,mo-1,d); if(dt.getFullYear()!==y||dt.getMonth()!==mo-1||dt.getDate()!==d) return null;
+  return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function enhanceDateInput(inp){
+  if(!inp||inp.dataset.dmy) return; inp.dataset.dmy='1';
+  const wrap=document.createElement('span'); wrap.className='dmy-wrap';
+  inp.parentNode.insertBefore(wrap,inp); wrap.appendChild(inp);
+  const txt=document.createElement('input'); txt.type='text'; txt.className='dmy-txt'; txt.placeholder='วว/ดด/ปปปป'; txt.inputMode='numeric'; txt.autocomplete='off';
+  txt.style.cssText=inp.getAttribute('style')||''; txt.id=inp.id?inp.id+'-txt':'';
+  const btn=document.createElement('button'); btn.type='button'; btn.className='dmy-btn'; btn.title='เลือกจากปฏิทิน'; btn.textContent='📅';
+  wrap.insertBefore(txt,inp); wrap.appendChild(btn);
+  const proto=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+  const show=()=>{ txt.value=dmy(proto.get.call(inp)); txt.classList.remove('dmy-bad'); };
+  // โค้ดที่ตั้งค่า .value ของช่องจริง → อัปเดตตัวแสดงผลด้วย
+  Object.defineProperty(inp,'value',{configurable:true,get(){return proto.get.call(inp);},set(v){proto.set.call(inp,v);show();}});
+  const commit=()=>{
+    const iso=parseDmy(txt.value);
+    if(iso===null){ txt.classList.add('dmy-bad'); txt.title='รูปแบบวันที่ไม่ถูกต้อง — ใช้ วว/ดด/ปปปป เช่น 25/11/2026'; return; }
+    txt.title='';
+    if(iso!==proto.get.call(inp)){ proto.set.call(inp,iso); inp.dispatchEvent(new Event('input',{bubbles:true})); inp.dispatchEvent(new Event('change',{bubbles:true})); }
+    show();
+  };
+  txt.addEventListener('change',commit);
+  txt.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); commit(); } });
+  inp.addEventListener('change',show); inp.addEventListener('input',show);
+  btn.addEventListener('click',()=>{ try{ inp.showPicker(); }catch(e){ inp.focus(); inp.click(); } });
+  show();
+}
+function enhanceDateInputs(root){ (root||document).querySelectorAll('input[type="date"]').forEach(enhanceDateInput); }
+document.addEventListener('DOMContentLoaded',()=>enhanceDateInputs());
+if(document.readyState!=='loading') setTimeout(()=>enhanceDateInputs(),0);
 function lfMatch(q,parts){ q=String(q||'').trim().toLowerCase(); if(!q) return true; const t=parts.join(' ').toLowerCase(); return q.split(/\s+/).every(w=>t.includes(w)); }
 function lfPlantOrder(){ return Object.keys(CFG); }
 function lfToggle(key,pk){ const c=LF[key].closed; c.has(pk)?c.delete(pk):c.add(pk); ({ts:renderSavedTS,inv:renderInvList,sp:renderSpSaved})[key](); }
@@ -3342,7 +3387,7 @@ function showInvPreview(){
     </div>
     <div style="text-align:right;font-size:13px">
       <div><strong>INVOICE No.:</strong> ${no}</div>
-      <div><strong>Date:</strong> ${dt}</div>
+      <div><strong>Date:</strong> ${dmy(dt)}</div>
     </div>
   </div>
   ${invCustHTML(plant,'')}
@@ -3409,7 +3454,7 @@ async function saveInv(confirmIt,ackShort){
   { const same=S.invoices.find(i=>i.type!=='special'&&i.key===key&&i!==old);
     if(same){alert(`${pName} / ${dName} เดือน ${monthLabel(dt.slice(0,7))} มี Invoice ${same.no} อยู่แล้ว\nเลือกวันที่เดือนอื่น หรือลบใบนั้นก่อน`);return;} }
   const dup=S.invoices.find(i=>i.no===no&&i!==old);
-  if(dup){alert(`เลขที่ ${no} ถูกใช้กับ Invoice อื่นแล้ว (วันที่ ${dup.dt||'-'})`+(invNoMon(dup.no)&&invNoWithMon(dup.no,dup.dt)!==dup.no?`\n\nใบนั้นวันที่เป็นเดือน ${monthLabel((dup.dt||'').slice(0,7))} แต่เลขที่ระบุเดือนผิด\nกด “🔧 แก้เลขที่ให้ถูกต้อง” ในรายการ Invoice ด้านล่าง แล้วบันทึกใบนี้อีกครั้ง`:''));renderInvList();return;}
+  if(dup){alert(`เลขที่ ${no} ถูกใช้กับ Invoice อื่นแล้ว (วันที่ ${dmy(dup.dt)||'-'})`+(invNoMon(dup.no)&&invNoWithMon(dup.no,dup.dt)!==dup.no?`\n\nใบนั้นวันที่เป็นเดือน ${monthLabel((dup.dt||'').slice(0,7))} แต่เลขที่ระบุเดือนผิด\nกด “🔧 แก้เลขที่ให้ถูกต้อง” ในรายการ Invoice ด้านล่าง แล้วบันทึกใบนี้อีกครั้ง`:''));renderInvList();return;}
   const ts=window._lastTS;
   const sum=window._lastSummary;
   const wasConf=old&&invStatus(old)==='confirmed';
@@ -3454,7 +3499,7 @@ function renderInvList(){
   const plants=[...new Set(all.map(i=>i.plant))];
   const mm=invNoMismatches();
   const mmHtml=mm.length?`<div class="ovl-box" style="margin:0 0 .75rem"><strong>⚠️ เลขที่ Invoice ต้องแก้ ${mm.length} ใบ</strong> — ${mm.some(x=>x.fmt)?'SLR - PACK เปลี่ยนเป็นเลขรูปแบบใหม่ (HOYA-PACK DAY-…)':''}${mm.some(x=>x.fmt)&&mm.some(x=>!x.fmt)?' · ':''}${mm.some(x=>!x.fmt)?'เลขที่ไม่ตรงกับชื่อโรงงาน/แผนก/ลำดับเลขที่ หรือเดือน ในการตั้งค่าปัจจุบัน':''}
-    <ul>${mm.slice(0,8).map(x=>`<li>${esc(x.i.no)} (วันที่ ${esc(x.i.dt)}) → <strong>${esc(x.to)}</strong>${x.locked?' <span style="color:var(--muted)">— 🔒 อยู่ในใบกำกับภาษี '+esc(x.locked.no)+' แก้ไม่ได้</span>':''}</li>`).join('')}${mm.length>8?`<li>… และอีก ${mm.length-8} ใบ</li>`:''}</ul>
+    <ul>${mm.slice(0,8).map(x=>`<li>${esc(x.i.no)} (วันที่ ${esc(dmy(x.i.dt))}) → <strong>${esc(x.to)}</strong>${x.locked?' <span style="color:var(--muted)">— 🔒 อยู่ในใบกำกับภาษี '+esc(x.locked.no)+' แก้ไม่ได้</span>':''}</li>`).join('')}${mm.length>8?`<li>… และอีก ${mm.length-8} ใบ</li>`:''}</ul>
     ${mm.some(x=>!x.locked)?'<div class="brow"><button class="btn bp bsm" onclick="fixInvNoMonths()">🔧 แก้เลขที่ให้ถูกต้อง</button></div>':''}</div>`:'';
   let warn=el.querySelector(':scope > .lf-warn');
   if(!warn){ el.innerHTML='<div class="lf-warn"></div><div class="lf-wrap"></div>'; warn=el.querySelector('.lf-warn'); }
@@ -3485,7 +3530,7 @@ function renderInvList(){
     <td style="font-family:'Sarabun',sans-serif;font-size:12px;font-weight:600">${esc(i.no)}${i.type==='special'?' <span class="badge bg-gold">⭐ Special</span>':''}${isCur?' <span class="badge bg-green">📌 กำลังแก้ไข</span>':''}</td>
     <td><span class="badge bg-gold">${esc(CFG[i.plant]?.depts?.[i.dept]?.name||i.dept)}</span></td>
     <td style="white-space:nowrap">${st}${ed}</td>
-    <td style="font-size:11.5px;white-space:nowrap">${esc(i.dt||'')}</td>
+    <td style="font-size:11.5px;white-space:nowrap">${esc(dmy(i.dt))}</td>
     <td class="num">${fmt(i.up)}</td><td class="num">${fmt(i.vat)}</td>
     <td class="num" style="font-weight:700;color:var(--navy)">${fmt(i.grand)}</td>
     <td style="white-space:nowrap;text-align:right;overflow:visible">${btns}</td>
@@ -4159,7 +4204,7 @@ function renderTaxPending(){
         <td style="white-space:nowrap"><button class="btn bo bsm" style="padding:0 7px" ${ix?'':'disabled'} onclick="moveTaxInv('${mon}','${sk}',${i.id},-1)" title="เลื่อนขึ้นในใบ">▲</button><button class="btn bo bsm" style="padding:0 7px;margin-left:2px" ${ix<pend.length-1?'':'disabled'} onclick="moveTaxInv('${mon}','${sk}',${i.id},1)" title="เลื่อนลงในใบ">▼</button></td>
         <td></td>
         <td style="padding-left:22px"><label style="display:inline-flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" ${on?'checked':''} onchange="toggleTaxSel('${mon}','${sk}',${i.id},this.checked)">
-          ${esc(i.no)}</label> <span style="color:var(--muted);font-size:11.5px">${i.type==='special'?'Special':esc(CFG[pk]?.depts?.[i.dept]?.name||i.dept||'')} · ${esc(i.dt||'')}</span>${invStatus(i)==='confirmed'?'':' <span class="badge bg-gold" style="font-size:10px">ร่าง</span>'}</td>
+          ${esc(i.no)}</label> <span style="color:var(--muted);font-size:11.5px">${i.type==='special'?'Special':esc(CFG[pk]?.depts?.[i.dept]?.name||i.dept||'')} · ${esc(dmy(i.dt))}</span>${invStatus(i)==='confirmed'?'':' <span class="badge bg-gold" style="font-size:10px">ร่าง</span>'}</td>
         <td></td><td class="num" style="font-size:12.5px">${fmtNum(invAmt(i).grand)}</td><td></td><td></td></tr>`;}).join('')
         +((_taxOrd[mon+'|'+sk]||[]).length?`<tr class="q-sub"><td></td><td colspan="7" style="padding-left:22px"><button class="btn bo bsm" onclick="resetTaxOrd('${mon}','${sk}')">↺ เรียงในใบแบบค่าเริ่มต้น</button></td></tr>`:'');
     }
@@ -4223,7 +4268,7 @@ function taxSetSectionHTML(mon,sk,pendRaw,taxDate,bill){
       return `<tr class="${on?'':'off'}"><td><input type="checkbox" ${on?'checked':''} onchange="toggleTaxSel('${mon}','${sk}',${i.id},this.checked)"></td><td>${on?k:''}</td>
         <td>${esc(i.no)}${i.type==='special'?' <span class="badge bg-navy" style="font-size:10px">Special</span>':''}</td>
         <td>${esc(CFG[pk]?.depts?.[i.dept]?.name||i.dept||'')}${i.type==='special'?'':` <span style="color:var(--muted);font-size:11px">ลำดับ ${deptSeq(pk,i.dept)}</span>`}</td>
-        <td style="font-size:12px">${esc(i.dt||'')}</td>
+        <td style="font-size:12px">${esc(dmy(i.dt))}</td>
         <td>${invStatus(i)==='confirmed'?'<span class="badge bg-green">ยืนยันแล้ว</span>':'<span class="badge bg-gold" title="ถ้าติ๊กรวม จะถูกยืนยันอัตโนมัติเมื่อออกใบกำกับภาษี">ร่าง</span>'}</td>
         <td class="num">${fmtNum(a.up)}</td><td class="num">${fmtNum(a.vat)}</td><td class="num">${fmtNum(a.grand)}</td></tr>`;}).join('');})()}
     </tbody><tfoot><tr><td></td><td colspan="5">รวมที่เลือก ${chosen.length} ใบ${customOrd?` <button class="btn bo bsm" style="margin-left:8px;font-weight:400" onclick="resetTaxOrd('${mon}','${sk}')">↺ เรียงตามลำดับแผนก</button>`:''}</td><td class="num">${fmtNum(t.up)}</td><td class="num">${fmtNum(t.vat)}</td><td class="num">${fmtNum(t.grand)}</td></tr></tfoot></table>
@@ -6430,7 +6475,7 @@ function renderRecon(){
     const rows=issued.filter(t=>(t.date||'').startsWith(mon)&&payGroup(t.plant)===g).sort((a,b)=>String(a.no).localeCompare(String(b.no)));
     let sUp=0,sVat=0,sW=0,sPay=0;
     const tr=rows.map(t=>{ const c=reconAmt(t); sUp+=t.up||0; sVat+=t.vat||0; sW+=c.wht; sPay+=c.pay;
-      return `<tr><td>${esc(t.no)}</td><td>${esc(CFG[t.plant]?.name||t.plant||'')}${t.set==='special'?' <span class="badge bg-gold">⭐ Special</span>':''}</td><td>${esc(t.date||'')}</td>
+      return `<tr><td>${esc(t.no)}</td><td>${esc(CFG[t.plant]?.name||t.plant||'')}${t.set==='special'?' <span class="badge bg-gold">⭐ Special</span>':''}</td><td>${esc(dmy(t.date))}</td>
         <td class="num">${fmtNum(t.up)}</td><td class="num">${fmtNum(t.vat)}</td>
         <td class="num"><select onchange="setRecWht('${esc(String(t.id))}',this.value)" style="padding:3px 4px;border:1px solid var(--bord);border-radius:6px"><option value="1" ${c.w===1?'selected':''}>1%</option><option value="3" ${c.w===3?'selected':''}>3%</option><option value="0" ${c.w===0?'selected':''}>ไม่หัก</option></select></td>
         <td class="num">${fmtNum(c.wht)}</td><td class="num" style="font-weight:700;color:var(--navy)">${fmtNum(c.pay)}</td></tr>`; }).join('');
@@ -6918,7 +6963,7 @@ function getSpInvHTML(forPrint=false){
   const messrs=document.getElementById('sp-messrs')?.value||'HOYA OPTICS (THAILAND) LTD.';
   const pName=CFG[plant]?.name||plant;
   const dName=CFG[plant]?.depts?.[dept]?.name||dept;
-  const dtFmt=dt?new Date(dt).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'';
+  const dtFmt=dmy(dt);
   const {up,vat,grand}=calcSp();
   const fmt=fmtNum;
   const lhHtml=getLetterheadHTML(forPrint);
@@ -7078,7 +7123,7 @@ function renderSpSaved(){
     return {pk:inv.plant,grand:inv.grand||0,html:`<tr${isCur?' class="lf-cur"':''}>
       <td style="font-size:12px;font-weight:600">${esc(inv.no)}${isCur?' <span class="badge bg-green">📌 กำลังแก้ไข</span>':''}${inv.title?`<div style="font-size:11px;color:var(--muted);font-weight:400">${esc(inv.title)}</div>`:''}</td>
       <td><span class="badge bg-gold">${esc(CFG[inv.plant]?.depts?.[inv.dept]?.name||inv.dept)}</span></td>
-      <td style="font-size:11.5px;white-space:nowrap">${esc(inv.dt||'')}</td>
+      <td style="font-size:11.5px;white-space:nowrap">${esc(dmy(inv.dt))}</td>
       <td>${r?`<span class="badge bg-navy">🔒 ${esc(r.no)}</span>`:invStatus(inv)==='confirmed'?'<span class="badge bg-green">✅ ยืนยันแล้ว</span>':'<span class="badge bg-gold">ร่าง</span>'}</td>
       <td class="num" style="font-weight:700;color:var(--navy)">${fmtNum(inv.grand)}</td>
       <td style="white-space:nowrap;text-align:right">${isCur?'':`<button class="btn bo bsm" onclick="loadSpInv(${inv.id},true)">📂 เปิด</button>`}
