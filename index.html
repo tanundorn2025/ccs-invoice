@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- CCS Invoice System | build 2026-11-26b | restored from repo commit 3f72a44 with the Designer removed -->
+<!-- CCS Invoice System | build 2026-11-27a | restored from repo commit 3f72a44 with the Designer removed -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -204,6 +204,8 @@ input[readonly]{background:#f8f9fb;color:var(--muted)}
 .db-al.red{background:#fdecea;border-color:#d92d20}.db-al.amber{background:#fff6e0;border-color:#e0a800}.db-al.info{background:#e9f0fb;border-color:#3b6fb6}.db-al.ok{background:#e8f6ee;border-color:#1a8a4a}
 .db-al .t{flex:1}.db-al .t small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
 .db-bar{cursor:pointer}.db-bar:hover rect{opacity:.85}
+.fcrd.dept-off>.fhdr{background:#8a94a3!important}
+.fcrd.dept-off>:not(.fhdr){display:none}
 .ts-dept-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:.6rem;padding:8px 10px;background:var(--surf2);border:1px solid var(--bord);border-radius:var(--r)}
 .ts-dept-bar:empty{display:none}
 .ts-dept-bar .dlab{font-size:12.5px;font-weight:700;color:var(--navy);margin-right:4px}
@@ -380,7 +382,7 @@ body,input,select,textarea,button,table{font-variant-numeric:tabular-nums}
 
 <header class="hdr">
   <div class="hdr-logo"><span class="hdr-badge">CCS</span>ระบบออก Invoice &amp; Summary — HOYA OPTICS</div>
-  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-26b</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
+  <div class="hdr-meta">Chiangmai Cleaning and Supply Service · build <span id="app-build">2026-11-27a</span> <button id="upd-btn" onclick="checkUpdate(true)" title="ตรวจสอบ/โหลดเวอร์ชันล่าสุด" style="margin-left:6px;padding:2px 9px;border:1px solid rgba(255,255,255,.5);border-radius:99px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;cursor:pointer">🔄 อัปเดต</button></div>
 </header>
 
 <nav class="tabs">
@@ -1824,7 +1826,7 @@ function sw(id,btn,force){
    PLANT / DEPT SELECTS
    ============================================================ */
 function getDeptOptions(plant){
-  return deptEntries(plant).map(([k,d])=>`<option value="${k}">${esc(d.name)}</option>`).join('');
+  return deptEntries(plant).map(([k,d])=>`<option value="${k}"${d.inactive?' disabled':''}>${esc(d.name)}${d.inactive?' — ปิดใช้งาน':''}</option>`).join('');
 }
 
 function onPlantChange(){
@@ -1865,7 +1867,7 @@ function onDeptChange(){
 function renderDeptBar(){
   const el=document.getElementById('ts-dept-bar'); if(!el) return;
   const plant=document.getElementById('tf-plant')?.value, cur=document.getElementById('tf-dept')?.value, ds=document.getElementById('tf-ds')?.value;
-  const depts=deptEntries(plant);
+  const depts=deptEntries(plant).filter(([k,d])=>!d.inactive||k===cur);
   if(depts.length<2){ el.innerHTML=''; return; }
   el.innerHTML=`<span class="dlab">🏷️ แผนก (${esc(CFG[plant]?.name||plant)}):</span>`+depts.map(([k,d])=>{
     const saved=S.timesheets.some(t=>t.plant===plant&&t.dept===k&&t.ds===ds);
@@ -2980,7 +2982,7 @@ function dashAlerts(mon){
   if(bad.length) A.push({sev:'red',title:`ใบบันทึกเวลามีข้อมูลผิด ${bad.length} ใบ`,detail:bad.slice(0,4).map(t=>(CFG[t.plant]?.depts?.[t.dept]?.name||t.dept)+' '+rangeText(t.ds,t.de)).join(' · '),go:go('t1','ไปแก้')});
   // แผนกที่ยังไม่มี Invoice ในเดือนที่เลือก (เฉพาะเดือนปัจจุบันหรือก่อนหน้า)
   if(mon<=todayISO().slice(0,7)){
-    const miss=[]; Object.entries(CFG).forEach(([pk,pv])=>deptEntries(pk).forEach(([dk,dv])=>{ if(!S.invoices.some(i=>i.type!=='special'&&i.plant===pk&&i.dept===dk&&(i.dt||'').startsWith(mon))) miss.push((pv.name||pk)+' – '+(dv.name||dk)); }));
+    const miss=[]; Object.entries(CFG).forEach(([pk,pv])=>deptEntries(pk,true).forEach(([dk,dv])=>{ if(!S.invoices.some(i=>i.type!=='special'&&i.plant===pk&&i.dept===dk&&(i.dt||'').startsWith(mon))) miss.push((pv.name||pk)+' – '+(dv.name||dk)); }));
     const early=mon===todayISO().slice(0,7)&&+todayISO().slice(8,10)<25;   // ต้นเดือนปัจจุบัน ยังไม่ถึงรอบออก → แค่แจ้งให้ทราบ
     if(miss.length) A.push({sev:early?'info':'amber',title:`ยังไม่มี Invoice เดือน ${monthLabel(mon)} ${miss.length} แผนก`,detail:miss.slice(0,8).join(' · ')+(miss.length>8?` … และอีก ${miss.length-8}`:''),go:go('t1','ไปทำใบบันทึกเวลา')});
   }
@@ -2993,7 +2995,7 @@ function dashAlerts(mon){
   if(q.length) A.push({sev:'amber',title:`รอออกใบกำกับภาษี ${q.length} ชุด`,detail:[...new Set(q.map(k=>monthLabel(taxIssueMon(qMon(k),skPlant(qSk(k))))))].map(m=>'รอบ '+m).join(', '),go:go('t6','ไปออกใบกำกับภาษี')});
   const mm=invNoMismatches().filter(x=>!x.locked);
   if(mm.length) A.push({sev:'amber',title:`เลขที่ Invoice ไม่ตรงกับการตั้งค่า ${mm.length} ใบ`,detail:'กด “🔧 แก้เลขที่ให้ถูกต้อง” ในรายการ Invoice',go:go('t2','ไปแก้')});
-  const dup=[]; Object.entries(CFG).forEach(([pk,pv])=>{ const c={}; Object.keys(pv.depts||{}).forEach(dk=>{ const n=deptSeq(pk,dk); (c[n]=c[n]||[]).push(pv.depts[dk].name||dk); }); Object.entries(c).forEach(([n,a])=>{ if(a.length>1) dup.push(`${pv.name||pk}: ${a.join(', ')} (ลำดับ ${n})`); }); });
+  const dup=[]; Object.entries(CFG).forEach(([pk,pv])=>{ const c={}; Object.keys(pv.depts||{}).filter(dk=>!deptOff(pk,dk)).forEach(dk=>{ const n=deptSeq(pk,dk); (c[n]=c[n]||[]).push(pv.depts[dk].name||dk); }); Object.entries(c).forEach(([n,a])=>{ if(a.length>1) dup.push(`${pv.name||pk}: ${a.join(', ')} (ลำดับ ${n})`); }); });
   if(dup.length) A.push({sev:'amber',title:`ลำดับเลขที่แผนกซ้ำ ${dup.length} จุด`,detail:dup.join(' · ')+' — Invoice จะได้เลขที่ซ้ำกัน',go:go('t4','ไปตั้งค่า')});
   // กระทบยอด: 3 รอบล่าสุดที่ออกใบกำกับภาษีแล้ว
   const iss=S.taxInvoices.filter(t=>t.status!=='cancelled');
@@ -5347,7 +5349,7 @@ function renderCfg(){
           <button class="btn ba bsm" style="flex-shrink:0;height:32px" onclick="addDept('${pk}')">+ แผนก</button>
         </div>
         ${deptEntries(pk).map(([dk,dv])=>`
-        <div class="fcrd" style="margin-bottom:.5rem">
+        <div class="fcrd${dv.inactive?' dept-off':''}" style="margin-bottom:.5rem">
           <div class="fhdr" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
             <span style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
               <input type="text" id="cfg-${pk}-${dk}-name" value="${esc(dv.name)}" title="แก้ชื่อแผนก" placeholder="ชื่อแผนก"
@@ -5358,7 +5360,11 @@ function renderCfg(){
                 <input type="number" min="1" id="cfg-${pk}-${dk}-seq" value="${deptSeq(pk,dk)}" onchange="setCfgVal('${pk}','${dk}','seq',this.value)" style="width:64px;padding:4px 6px;font-size:13px${seqDup(pk,dk)?';border:2px solid #ff8a8a':''}"></label>
               ${seqDup(pk,dk)?'<span style="color:#ffb3b3;font-size:11.5px;font-weight:700">⚠️ ลำดับซ้ำ</span>':''}
             </span>
-            <button class="btn bd bsm" onclick="removeDept('${pk}','${dk}')">✕</button>
+            <span style="display:flex;gap:6px;align-items:center">
+              ${dv.inactive?'<span class="badge" style="background:#fff;color:#555">⏸ ปิดใช้งาน</span>':''}
+              <button class="btn bo bsm" style="background:#fff;white-space:nowrap" onclick="setDeptActive('${pk}','${dk}',${dv.inactive?'true':'false'})" title="${dv.inactive?'เปิดใช้งานแผนกนี้อีกครั้ง':'ซ่อนแผนกนี้จากการเลือก — ข้อมูลเก่ายังอยู่ครบ'}">${dv.inactive?'▶ เปิดใช้งาน':'⏸ ปิดใช้งาน'}</button>
+              <button class="btn bd bsm" onclick="removeDept('${pk}','${dk}')" title="ลบแผนก">✕</button>
+            </span>
           </div>
           <div class="fbdy"><div class="g4" style="gap:.5rem">
             <div class="fg"><label>จำนวน (คน)</label><input type="number" id="cfg-${pk}-${dk}-w" value="${dv.workers||1}" onchange="setCfgVal('${pk}','${dk}','workers',this.value)"></div>
@@ -5438,8 +5444,25 @@ function addDept(pk){
   alert('✅ เพิ่มแผนก "'+name+'" ใน '+CFG[pk].name+' แล้ว');
 }
 
-function removeDept(pk,dk){
-  if(!confirm('ลบแผนก "'+CFG[pk]?.depts[dk]?.name+'"?')) return;
+function setDeptActive(pk,dk,on){
+  const d=CFG[pk]?.depts?.[dk]; if(!d) return;
+  if(on) delete d.inactive; else d.inactive=true;
+  renderCfg(); refreshAllSelects(); persistSettings();
+  try{renderDeptBar();}catch(e){}
+  showToast(on?`▶ เปิดใช้งาน ${d.name} แล้ว`:`⏸ ปิดใช้งาน ${d.name} แล้ว — ใบเก่ายังเปิด/พิมพ์ได้ตามปกติ`);
+}
+async function removeDept(pk,dk){
+  const d=CFG[pk]?.depts?.[dk]; if(!d) return;
+  const nTs=S.timesheets.filter(t=>t.plant===pk&&t.dept===dk).length, nInv=S.invoices.filter(i=>i.plant===pk&&i.dept===dk).length;
+  if(nTs||nInv){
+    const v=await askChoice('ลบแผนก '+(d.name||dk)+'?',
+      `<div style="font-size:13px;line-height:1.6">แผนกนี้มีข้อมูลที่บันทึกไว้: <b>ใบบันทึกเวลา ${nTs} ใบ · Invoice ${nInv} ใบ</b><br>
+       ถ้าลบ ใบเก่าจะไม่มีชื่อ/อัตราของแผนกให้ใช้ — เปิดแก้ไข/พิมพ์ซ้ำอาจผิด และอาจบันทึกผิดแผนก<br><br>
+       <b>แนะนำ “ปิดใช้งาน”</b> — ซ่อนจากการเลือก แต่ใบเก่ายังใช้งานได้ครบ และเปิดกลับได้ทุกเมื่อ</div>`,
+      [{label:'ยกเลิก',value:''},{label:'⏸ ปิดใช้งานแทน',value:'off',cls:'bp'},{label:'ลบถาวร',value:'del',cls:'bd'}]);
+    if(v==='off'){ setDeptActive(pk,dk,false); return; }
+    if(v!=='del') return;
+  } else if(!confirm('ลบแผนก "'+(d.name||dk)+'"?')) return;
   delete CFG[pk].depts[dk];
   renderCfg();
   refreshAllSelects();
@@ -6783,7 +6806,8 @@ const MON_ABBR=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV
 /* รูปแบบ: CCS-H.OPTICS-{PLANT}[-{DEPT}][-SP]-{MON}.-{ลำดับในเดือนของโรงงาน}({YY}) — DEPT ไม่ใส่ถ้าเป็น MAIN */
 /* ลำดับของแผนกในเลขที่ Invoice (ตั้งในตั้งค่า) — ยังไม่ได้ตั้ง = ตำแหน่งของแผนกในโรงงาน */
 /* แผนกเรียงตาม "ลำดับเลขที่" (ใช้ในตั้งค่า / ช่องเลือกแผนก / แถบแผนก) */
-function deptEntries(pk){ return Object.entries(CFG[pk]?.depts||{}).sort((a,b)=>deptSeq(pk,a[0])-deptSeq(pk,b[0])||String(a[1].name||a[0]).localeCompare(String(b[1].name||b[0]))); }
+function deptOff(pk,dk){ return !!CFG[pk]?.depts?.[dk]?.inactive; }
+function deptEntries(pk,activeOnly){ return Object.entries(CFG[pk]?.depts||{}).filter(([k,d])=>!activeOnly||!d.inactive).sort((a,b)=>(!!a[1].inactive)-(!!b[1].inactive)||deptSeq(pk,a[0])-deptSeq(pk,b[0])||String(a[1].name||a[0]).localeCompare(String(b[1].name||b[0]))); }
 function deptSeq(pk,dk){
   const d=CFG[pk]?.depts?.[dk];
   if(d&&+d.seq>0) return +d.seq;
@@ -6792,7 +6816,8 @@ function deptSeq(pk,dk){
 }
 function seqDup(pk,dk){
   const n=deptSeq(pk,dk);
-  return Object.keys(CFG[pk]?.depts||{}).some(k=>k!==dk&&deptSeq(pk,k)===n);
+  if(deptOff(pk,dk)) return false;
+  return Object.keys(CFG[pk]?.depts||{}).some(k=>k!==dk&&!deptOff(pk,k)&&deptSeq(pk,k)===n);
 }
 /* รูปแบบ: CCS-{ชื่อโรงงาน}-{ชื่อแผนก}[-SP]-{เดือนที่ออก}.-{ลำดับแผนก}({ปี ค.ศ. 2 หลัก})
    เช่น CCS-HOYA OPTICS SLR-MAIN (Cleaning)-NOV.-1(26) */
